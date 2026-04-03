@@ -1,0 +1,117 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+<BaseLayout title="登录 - Aprice" description="Supabase 邮箱魔法链接登录，适合静态站点部署。">
+  <section class="section">
+    <div class="shell">
+      <div class="hero-banner">
+        <div class="hero-banner__inner">
+          <div class="hero-banner__eyebrow">Account access</div>
+          <h1 class="product-title">邮箱魔法链接登录。</h1>
+          <p class="product-sub">适合 GitHub Pages 的静态前端，不需要自建会话服务器。</p>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top:18px;">
+        <section class="tile tile--wide">
+          <form class="form" id="login-form">
+            <label class="field" for="email">
+              <input id="email" type="email" placeholder="name@example.com" autocomplete="email" required />
+            </label>
+            <button class="button" type="submit">发送登录链接</button>
+            <div class="notice" id="login-status">如果配置了 Supabase，这里会发送一封登录邮件。</div>
+          </form>
+        </section>
+        <section class="tile">
+          <div class="section__header">
+            <h3>当前会话</h3>
+            <p>登录后可查看个人价格记录和收藏。</p>
+          </div>
+          <div class="list" id="session-state">
+            <div class="list__item">
+              <div>
+                <strong>未加载</strong>
+                <small>页面会自动检查当前会话。</small>
+              </div>
+              <span class="meta">...</span>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <button class="button button--ghost" id="logout-button" type="button">退出登录</button>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <script type="module">
+    import { getSession, sendMagicLink, signOut, resolveBase } from '../lib/browser.js';
+
+    const form = document.querySelector('#login-form');
+    const input = document.querySelector('#email');
+    const status = document.querySelector('#login-status');
+    const sessionState = document.querySelector('#session-state');
+    const logoutButton = document.querySelector('#logout-button');
+
+    async function refreshSession() {
+      try {
+        const session = await getSession();
+        if (!session?.user) {
+          sessionState.innerHTML = `
+            <div class="list__item">
+              <div>
+                <strong>未登录</strong>
+                <small>你可以使用邮箱魔法链接继续。</small>
+              </div>
+              <span class="meta">offline</span>
+            </div>
+          `;
+          return;
+        }
+
+        sessionState.innerHTML = `
+          <div class="list__item">
+            <div>
+              <strong>${session.user.email || '已登录用户'}</strong>
+              <small>${session.user.user_metadata?.full_name || 'Aprice member'}</small>
+            </div>
+            <span class="meta">online</span>
+          </div>
+        `;
+      } catch (error) {
+        sessionState.innerHTML = `
+          <div class="list__item">
+            <div>
+              <strong>无法读取会话</strong>
+              <small>${error.message}</small>
+            </div>
+            <span class="meta">error</span>
+          </div>
+        `;
+      }
+    }
+
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const email = input.value.trim();
+      if (!email) return;
+
+      status.textContent = '正在发送登录链接...';
+      try {
+        await sendMagicLink(email);
+        status.textContent = '登录链接已发送。打开邮件完成登录，然后回到本站即可。';
+      } catch (error) {
+        status.textContent = `发送失败：${error.message}`;
+      }
+      await refreshSession();
+    });
+
+    logoutButton?.addEventListener('click', async () => {
+      await signOut();
+      status.textContent = '已退出登录。';
+      await refreshSession();
+      window.location.assign(resolveBase(''));
+    });
+
+    refreshSession();
+  </script>
+</BaseLayout>

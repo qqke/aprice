@@ -1,0 +1,253 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { demoProducts, demoStores, demoPrices } from '../lib/catalog.js';
+
+const base = import.meta.env.BASE_URL || '/';
+const featured = demoProducts[0];
+const featuredPrices = demoPrices.filter((price) => price.product_id === featured.id);
+const featuredStores = featuredPrices
+  .map((price) => demoStores.find((store) => store.id === price.store_id))
+  .filter(Boolean);
+---
+<BaseLayout title="Aprice - 日本本地药店比价" description="扫码、搜索、比较附近药店价格，并保存个人价格记录。">
+  <section class="hero">
+    <div class="shell hero__grid">
+      <div class="hero__panel">
+        <div class="hero__copy">
+          <div class="eyebrow">Japanese drugstore price compare</div>
+          <h1 class="headline">扫条码，立刻比日本药店价格。</h1>
+          <p class="lead">
+            这是一个为日本本地药店设计的轻量比价应用。扫码、模糊搜索、附近门店对比和个人价格记录都放在同一个静态站点里。
+          </p>
+          <div class="hero__actions">
+            <a class="button" href={`${base}scan/`}>开始扫码查价</a>
+            <a class="button button--ghost" href={`${base}login/`}>邮箱登录</a>
+            <a class="button button--ghost" href={`${base}me/`}>个人价格记录</a>
+          </div>
+          <div class="hero__stats">
+            <div class="stat">
+              <strong>JAN 扫码</strong>
+              <span>快速查到商品页面</span>
+            </div>
+            <div class="stat">
+              <strong>附近比价</strong>
+              <span>按地理位置排序门店价格</span>
+            </div>
+            <div class="stat">
+              <strong>我的价格</strong>
+              <span>保存购买价、门店与备注</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="hero__panel">
+        <div class="hero__scan">
+          <div class="section__header" style="margin:0;">
+            <div>
+              <h2>即时查价面板</h2>
+              <p>先搜商品，再看附近门店，最后存进个人记录。</p>
+            </div>
+            <span class="pill">Demo + Supabase ready</span>
+          </div>
+
+          <div class="scan-card">
+            <div class="scan-card__inner">
+              <div class="pillrow">
+                <span class="pill">JAN 4987188161027</span>
+                <span class="pill">渋谷 0.8 km</span>
+                <span class="pill">会员价可比</span>
+              </div>
+              <div class="scan-frame" aria-hidden="true"></div>
+              <div class="pillrow">
+                <span class="pill">ロキソニンS</span>
+                <span class="pill">¥748 起</span>
+                <span class="pill">3 家门店</span>
+              </div>
+            </div>
+            <div class="scan-beam"></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="shell">
+      <div class="section__header">
+        <div>
+          <h2>快速搜索</h2>
+          <p>支持商品名、品牌、拼写片段、假名片段和 JAN 条码。</p>
+        </div>
+      </div>
+      <div class="searchbar">
+        <label class="field" for="home-search">
+          <input id="home-search" type="search" placeholder="输入商品名或条码，例如 ロキソニン / 4987188161027" />
+        </label>
+        <button class="button" id="home-search-button" type="button">搜索</button>
+      </div>
+      <div class="divider"></div>
+      <div class="grid">
+        <section class="tile tile--wide">
+          <div class="section__header">
+            <h3>搜索结果</h3>
+            <p id="search-status">输入后会在这里显示结果。</p>
+          </div>
+          <div class="list" id="search-results">
+            {demoProducts.map((product) => (
+              <a class="list__item" href={`${base}product/${product.id}/`}>
+                <div>
+                  <strong>{product.name}</strong>
+                  <small>{product.brand} · {product.pack} · {product.barcode}</small>
+                </div>
+                <span class="price">查看</span>
+              </a>
+            ))}
+          </div>
+        </section>
+        <section class="tile">
+          <div class="section__header">
+            <h3>热门商品</h3>
+            <p>先从最常见的几款开始。</p>
+          </div>
+          <div class="list">
+            {demoProducts.map((product) => (
+              <a class="list__item" href={`${base}product/${product.id}/`}>
+                <div>
+                  <strong>{product.name}</strong>
+                  <small>{product.category}</small>
+                </div>
+                <span class="meta">{product.pack}</span>
+              </a>
+            ))}
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="shell">
+      <div class="section__header">
+        <div>
+          <h2>附近价格</h2>
+          <p>允许用户打开定位后，将同一商品在附近门店里的价格排出来。</p>
+        </div>
+        <button class="button button--ghost" id="geolocate-home" type="button">使用当前位置</button>
+      </div>
+      <div class="grid">
+        <section class="tile tile--wide">
+          <div class="list" id="nearby-results">
+            {featuredPrices.map((price) => {
+              const store = demoStores.find((item) => item.id === price.store_id);
+              return (
+                <div class="list__item">
+                  <div>
+                    <strong>{store?.name}</strong>
+                    <small>{store?.address} · {store?.hours}</small>
+                  </div>
+                  <div style="text-align:right;">
+                    <div class="price">¥{price.price_yen}</div>
+                    <small>{price.is_member_price ? '会员价' : '公开价'}</small>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+        <section class="tile">
+          <div class="section__header">
+            <h3>最近查看</h3>
+            <p>个人偏好和收藏会在这里聚合。</p>
+          </div>
+          <div class="list">
+            {featuredStores.map((store) => (
+              <div class="list__item">
+                <div>
+                  <strong>{store?.chain_name}</strong>
+                  <small>{store?.city}</small>
+                </div>
+                <span class="meta">推荐</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="shell hero-banner">
+      <div class="hero-banner__inner">
+        <div class="hero-banner__eyebrow">Personal price log</div>
+        <h2 class="product-title">把你看到的价，变成你自己的历史。</h2>
+        <p class="product-sub">
+          记录购买价、门店、时间和备注，之后就能回头比较你自己真正买到的价格。
+        </p>
+        <div class="pillrow">
+          <span class="pill">我的价格记录</span>
+          <span class="pill">收藏商品</span>
+          <span class="pill">最近查看</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section footer">
+    <div class="shell">
+      <p>
+        这是一个静态站点 MVP。登录、数据与权限由 Supabase 提供，GitHub Pages 只负责托管前端页面。
+      </p>
+    </div>
+  </section>
+
+  <script type="module">
+    import { geolocate, searchProducts, resolveBase } from '../lib/browser.js';
+
+    const input = document.querySelector('#home-search');
+    const button = document.querySelector('#home-search-button');
+    const results = document.querySelector('#search-results');
+    const status = document.querySelector('#search-status');
+    const geolocateButton = document.querySelector('#geolocate-home');
+
+    async function renderResults(term) {
+      const items = await searchProducts(term);
+      status.textContent = term ? `${items.length} 条结果` : '显示默认示例商品。';
+      results.innerHTML = items
+        .map(
+          (item) => `
+            <a class="list__item" href="${resolveBase(`product/${item.id}/`)}">
+              <div>
+                <strong>${item.name}</strong>
+                <small>${item.brand} · ${item.pack} · ${item.barcode}</small>
+              </div>
+              <span class="price">查看</span>
+            </a>
+          `,
+        )
+        .join('');
+    }
+
+    button?.addEventListener('click', () => renderResults(input?.value || ''));
+    input?.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        renderResults(input.value);
+      }
+    });
+
+    geolocateButton?.addEventListener('click', async () => {
+      geolocateButton.textContent = '定位中...';
+      try {
+        const location = await geolocate();
+        status.textContent = `当前位置：${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}。可在商品页里按附近门店重排。`;
+      } catch (error) {
+        status.textContent = `定位失败：${error.message}`;
+      } finally {
+        geolocateButton.textContent = '使用当前位置';
+      }
+    });
+
+    renderResults('');
+  </script>
+</BaseLayout>

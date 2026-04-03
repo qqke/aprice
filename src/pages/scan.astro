@@ -1,0 +1,190 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+<BaseLayout title="扫码查价 - Aprice" description="使用相机扫描 JAN 条码，或者手动输入编号进行商品搜索。">
+  <section class="section">
+    <div class="shell">
+      <div class="hero-banner">
+        <div class="hero-banner__inner">
+          <div class="hero-banner__eyebrow">Scan mode</div>
+          <h1 class="product-title">把相机对准条码。</h1>
+          <p class="product-sub">
+            GitHub Pages 上也能跑的轻量扫码页。支持 BarcodeDetector，若浏览器不支持则回退到手动输入。
+          </p>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top:18px;">
+        <section class="tile tile--wide">
+          <div class="stack">
+            <div class="scan-frame">
+              <video id="camera" playsinline muted style="width:100%; height:100%; min-height:320px; object-fit:cover; display:block;"></video>
+              <canvas id="capture" hidden></canvas>
+              <div class="scan-beam"></div>
+            </div>
+            <div class="pillrow">
+              <button class="button" id="start-scan" type="button">启动相机</button>
+              <button class="button button--ghost" id="stop-scan" type="button">停止</button>
+              <button class="button button--ghost" id="snap-scan" type="button">尝试识别</button>
+            </div>
+          </div>
+        </section>
+        <section class="tile">
+          <div class="section__header">
+            <h3>手动输入</h3>
+            <p>拍不到就直接输条码。</p>
+          </div>
+          <div class="form">
+            <label class="field" for="barcode-input">
+              <input id="barcode-input" inputmode="numeric" placeholder="例如 4987188161027" />
+            </label>
+            <button class="button" id="barcode-search" type="button">查找商品</button>
+            <div class="notice" id="scan-status">等待扫码。</div>
+          </div>
+        </section>
+      </div>
+
+      <section class="section">
+        <div class="section__header">
+          <div>
+            <h2>扫描结果</h2>
+            <p>识别到条码后，会自动跳转到商品页。</p>
+          </div>
+        </div>
+        <div class="tile" style="width:100%;">
+          <div class="list" id="scan-result-list">
+            <div class="list__item">
+              <div>
+                <strong>尚未识别</strong>
+                <small>启动相机或输入条码后，结果会显示在这里。</small>
+              </div>
+              <span class="meta">waiting</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <script type="module">
+    import { fetchProductByBarcode, resolveBase } from '../lib/browser.js';
+
+    const video = document.querySelector('#camera');
+    const startButton = document.querySelector('#start-scan');
+    const stopButton = document.querySelector('#stop-scan');
+    const snapButton = document.querySelector('#snap-scan');
+    const input = document.querySelector('#barcode-input');
+    const searchButton = document.querySelector('#barcode-search');
+    const status = document.querySelector('#scan-status');
+    const resultList = document.querySelector('#scan-result-list');
+
+    let stream = null;
+    let rafId = null;
+    let detector = null;
+
+    function renderProduct(product) {
+      if (!product) {
+        resultList.innerHTML = `
+          <div class="list__item">
+            <div>
+              <strong>没有找到对应商品</strong>
+              <small>请确认条码是否正确，或者去首页做模糊搜索。</small>
+            </div>
+            <span class="meta">empty</span>
+          </div>
+        `;
+        return;
+      }
+
+      resultList.innerHTML = `
+        <a class="list__item" href="${resolveBase(`product/${product.id}/`)}">
+          <div>
+            <strong>${product.name}</strong>
+            <small>${product.brand} · ${product.pack} · ${product.barcode}</small>
+          </div>
+          <span class="price">打开</span>
+        </a>
+      `;
+    }
+
+    async function lookup(code) {
+      const product = await fetchProductByBarcode(code);
+      if (product) {
+        status.textContent = `识别成功：${product.name}`;
+        renderProduct(product);
+        window.location.assign(resolveBase(`product/${product.id}/`));
+        return;
+      }
+
+      status.textContent = `未找到条码 ${code}`;
+      renderProduct(null);
+    }
+
+    async function scanFrame() {
+      if (!detector || !video.videoWidth) {
+        rafId = requestAnimationFrame(scanFrame);
+        return;
+      }
+
+      try {
+        const barcodes = await detector.detect(video);
+        if (barcodes?.length) {
+          const code = barcodes[0].rawValue;
+          if (code) {
+            await lookup(code);
+            return;
+          }
+        }
+      } catch {
+        // keep scanning
+      }
+
+      rafId = requestAnimationFrame(scanFrame);
+    }
+
+    async function startCamera() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        status.textContent = '当前浏览器不支持相机访问。请使用手动输入。';
+        return;
+      }
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        video.srcObject = stream;
+        await video.play();
+        detector = 'BarcodeDetector' in window ? new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128'] }) : null;
+        status.textContent = detector ? '相机已启动，正在寻找条码...' : '相机已启动，但当前浏览器没有 BarcodeDetector。请使用手动输入。';
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(scanFrame);
+      } catch (error) {
+        status.textContent = `相机启动失败：${error.message}`;
+      }
+    }
+
+    function stopCamera() {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+      stream?.getTracks().forEach((track) => track.stop());
+      stream = null;
+      if (video) video.srcObject = null;
+      status.textContent = '已停止。';
+    }
+
+    startButton?.addEventListener('click', startCamera);
+    stopButton?.addEventListener('click', stopCamera);
+    snapButton?.addEventListener('click', async () => {
+      const code = input?.value?.trim();
+      if (!code) return;
+      await lookup(code);
+    });
+
+    searchButton?.addEventListener('click', async () => {
+      const code = input?.value?.trim();
+      if (!code) {
+        status.textContent = '请输入条码。';
+        return;
+      }
+      await lookup(code);
+    });
+  </script>
+</BaseLayout>

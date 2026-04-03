@@ -1,0 +1,195 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getDemoProducts, getDemoStores } from '../lib/browser.js';
+
+const products = getDemoProducts();
+const stores = getDemoStores();
+---
+<BaseLayout title="我的 - Aprice" description="查看个人价格记录、收藏和最近查看的药店商品。">
+  <section class="section">
+    <div class="shell">
+      <div class="hero-banner">
+        <div class="hero-banner__inner">
+          <div class="hero-banner__eyebrow">Personal shelf</div>
+          <h1 class="product-title">你的价格历史，都在这里。</h1>
+          <p class="product-sub">登录后可以保存个人购买价、收藏商品，并回看历史价格。</p>
+        </div>
+      </div>
+
+      <div class="grid" style="margin-top:18px;">
+        <section class="tile tile--wide">
+          <div class="section__header">
+            <div>
+              <h2>个人价格记录</h2>
+              <p>这里会显示你的购买价、门店和备注。</p>
+            </div>
+          </div>
+          <div class="list" id="my-logs">
+            <div class="list__item">
+              <div>
+                <strong>等待登录</strong>
+                <small>登录后会自动读取你的价格历史。</small>
+              </div>
+              <span class="meta">me</span>
+            </div>
+          </div>
+        </section>
+        <section class="tile">
+          <div class="section__header">
+            <h3>收藏</h3>
+            <p>收藏商品或者门店，方便下次打开。</p>
+          </div>
+          <div class="list" id="my-favorites">
+            <div class="list__item">
+              <div>
+                <strong>等待加载</strong>
+                <small>登录后可以看到收藏列表。</small>
+              </div>
+              <span class="meta">fav</span>
+            </div>
+          </div>
+        </section>
+        <section class="tile">
+          <div class="section__header">
+            <h3>快速记录</h3>
+            <p>把刚看到的价格先记下来。</p>
+          </div>
+          <form class="form" id="log-form">
+            <label class="field">
+              <select id="log-product">
+                {products.map((product) => <option value={product.id}>{product.name}</option>)}
+              </select>
+            </label>
+            <label class="field">
+              <select id="log-store">
+                {stores.map((store) => <option value={store.id}>{store.name}</option>)}
+              </select>
+            </label>
+            <label class="field">
+              <input id="log-price" type="number" inputmode="numeric" placeholder="价格（円）" />
+            </label>
+            <label class="field">
+              <input id="log-note" placeholder="备注，例如会员价 / 促销 / 税后" />
+            </label>
+            <button class="button" type="submit">保存记录</button>
+            <div class="notice" id="log-status">先登录再保存个人记录。</div>
+          </form>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <script type="module">
+    import { fetchFavorites, fetchPersonalLogs, getCurrentUser, savePersonalLog, formatDateTime, formatYen } from '../lib/browser.js';
+
+    const logsEl = document.querySelector('#my-logs');
+    const favsEl = document.querySelector('#my-favorites');
+    const form = document.querySelector('#log-form');
+    const status = document.querySelector('#log-status');
+    const productInput = document.querySelector('#log-product');
+    const storeInput = document.querySelector('#log-store');
+    const priceInput = document.querySelector('#log-price');
+    const noteInput = document.querySelector('#log-note');
+
+    async function refresh() {
+      const user = await getCurrentUser();
+      if (!user) {
+        logsEl.innerHTML = `
+          <div class="list__item">
+            <div>
+              <strong>还没有登录</strong>
+              <small>先到登录页完成邮箱魔法链接登录。</small>
+            </div>
+            <span class="meta">offline</span>
+          </div>
+        `;
+        if (favsEl) {
+          favsEl.innerHTML = `
+            <div class="list__item">
+              <div>
+                <strong>未登录</strong>
+                <small>收藏内容会在登录后出现。</small>
+              </div>
+              <span class="meta">offline</span>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      const [logs, favorites] = await Promise.all([fetchPersonalLogs(user.id), fetchFavorites(user.id)]);
+      logsEl.innerHTML = logs.length
+        ? logs
+            .map(
+              (log) => `
+                <div class="list__item">
+                  <div>
+                    <strong>${log.products?.name || log.product_id}</strong>
+                    <small>${formatDateTime(log.created_at || log.purchased_at || new Date())} · ${log.stores?.name || log.store_id} · ${log.note || '无备注'}</small>
+                  </div>
+                  <span class="price">${formatYen(log.price_yen)}</span>
+                </div>
+              `,
+            )
+            .join('')
+        : `
+          <div class="list__item">
+            <div>
+              <strong>还没有记录</strong>
+              <small>现在就把第一笔价格记下来。</small>
+            </div>
+            <span class="meta">empty</span>
+          </div>
+        `;
+
+      if (favsEl) {
+        favsEl.innerHTML = favorites.length
+          ? favorites
+              .map(
+                (fav) => `
+                  <div class="list__item">
+                    <div>
+                      <strong>${fav.entity_type}</strong>
+                      <small>${fav.entity_id}</small>
+                    </div>
+                    <span class="meta">${fav.created_at ? formatDateTime(fav.created_at) : ''}</span>
+                  </div>
+                `,
+              )
+              .join('')
+          : `
+            <div class="list__item">
+              <div>
+                <strong>暂无收藏</strong>
+                <small>收藏商品或门店后会显示在这里。</small>
+              </div>
+              <span class="meta">empty</span>
+            </div>
+          `;
+      }
+    }
+
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      status.textContent = '正在保存...';
+      try {
+        await savePersonalLog({
+          product_id: productInput.value,
+          store_id: storeInput.value,
+          price_yen: Number(priceInput.value),
+          note: noteInput.value.trim(),
+          purchased_at: new Date().toISOString().slice(0, 10),
+        });
+        status.textContent = '已保存个人价格记录。';
+        priceInput.value = '';
+        noteInput.value = '';
+        await refresh();
+      } catch (error) {
+        status.textContent = `保存失败：${error.message}`;
+      }
+    });
+
+    refresh();
+  </script>
+</BaseLayout>
+
