@@ -8,7 +8,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <div class="section__header section__header--tight">
         <div>
           <h1 class="product-title" style="font-size: clamp(1.8rem, 3.6vw, 2.8rem);">你的价格历史和收藏，都在这里。</h1>
-          <p class="product-sub">登录后可记录购买价、收藏商品和门店，并随时回看。</p>
+          <p class="product-sub">登录后可记录购买价、添加商品收藏和门店，并随时回看。</p>
         </div>
         <div class="pillrow">
           <span class="pill">最近浏览</span>
@@ -28,8 +28,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="list" id="my-logs">
             <div class="list__item">
               <div>
-                <strong>先登录</strong>
-                <small>登录后会自动同步你的个人价格历史。</small>
+                <strong>请先登录</strong>
+                <small>登录后同步个人价格历史。</small>
               </div>
               <span class="meta">me</span>
             </div>
@@ -40,12 +40,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="section__header section__header--tight">
             <div>
               <h3>最近浏览</h3>
-              <p>商品页会自动把刚看过的药品放进来。</p>
+              <p>商品页会带入最近查看的药品。</p>
             </div>
             <button class="button button--ghost" id="clear-recent-views" type="button">清空</button>
           </div>
           <div class="feed" id="recent-views">
-            <div class="notice notice--compact">从扫码或搜索点进商品后，最近浏览会显示在这里。</div>
+            <div class="notice notice--compact">最近浏览会显示在这里。</div>
           </div>
         </section>
 
@@ -67,7 +67,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             </div>
           </div>
           <div class="feed" id="my-favorites">
-            <div class="notice notice--compact">登录后可以看到收藏列表。</div>
+            <div class="notice notice--compact">登录后即可查看收藏列表。</div>
           </div>
         </section>
 
@@ -98,9 +98,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <input id="log-note" placeholder="备注，例如会员价 / 促销 / 税后" />
             </label>
             <div class="pillrow">
-              <button class="button" type="submit">保存记录</button>
-              <button class="button button--ghost" id="favorite-product-button" type="button">收藏商品</button>
-              <button class="button button--ghost" id="favorite-store-button" type="button">收藏门店</button>
+              <button class="button" type="submit">保存价格记录</button>
+              <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>
+              <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button>
             </div>
             <div class="notice notice--compact" id="log-status">正在确认登录状态。</div>
           </form>
@@ -188,7 +188,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="feed__item">
             <div>
               <strong>暂无浏览记录</strong>
-              <small>从扫码或搜索点进商品后，会自动显示在这里。</small>
+              <small>最近浏览会显示在这里。</small>
             </div>
             <span class="price">recent</span>
           </div>
@@ -205,7 +205,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       if (favoritesSummary) {
         favoritesSummary.textContent = favoritesList.length
           ? `共 ${favoritesList.length} 项收藏，当前显示 ${filtered.length} 项，按${favoriteSort === 'recent' ? '最近添加' : '最早添加'}排序。`
-          : '登录后可以看到收藏列表。';
+          : '登录后即可查看收藏列表。';
       }
       favsEl.innerHTML = filtered.length
         ? filtered.map((fav) => `
@@ -225,7 +225,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="feed__item">
             <div>
               <strong>${favoritesList.length ? '当前筛选下没有收藏' : '暂无收藏'}</strong>
-              <small>${favoritesList.length ? '换个筛选条件看看，或者先收藏商品或门店。' : '收藏商品或门店后会显示在这里。'}</small>
+              <small>${favoritesList.length ? '换个筛选条件看看，或者先添加商品收藏或门店。' : '添加后会显示在这里。'}</small>
             </div>
             <span class="price">暂无</span>
           </div>
@@ -277,7 +277,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       logsEl.innerHTML = `
         <div class="list__item">
           <div>
-            <strong>先登录</strong>
+            <strong>请先登录</strong>
             <small>先到登录页完成邮箱密码登录。</small>
           </div>
           <span class="meta">offline</span>
@@ -287,12 +287,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <div class="feed__item">
           <div>
             <strong>未登录</strong>
-            <small>收藏内容会在登录后出现。</small>
+            <small>收藏内容会在登录后显示。</small>
           </div>
           <span class="price">offline</span>
         </div>
       `;
-      status.textContent = '登录后才能保存个人记录、收藏商品和门店。';
+      status.textContent = '登录后才能保存个人记录、添加商品收藏和门店。';
       setControlsDisabled(true);
     }
 
@@ -360,13 +360,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         noteInput.value = '';
         await refresh();
       } catch (error) {
-        status.textContent = `保存失败：${error.message}`;
+        status.textContent = `记录失败：${error.message}`;
       }
     });
 
     favoriteProductButton?.addEventListener('click', async () => {
       if (!productInput?.value) {
-        status.textContent = '先选择一个商品再收藏。';
+        status.textContent = '先选择一个商品再添加收藏。';
         return;
       }
       try {
@@ -380,7 +380,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     favoriteStoreButton?.addEventListener('click', async () => {
       if (!storeInput?.value) {
-        status.textContent = '先选择一个门店再收藏。';
+        status.textContent = '先选择一个门店再添加收藏。';
         return;
       }
       try {

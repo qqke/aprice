@@ -10,5 +10,7 @@
 ## Review
 
 - 认证主流程已从 magic link 切换为邮箱密码登录 / 注册 / 找回密码，并且已通过 `npm run check`、`npm test`、`npm run build` 验证。
+- 会话感知的顶栏登录入口和登录页已补齐：已登录时显示退出/切换账号，返回登录页时隐藏注册登录表单。
 - 登录页、顶栏会话徽章、退出登录和恢复密码回调都已接通，旧的 `signInWithOtp` 调用和 magic link 文案已清理。
 - `npm run check` 仍保留了 `tests/admin-page-browser.test.mjs` 的 3 条 TypeScript hint，但没有阻断构建或测试。
+

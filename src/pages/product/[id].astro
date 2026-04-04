@@ -34,9 +34,9 @@ const { product } = Astro.props as { product: Product };
           <h1 class="product-title" style="font-size: clamp(1.8rem, 4vw, 3rem);">{product.name}</h1>
           <p class="product-sub" style="max-width: 58ch;">{product.description}</p>
           <div class="pillrow">
-            <button class="button button--ghost" id="favorite-product-button" type="button">收藏当前商品</button>
-            <button class="button button--ghost" id="favorite-store-button" type="button">收藏当前门店</button>
-            <span class="pill" id="favorite-status">登录后可一键收藏。</span>
+            <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>
+            <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button>
+            <span class="pill" id="favorite-status">登录后即可添加收藏。</span>
           </div>
         </div>
       </div>
@@ -50,9 +50,9 @@ const { product } = Astro.props as { product: Product };
             </div>
             <button class="button button--ghost" id="geo-sort" type="button">按当前位置重排</button>
           </div>
-          <div class="notice notice--compact" id="geo-status" style="margin-bottom:12px;">正在同步 Supabase 价格。</div>
+          <div class="notice notice--compact" id="geo-status" style="margin-bottom:12px;">正在同步价格数据。</div>
           <div class="feed" id="price-list">
-            <div class="notice notice--compact">正在同步价格，结果会在这里显示。</div>
+            <div class="notice notice--compact">价格结果会显示在这里。</div>
           </div>
         </section>
 
@@ -63,9 +63,9 @@ const { product } = Astro.props as { product: Product };
               <p>价格流之外，也能快速扫到门店分布。</p>
             </div>
           </div>
-          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">门店列表会在价格加载后同步显示。</div>
+          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">价格加载后，门店列表会显示。</div>
           <div class="feed" id="nearby-store-list">
-            <div class="notice notice--compact">正在同步门店，价格加载后会显示。</div>
+            <div class="notice notice--compact">价格加载后会显示。</div>
           </div>
         </section>
       </div>
@@ -91,7 +91,7 @@ const { product } = Astro.props as { product: Product };
                   <input id="personal-note" placeholder="备注" />
                 </label>
               </div>
-              <button class="button" type="submit">保存到我的价格</button>
+              <button class="button" type="submit">记录个人价格</button>
               <div class="notice notice--compact" id="personal-status">登录后即可记录个人购买价。</div>
             </form>
           </section>
@@ -108,7 +108,7 @@ const { product } = Astro.props as { product: Product };
                   <div class="pillrow" id="insight-pills">
                     <span class="pill">同步中</span>
                   </div>
-                  <small>页面加载后会用真实 Supabase 价格补全这里的摘要。</small>
+                  <small>摘要会自动补全。</small>
                 </div>
                 <span class="price">摘要</span>
               </div>
@@ -127,7 +127,7 @@ const { product } = Astro.props as { product: Product };
               </div>
             </div>
             <div class="feed" id="trend-list">
-              <div class="notice notice--compact">近期价格采样会在这里按时间线显示。</div>
+              <div class="notice notice--compact">近期价格采样会按时间线显示。</div>
             </div>
           </section>
         </div>
@@ -321,7 +321,7 @@ const { product } = Astro.props as { product: Product };
             <div class="feed__item">
               <div>
                 <strong>暂无趋势</strong>
-                <small>先插入几条价格记录，趋势会自动出现。</small>
+                <small>先插入几条价格记录，趋势就会出现。</small>
               </div>
               <span class="price">暂无</span>
             </div>
@@ -443,7 +443,7 @@ const { product } = Astro.props as { product: Product };
     favoriteButton?.addEventListener('click', async () => {
       const user = await getCurrentUser();
       if (!user) {
-        if (favoriteStatus) favoriteStatus.textContent = '请先登录后再收藏。';
+        if (favoriteStatus) favoriteStatus.textContent = '请先登录后再添加商品收藏。';
         window.location.assign(resolveBase('login/'));
         return;
       }
@@ -451,7 +451,7 @@ const { product } = Astro.props as { product: Product };
       try {
         const result = await toggleFavorite('product', productId);
         if (favoriteStatus) {
-          favoriteStatus.textContent = result.action === 'added' ? '已收藏当前商品。' : '已取消收藏。';
+          favoriteStatus.textContent = result.action === 'added' ? '已添加商品收藏。' : '已取消商品收藏。';
         }
       } catch (error) {
         if (favoriteStatus) favoriteStatus.textContent = `收藏失败：${error.message}`;
@@ -461,20 +461,20 @@ const { product } = Astro.props as { product: Product };
     favoriteStoreButton?.addEventListener('click', async () => {
       const user = await getCurrentUser();
       if (!user) {
-        if (favoriteStatus) favoriteStatus.textContent = '请先登录后再收藏门店。';
+        if (favoriteStatus) favoriteStatus.textContent = '请先登录后再添加门店收藏。';
         window.location.assign(resolveBase('login/'));
         return;
       }
 
       if (!activeStoreId) {
-        if (favoriteStatus) favoriteStatus.textContent = '当前还没有可收藏的门店。';
+        if (favoriteStatus) favoriteStatus.textContent = '当前还没有可添加收藏的门店。';
         return;
       }
 
       try {
         const result = await toggleFavorite('store', activeStoreId);
         if (favoriteStatus) {
-          favoriteStatus.textContent = result.action === 'added' ? '已收藏当前门店。' : '已取消门店收藏。';
+          favoriteStatus.textContent = result.action === 'added' ? '已添加门店收藏。' : '已取消门店收藏。';
         }
       } catch (error) {
         if (favoriteStatus) favoriteStatus.textContent = `收藏失败：${error.message}`;
@@ -489,7 +489,7 @@ const { product } = Astro.props as { product: Product };
 
       const user = await getCurrentUser();
       if (!user) {
-        if (favoriteStatus) favoriteStatus.textContent = '请先登录后再收藏门店。';
+        if (favoriteStatus) favoriteStatus.textContent = '请先登录后再添加门店收藏。';
         window.location.assign(resolveBase('login/'));
         return;
       }
@@ -497,7 +497,7 @@ const { product } = Astro.props as { product: Product };
       try {
         const result = await toggleFavorite('store', storeId);
         if (favoriteStatus) {
-          favoriteStatus.textContent = result.action === 'added' ? '已收藏门店。' : '已取消门店收藏。';
+          favoriteStatus.textContent = result.action === 'added' ? '已添加门店收藏。' : '已取消门店收藏。';
         }
       } catch (error) {
         if (favoriteStatus) favoriteStatus.textContent = `收藏失败：${error.message}`;
@@ -524,7 +524,7 @@ const { product } = Astro.props as { product: Product };
       event.preventDefault();
       const user = await getCurrentUser();
       if (!user) {
-        status.textContent = '请先登录后再保存。';
+        status.textContent = '请先登录后再记录。';
         window.location.assign(resolveBase('login/'));
         return;
       }
@@ -541,7 +541,7 @@ const { product } = Astro.props as { product: Product };
         price.value = '';
         note.value = '';
       } catch (error) {
-        status.textContent = `保存失败：${error.message}`;
+        status.textContent = `记录失败：${error.message}`;
       }
     });
 

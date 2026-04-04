@@ -12,7 +12,7 @@ const nav = [
   { href: `${base}`, label: '首页' },
   { href: `${base}scan/`, label: '扫码' },
   { href: `${base}me/`, label: '我的' },
-  { href: `${base}login/`, label: '登录' },
+  { href: `${base}login/`, label: '登录', auth: true },
 ];
 ---
 <!doctype html>
@@ -34,7 +34,7 @@ const nav = [
         </a>
         <nav class="nav" aria-label="Primary">
           {nav.map((item) => (
-            <a href={item.href} aria-current={current === item.href ? 'page' : undefined}>
+            <a href={item.href} data-auth-nav={item.auth ? 'true' : undefined} aria-current={current === item.href ? 'page' : undefined}>
               {item.label}
             </a>
           ))}
@@ -49,9 +49,10 @@ const nav = [
       <slot />
     </main>
     <script type="module" is:inline>
-      import { fetchCurrentProfile, getCurrentUser, resolveBase, subscribeAuthState } from '/aprice/browser.js';
+      import { fetchCurrentProfile, getCurrentUser, resolveBase, signOut, subscribeAuthState } from '/aprice/browser.js';
 
       const chip = document.querySelector('#session-chip');
+      const authNav = document.querySelector('[data-auth-nav]');
       let unsubscribeAuth = null;
 
       // 顶栏会话徽章既要显示当前用户，也要跟随 Supabase 的 auth state 变化实时刷新。
@@ -63,6 +64,16 @@ const nav = [
             chip.textContent = '未登录';
             chip.href = resolveBase('login/');
             chip.className = 'chip session-chip session-chip--guest';
+            if (authNav) {
+              authNav.textContent = '登录';
+              authNav.href = resolveBase('login/');
+              authNav.dataset.authState = 'guest';
+              if (window.location.pathname.endsWith('/login/')) {
+                authNav.setAttribute('aria-current', 'page');
+              } else {
+                authNav.removeAttribute('aria-current');
+              }
+            }
             return;
           }
 
@@ -72,12 +83,37 @@ const nav = [
           chip.textContent = label;
           chip.href = isAdmin ? resolveBase('admin/') : resolveBase('me/');
           chip.className = isAdmin ? 'chip session-chip session-chip--admin' : 'chip session-chip session-chip--member';
+          if (authNav) {
+            authNav.textContent = '退出登录';
+            authNav.href = '#';
+            authNav.dataset.authState = 'signed-in';
+            authNav.removeAttribute('aria-current');
+          }
         } catch {
           chip.textContent = '会话';
           chip.href = resolveBase('login/');
           chip.className = 'chip session-chip session-chip--guest';
+          if (authNav) {
+            authNav.textContent = '登录';
+            authNav.href = resolveBase('login/');
+            authNav.dataset.authState = 'guest';
+            if (window.location.pathname.endsWith('/login/')) {
+              authNav.setAttribute('aria-current', 'page');
+            } else {
+              authNav.removeAttribute('aria-current');
+            }
+          }
         }
       }
+
+      // 顶栏登录入口会根据登录状态在“登录”和“退出”之间切换，避免已登录时还看到登录按钮。
+      authNav?.addEventListener('click', async (event) => {
+        if (authNav.dataset.authState !== 'signed-in') return;
+        event.preventDefault();
+        await signOut();
+        await refreshSessionChip();
+        window.location.assign(resolveBase('login/'));
+      });
 
       // 订阅 auth state change，保证登录、登出和恢复密码后的 UI 不会停留在旧状态。
       unsubscribeAuth = await subscribeAuthState(() => {
@@ -91,3 +127,4 @@ const nav = [
     </script>
   </body>
 </html>
+

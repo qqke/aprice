@@ -2,17 +2,17 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { resolveBase } from '../lib/browser.js';
 ---
-<BaseLayout title="登录 - Aprice" description="Supabase 邮箱密码登录、注册和重置密码。">
+<BaseLayout title="登录 - Aprice" description="邮箱密码登录、注册和重置密码。">
   <section class="section section--first-workspace">
     <div class="shell">
       <div class="section__header section__header--tight">
         <div>
           <div class="eyebrow">登录 · 账号入口</div>
           <h1 class="product-title" style="font-size: clamp(1.8rem, 3.8vw, 3rem);">邮箱密码登录后，个人数据才会生效。</h1>
-          <p class="product-sub">这个页面负责邮箱密码注册、登录、找回密码，以及 Supabase 的会话检查。</p>
+          <p class="product-sub">这个页面负责邮箱密码注册、登录和找回密码。</p>
         </div>
         <div class="pillrow">
-          <span class="pill">Supabase Auth</span>
+          <span class="pill">邮箱密码</span>
         </div>
       </div>
 
@@ -26,6 +26,22 @@ import { resolveBase } from '../lib/browser.js';
             <span class="pill" id="auth-panel-pill">登录</span>
           </div>
 
+          <div class="stack" id="signed-in-state" hidden>
+            <div class="notice notice--compact" id="signed-in-message">账号已登录。</div>
+            <div class="list__item">
+              <div>
+                <strong id="signed-in-label">当前账号</strong>
+                <small id="signed-in-subtitle">可前往个人页继续操作。</small>
+              </div>
+              <span class="meta" id="signed-in-role">member</span>
+            </div>
+            <div class="pillrow">
+              <a class="button" href={resolveBase('me/')}>前往个人页</a>
+              <button class="button button--ghost" type="button" id="switch-account-button">切换账号</button>
+            </div>
+          </div>
+
+          <div id="auth-form-shell">
           <form class="form" id="auth-form">
             <label class="field" for="email" id="email-field">
               <input id="email" type="email" placeholder="name@example.com" autocomplete="email" required />
@@ -46,21 +62,22 @@ import { resolveBase } from '../lib/browser.js';
 
           <div class="divider"></div>
           <div class="stack">
-            <div class="notice notice--compact" id="auth-hint">Supabase 会话会自动持久化，退出后可重新登录继续使用。</div>
+            <div class="notice notice--compact" id="auth-hint">登录状态会自动保留，可随时退出并重新登录。</div>
             <a class="button button--ghost" href={resolveBase('')}>返回首页继续搜索</a>
           </div>
+        </div>
         </section>
 
         <section class="tile tile--flow">
           <div class="section__header section__header--tight">
             <div>
-              <h3>当前会话</h3>
-              <p>这里显示登录状态和 profile 角色。</p>
+              <h3>账号状态</h3>
+              <p>当前账号状态。</p>
             </div>
           </div>
 
           <div class="list" id="session-state">
-            <div class="notice notice--compact">页面会自动检查当前会话。</div>
+            <div class="notice notice--compact">登录状态已同步。</div>
           </div>
 
           <div class="divider"></div>
@@ -100,11 +117,19 @@ import { resolveBase } from '../lib/browser.js';
     const emailField = document.querySelector('#email-field');
     const passwordField = document.querySelector('#password-field');
     const confirmField = document.querySelector('#confirm-field');
+    const authFormShell = document.querySelector('#auth-form-shell');
+    const signedInState = document.querySelector('#signed-in-state');
+    const signedInMessage = document.querySelector('#signed-in-message');
+    const signedInLabel = document.querySelector('#signed-in-label');
+    const signedInSubtitle = document.querySelector('#signed-in-subtitle');
+    const signedInRole = document.querySelector('#signed-in-role');
+    const switchAccountButton = document.querySelector('#switch-account-button');
 
     const url = new URL(window.location.href);
     const isRecoveryRedirect = url.searchParams.get('mode') === 'reset' || url.searchParams.get('type') === 'recovery';
     let mode = isRecoveryRedirect ? 'reset-password' : 'login';
     let unsubscribeAuth = null;
+    let currentSession = null;
 
     const modeConfig = {
       login: {
@@ -119,13 +144,13 @@ import { resolveBase } from '../lib/browser.js';
       },
       register: {
         title: '注册账号',
-        description: '输入邮箱、密码和确认密码，完成 Supabase 邮箱注册。',
+        description: '输入邮箱、密码和确认密码，完成注册。',
         pill: '注册',
         submit: '创建账号',
         modeToggle: '切换到登录',
         forgotToggle: '忘记密码',
-        hint: '注册后如果项目开启邮箱确认，Supabase 会发确认邮件。',
-        status: '注册后如果项目开启邮箱确认，Supabase 会发确认邮件。',
+        hint: '注册后如果项目开启邮箱确认，会收到一封确认邮件。',
+        status: '注册后如果项目开启邮箱确认，会收到一封确认邮件。',
       },
       'request-reset': {
         title: '找回密码',
@@ -182,6 +207,15 @@ import { resolveBase } from '../lib/browser.js';
         confirmPasswordInput.required = showConfirm;
         confirmPasswordInput.value = '';
       }
+
+      syncAuthPanels();
+    }
+
+    // 根据当前登录状态和当前模式，决定是展示邮箱密码表单还是已登录摘要。
+    function syncAuthPanels() {
+      const showForm = !currentSession || mode === 'reset-password';
+      if (authFormShell) authFormShell.hidden = !showForm;
+      if (signedInState) signedInState.hidden = showForm || !currentSession;
     }
 
     // 统一校验邮箱、密码长度和确认密码，避免把无效请求发给 Supabase。
@@ -223,10 +257,11 @@ import { resolveBase } from '../lib/browser.js';
       return message || '未知错误，请稍后再试。';
     }
 
-    // 读取当前会话并渲染顶部状态卡，登录、登出和重置后都会自动刷新。
+    // 读取登录状态并渲染顶部状态卡，登录、登出和重置后都会自动刷新。
     async function refreshSession() {
       try {
         const session = await getSession();
+        currentSession = session ?? null;
         if (!session?.user) {
           sessionState.innerHTML = `
             <div class="list__item">
@@ -237,28 +272,42 @@ import { resolveBase } from '../lib/browser.js';
               <span class="meta">guest</span>
             </div>
           `;
+          if (mode === 'login') {
+            if (panelTitle) panelTitle.textContent = modeConfig.login.title;
+            if (panelDescription) panelDescription.textContent = modeConfig.login.description;
+            if (panelPill) panelPill.textContent = modeConfig.login.pill;
+          }
           if (mode === 'reset-password') {
             if (status) status.textContent = '请先从邮件中的重置链接进入，再设置新密码。';
           }
+          syncAuthPanels();
           return;
         }
 
         const profile = await fetchCurrentProfile();
         const role = profile?.role || 'member';
         const label = profile?.full_name || session.user.email || '已登录用户';
-        const subtitle = role === 'admin' ? '管理员权限已开启' : '可以继续保存个人价格和收藏';
         sessionState.innerHTML = `
           <div class="list__item">
             <div>
               <strong>${label}</strong>
-              <small>${subtitle}</small>
+              <small>可前往个人页继续操作。</small>
             </div>
             <span class="meta">${role}</span>
           </div>
         `;
         if (mode === 'reset-password' && status) {
           status.textContent = '已获取重置会话，可以直接更新新密码。';
+        } else {
+          if (panelTitle) panelTitle.textContent = '账号状态';
+          if (panelDescription) panelDescription.textContent = '账号已登录，可前往个人页继续操作。';
+          if (panelPill) panelPill.textContent = '已登录';
+          if (signedInMessage) signedInMessage.textContent = '账号已登录。';
+          if (signedInLabel) signedInLabel.textContent = label;
+          if (signedInSubtitle) signedInSubtitle.textContent = '可前往个人页继续操作。';
+          if (signedInRole) signedInRole.textContent = role;
         }
+        syncAuthPanels();
       } catch (error) {
         sessionState.innerHTML = `
           <div class="list__item">
@@ -269,6 +318,8 @@ import { resolveBase } from '../lib/browser.js';
             <span class="meta">error</span>
           </div>
         `;
+        currentSession = null;
+        syncAuthPanels();
       }
     }
 
@@ -295,7 +346,7 @@ import { resolveBase } from '../lib/browser.js';
       try {
         if (submitMode === 'login') {
           await signInWithEmailPassword({ email, password });
-          if (status) status.textContent = '登录成功，已同步当前会话。';
+          if (status) status.textContent = '登录成功，已同步登录状态。';
         } else if (submitMode === 'register') {
           const result = await signUpWithEmailPassword({ email, password });
           if (emailInput) emailInput.value = email;
@@ -348,6 +399,18 @@ import { resolveBase } from '../lib/browser.js';
 
     form?.addEventListener('submit', handleSubmit);
 
+    // 切换账号会先退出当前账号，然后重新展开登录表单。
+    switchAccountButton?.addEventListener('click', async () => {
+      await signOut();
+      setMode('login');
+      if (status) {
+        status.dataset.locked = 'true';
+        status.textContent = '已切换账号，请重新登录。';
+        delete status.dataset.locked;
+      }
+      await refreshSession();
+    });
+
     logoutButton?.addEventListener('click', async () => {
       await signOut();
       if (status) {
@@ -355,6 +418,7 @@ import { resolveBase } from '../lib/browser.js';
         status.textContent = '已退出登录。';
         delete status.dataset.locked;
       }
+      setMode('login');
       await refreshSession();
       window.location.assign(resolveBase(''));
     });

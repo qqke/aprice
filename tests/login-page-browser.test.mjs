@@ -74,6 +74,40 @@ function makeEsmShimModuleBody() {
   return `
     let session = null;
     const listeners = new Set();
+    const storageKey = '__aprice_test_session__';
+
+    function readSession() {
+      try {
+        const raw = localStorage.getItem(storageKey);
+        if (raw) return JSON.parse(raw);
+      } catch {}
+
+      try {
+        const marker = storageKey + '=';
+        const rawName = window.name || '';
+        if (rawName.startsWith(marker)) {
+          return JSON.parse(rawName.slice(marker.length));
+        }
+      } catch {}
+
+      return session;
+    }
+
+    function writeSession(nextSession) {
+      session = nextSession;
+      try {
+        if (nextSession) {
+          const serialized = JSON.stringify(nextSession);
+          localStorage.setItem(storageKey, serialized);
+          window.name = storageKey + '=' + serialized;
+        } else {
+          localStorage.removeItem(storageKey);
+          window.name = '';
+        }
+      } catch {}
+    }
+
+    session = readSession();
 
     function notify(event) {
       for (const listener of listeners) {
@@ -85,16 +119,18 @@ function makeEsmShimModuleBody() {
       return {
         auth: {
           async getSession() {
+            session = readSession();
             return { data: { session }, error: null };
           },
           async getUser() {
+            session = readSession();
             return { data: { user: session?.user || null }, error: null };
           },
           async signUp({ email }) {
             return { data: { user: { id: 'new-user', email }, session: null }, error: null };
           },
           async signInWithPassword({ email }) {
-            session = { user: { id: 'signed-in-user', email }, access_token: 'test-access-token' };
+            writeSession({ user: { id: 'signed-in-user', email }, access_token: 'test-access-token' });
             notify('SIGNED_IN');
             return { data: { session }, error: null };
           },
@@ -105,7 +141,7 @@ function makeEsmShimModuleBody() {
             return { data: { user: session?.user || null }, error: null };
           },
           async signOut() {
-            session = null;
+            writeSession(null);
             notify('SIGNED_OUT');
             return { error: null };
           },
@@ -117,7 +153,7 @@ function makeEsmShimModuleBody() {
         },
       };
     }
-  `.trim();
+  `;
 }
 
 async function main() {
@@ -201,6 +237,25 @@ async function main() {
 
     await page.waitForFunction(() => /登录成功/.test(document.querySelector('#auth-status')?.textContent || ''));
     await page.waitForFunction(() => /name@example.com/.test(document.querySelector('#session-state')?.textContent || ''));
+
+    await page.evaluate((email) => {
+      const session = {
+        user: { id: 'signed-in-user', email },
+        access_token: 'test-access-token',
+      };
+      localStorage.setItem('__aprice_test_session__', JSON.stringify(session));
+      window.name = '__aprice_test_session__=' + JSON.stringify(session);
+    }, 'name@example.com');
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => document.querySelector('#auth-form-shell')?.hidden === true);
+    await page.waitForFunction(() => !document.querySelector('#signed-in-state')?.hidden);
+    await page.waitForFunction(() => /退出/.test(document.querySelector('[data-auth-nav]')?.textContent || ''));
+
+    await page.locator('#switch-account-button').click();
+    await page.waitForFunction(() => document.querySelector('#auth-form-shell')?.hidden === false);
+    await page.waitForFunction(() => document.querySelector('#signed-in-state')?.hidden === true);
+    await page.waitForFunction(() => /登录/.test(document.querySelector('[data-auth-nav]')?.textContent || ''));
 
     await page.locator('#logout-button').click();
     await page.waitForURL('**/aprice/');

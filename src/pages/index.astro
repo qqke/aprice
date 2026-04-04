@@ -95,7 +95,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             <span class="pill">检索</span>
           </div>
           <div class="list" id="search-results">
-            <div class="notice notice--compact">命中结果会在这里展开。</div>
+            <div class="notice notice--compact">搜索结果会显示在这里。</div>
           </div>
         </section>
         <section class="tile tile--flow">
@@ -104,7 +104,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             <p>先从最近更新的几款开始。</p>
           </div>
           <div class="feed" id="popular-products">
-            <div class="notice notice--compact">最新更新的商品会在这里出现。</div>
+            <div class="notice notice--compact">最新更新的商品会显示在这里。</div>
           </div>
         </section>
       </div>
@@ -122,9 +122,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </div>
       <div class="grid">
         <section class="tile tile--wide tile--flow">
-          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">选择商品后，这里显示附近价格。</div>
+          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">选择商品后显示附近价格。</div>
           <div class="list" id="nearby-results">
-            <div class="notice notice--compact">选择商品后，这里显示附近价格。</div>
+            <div class="notice notice--compact">选择商品后显示附近价格。</div>
           </div>
         </section>
         <section class="tile tile--flow">
@@ -137,18 +137,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           </div>
           <div class="notice notice--compact" id="recent-status" style="margin-bottom:12px;">正在同步最近采样数据。</div>
           <div class="timeline" id="recently-viewed">
-            <div class="notice notice--compact">最近采样会在这里按时间线更新。</div>
+            <div class="notice notice--compact">最近采样会按时间线更新。</div>
           </div>
         </section>
       </div>
-    </div>
-  </section>
-
-  <section class="section footer">
-    <div class="shell">
-      <p>
-        这是一个静态站点 MVP。登录、数据与权限由 Supabase 提供，GitHub Pages 只负责托管前端页面。
-      </p>
     </div>
   </section>
 
@@ -229,7 +221,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="feed__item">
             <div>
               <strong>暂无商品</strong>
-              <small>先在 Supabase 里插入商品数据。</small>
+              <small>先录入商品数据。</small>
             </div>
             <span class="price">暂无</span>
           </div>
@@ -238,7 +230,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="list__item">
             <div>
               <strong>暂无商品</strong>
-              <small>先在 Supabase 里插入商品数据。</small>
+              <small>先录入商品数据。</small>
             </div>
             <span class="meta">暂无</span>
           </div>
@@ -317,7 +309,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         } else {
           status.textContent = items.length
             ? `已加载 ${items.length} 个商品，直接输入关键词继续筛选。`
-            : '当前还没有商品数据，先在 Supabase 里导入商品。';
+            : '当前还没有商品数据，先导入商品。';
         }
         renderProducts(items);
         if (items.length) {
@@ -386,7 +378,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="feed__item">
             <div>
               <strong>暂无采样</strong>
-              <small>先在 Supabase 里插入价格记录，最近采样会自动出现在这里。</small>
+              <small>先插入价格记录，最近采样会自动更新。</small>
             </div>
             <span class="price">暂无</span>
           </div>
@@ -485,7 +477,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="feed__item">
             <div>
               <strong>价格读取失败</strong>
-              <small>请检查 Supabase 连接和表权限。</small>
+              <small>请检查后端连接和表权限。</small>
             </div>
             <span class="price">error</span>
           </div>

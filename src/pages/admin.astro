@@ -8,15 +8,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <div>
           <div class="eyebrow">管理 · 维护工作台</div>
           <h1 class="product-title" style="font-size: clamp(1.8rem, 3.8vw, 3rem);">商品、门店、价格，一屏维护。</h1>
-          <p class="product-sub">只有 `role = admin` 的登录用户可用。这里通过 Supabase RPC 写入基础数据和价格采样。</p>
+          <p class="product-sub">仅管理员账号可用。这里通过后端调用写入基础数据和价格采样。</p>
         </div>
         <div class="pillrow">
           <a class="button button--ghost" href={`${import.meta.env.BASE_URL || '/'}login/`}>切换账号</a>
-          <button class="button button--ghost" id="admin-logout" type="button">退出</button>
+          <button class="button button--ghost" id="admin-logout" type="button">退出登录</button>
         </div>
       </div>
 
-      <div class="notice notice--warning" id="admin-status" style="margin-bottom:16px;">正在检查会话与权限。</div>
+      <div class="notice notice--warning" id="admin-status" style="margin-bottom:16px;">正在检查登录状态与权限。</div>
 
       <div class="grid">
         <section class="tile tile--wide tile--flow">
@@ -61,13 +61,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="section__header section__header--tight">
             <div>
               <h3>当前权限</h3>
-              <p>登录后会检查角色并加载后台数据。</p>
+              <p>登录后会检查账号权限并加载后台数据。</p>
             </div>
           </div>
           <div class="stack">
-            <div class="notice notice--compact">这个页只给维护账号使用。普通用户即使打开，也会被权限判断拦住。</div>
+            <div class="notice notice--compact">仅供维护账号使用。普通用户打开后会被权限检查拦住。</div>
             <div class="list" id="admin-access">
-              <div class="notice notice--compact">会先读取当前会话，再检查 profile.role。</div>
+              <div class="notice notice--compact">会先读取当前登录状态，再检查账号权限。</div>
             </div>
           </div>
         </section>
@@ -372,7 +372,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     async function loadData() {
       const [user, profile] = await Promise.all([getCurrentUser(), fetchCurrentProfile()]);
       if (!user) {
-        if (status) status.textContent = '请先登录，再用 role=admin 的账号进入管理页。';
+        if (status) status.textContent = '请先登录，再使用管理员账号进入管理页。';
         if (accessState) {
           accessState.innerHTML = `
             <div class="list__item">
@@ -387,7 +387,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         return false;
       }
       if (profile?.role !== 'admin') {
-        if (status) status.textContent = `当前账号不是管理员。当前 role: ${profile?.role || 'unknown'}`;
+        if (status) status.textContent = '当前账号不是管理员，请使用管理员账号进入管理页。';
         if (accessState) {
           accessState.innerHTML = `
             <div class="list__item">
