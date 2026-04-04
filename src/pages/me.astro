@@ -125,7 +125,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       resolveBase,
       savePersonalLog,
       toggleFavorite,
-    } from '../lib/browser.js';
+    } from '/aprice/browser.js';
 
     const logsEl = document.querySelector('#my-logs');
     const recentViewsEl = document.querySelector('#recent-views');
@@ -197,6 +197,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             <div class="feed__meta">
               <span class="price">收藏</span>
               <small>${fav.created_at ? formatDateTime(fav.created_at) : ''}</small>
+              <button class="button button--ghost" type="button" data-remove-favorite="${fav.id}" data-remove-favorite-type="${fav.entity_type}" data-remove-favorite-entity="${fav.entity_id}">取消</button>
             </div>
           </div>
         `).join('')
@@ -358,9 +359,32 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       status.textContent = '已清空最近浏览。';
     });
 
+    favsEl?.addEventListener('click', async (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const favoriteId = target.dataset.removeFavorite;
+      const favoriteType = target.dataset.removeFavoriteType;
+      const favoriteEntity = target.dataset.removeFavoriteEntity;
+      if (!favoriteId || !favoriteType || !favoriteEntity) return;
+
+      try {
+        await toggleFavorite(favoriteType, favoriteEntity);
+        status.textContent = '已更新收藏。';
+        await refresh();
+      } catch (error) {
+        status.textContent = `收藏失败：${error.message}`;
+      }
+    });
+
     refresh();
   </script>
 </BaseLayout>
+
+
+
+
+
+
 
 
 

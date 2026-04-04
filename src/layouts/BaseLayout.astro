@@ -42,11 +42,14 @@ const nav = [
         <a class="chip session-chip" id="session-chip" href={`${base}login/`}>未登录</a>
       </div>
     </header>
+    <script is:inline define:vars={{ baseUrl: base, supabaseUrl: import.meta.env.PUBLIC_SUPABASE_URL || '', supabaseAnonKey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '' }}>
+      window.__APriceConfig = { baseUrl, supabaseUrl, supabaseAnonKey };
+    </script>
     <main class="page">
       <slot />
     </main>
     <script type="module" is:inline>
-      import { fetchCurrentProfile, getCurrentUser, resolveBase } from '../lib/browser.js';
+      import { fetchCurrentProfile, getCurrentUser, resolveBase } from '/aprice/browser.js';
 
       const chip = document.querySelector('#session-chip');
 
@@ -78,3 +81,10 @@ const nav = [
     </script>
   </body>
 </html>
+
+
+
+
+
+
+

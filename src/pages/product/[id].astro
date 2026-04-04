@@ -128,6 +128,29 @@ const { product } = Astro.props as { product: Product };
           </section>
         </div>
       </section>
+
+      <section class="section">
+        <div class="grid">
+          <section class="tile tile--wide">
+            <div class="section__header section__header--tight">
+              <div>
+                <h3>最近变化</h3>
+                <p>看最新几条采样，就能知道这件商品是在涨还是在跌。</p>
+              </div>
+              <span class="pill">Trend</span>
+            </div>
+            <div class="feed" id="trend-list">
+              <div class="feed__item">
+                <div>
+                  <strong>加载中</strong>
+                  <small>正在读取最近价格变化。</small>
+                </div>
+                <span class="price">--</span>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
     </div>
   </section>
 
@@ -177,6 +200,7 @@ const { product } = Astro.props as { product: Product };
     const priceList = document.querySelector('#price-list');
     const nearbyStoreList = document.querySelector('#nearby-store-list');
     const insightPills = document.querySelector('#insight-pills');
+    const trendList = document.querySelector('#trend-list');
 
     let stores = [];
     let activeStoreId = '';
@@ -267,6 +291,17 @@ const { product } = Astro.props as { product: Product };
       if (!insightPills) return;
       if (!rows.length) {
         insightPills.innerHTML = '<span class="pill">暂无价格数据</span>';
+        if (trendList) {
+          trendList.innerHTML = `
+            <div class="feed__item">
+              <div>
+                <strong>暂无趋势</strong>
+                <small>先插入几条价格记录，趋势会自动出现。</small>
+              </div>
+              <span class="price">empty</span>
+            </div>
+          `;
+        }
         return;
       }
 
@@ -275,15 +310,63 @@ const { product } = Astro.props as { product: Product };
       const maxPrice = Math.max(...rows.map((row) => row.price_yen));
       const storeCount = new Set(rows.map((row) => row.store_id)).size;
       const gapToMin = latest ? latest.price_yen - minPrice : 0;
+      const older = rows[1];
+      const priceDelta = older ? latest.price_yen - older.price_yen : null;
       const trend = gapToMin === 0 ? '当前就是最低价' : (gapToMin > 0 ? `比最低价高 ${formatYen(gapToMin)}` : `比最低价低 ${formatYen(Math.abs(gapToMin))}`);
+      const change = priceDelta === null
+        ? '暂无上次采样'
+        : priceDelta === 0
+          ? '较上次采样持平'
+          : priceDelta > 0
+            ? `较上次采样涨 ${formatYen(priceDelta)}`
+            : `较上次采样降 ${formatYen(Math.abs(priceDelta))}`;
 
       insightPills.innerHTML = `
         <span class="pill">最低价 ¥${minPrice}</span>
         <span class="pill">最高价 ¥${maxPrice}</span>
         <span class="pill">${storeCount} 家门店</span>
         <span class="pill">${trend}</span>
+        <span class="pill">${change}</span>
         <span class="pill">最新采样：${latest?.stores?.name || 'unknown'}</span>
       `;
+
+      if (trendList) {
+        trendList.innerHTML = rows.slice(0, 4).map((row, index) => {
+          const nextRow = rows[index + 1];
+          const delta = nextRow ? row.price_yen - nextRow.price_yen : null;
+          const deltaLabel = delta === null
+            ? '最新'
+            : delta === 0
+              ? '持平'
+              : delta > 0
+                ? `+${formatYen(delta)}`
+                : `-${formatYen(Math.abs(delta))}`;
+          return index === 0 ? `
+            <div class="feed__item feed__item--featured">
+              <div class="feed__copy">
+                <div class="feed__kicker">最新采样</div>
+                <strong>${row.stores?.name || 'Unknown store'}</strong>
+                <small>${row.stores?.city || ''} · ${row.stores?.pref || ''} · ${row.is_member_price ? '会员价' : '公开价'}</small>
+              </div>
+              <div class="feed__meta">
+                <div class="price">${formatYen(row.price_yen)}</div>
+                <small>${deltaLabel}</small>
+              </div>
+            </div>
+          ` : `
+            <div class="feed__item">
+              <div>
+                <strong>${row.stores?.name || 'Unknown store'}</strong>
+                <small>${row.stores?.city || ''} · ${row.stores?.pref || ''} · ${row.is_member_price ? '会员价' : '公开价'}</small>
+              </div>
+              <div class="feed__meta">
+                <span class="price">${formatYen(row.price_yen)}</span>
+                <small>${deltaLabel}</small>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
     }
 
     async function loadPrices() {
@@ -415,3 +498,9 @@ const { product } = Astro.props as { product: Product };
     Promise.all([loadStores(), loadPrices()]);
   </script>
 </BaseLayout>
+
+
+
+
+
+
