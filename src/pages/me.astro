@@ -93,7 +93,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <button class="button button--ghost" id="favorite-product-button" type="button">收藏商品</button>
               <button class="button button--ghost" id="favorite-store-button" type="button">收藏门店</button>
             </div>
-            <div class="notice" id="log-status">先登录再保存个人记录。</div>
+            <div class="notice" id="log-status">正在确认登录状态。</div>
           </form>
         </section>
       </div>
@@ -102,18 +102,18 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   <script type="module">
     import {
+      clearRecentViews,
       fetchAllProducts,
       fetchAllStores,
       fetchFavorites,
       fetchPersonalLogs,
       fetchRecentViews,
-      clearRecentViews,
+      formatDateTime,
+      formatYen,
       getCurrentUser,
       resolveBase,
       savePersonalLog,
       toggleFavorite,
-      formatDateTime,
-      formatYen,
     } from '../lib/browser.js';
 
     const logsEl = document.querySelector('#my-logs');
@@ -129,8 +129,16 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const favoriteProductButton = document.querySelector('#favorite-product-button');
     const favoriteStoreButton = document.querySelector('#favorite-store-button');
 
+    const formControls = [productInput, storeInput, priceInput, noteInput, favoriteProductButton, favoriteStoreButton];
     let products = [];
     let stores = [];
+
+    function setControlsDisabled(disabled) {
+      formControls.forEach((control) => {
+        if (!control) return;
+        control.disabled = disabled;
+      });
+    }
 
     function productName(id) {
       return products.find((item) => item.id === id)?.name || id;
@@ -161,10 +169,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             <span class="meta">recent</span>
           </div>
         `;
-    }
-
-    function loadRecentViews() {
-      renderRecentViews(fetchRecentViews());
     }
 
     function renderFavorites(favorites) {
@@ -213,30 +217,39 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         `;
     }
 
+    function renderLoggedOutState() {
+      logsEl.innerHTML = `
+        <div class="list__item">
+          <div>
+            <strong>还没有登录</strong>
+            <small>先到登录页完成邮箱魔法链接登录。</small>
+          </div>
+          <span class="meta">offline</span>
+        </div>
+      `;
+      favsEl.innerHTML = `
+        <div class="list__item">
+          <div>
+            <strong>未登录</strong>
+            <small>收藏内容会在登录后出现。</small>
+          </div>
+          <span class="meta">offline</span>
+        </div>
+      `;
+      status.textContent = '登录后才能保存个人记录、收藏商品和门店。';
+      setControlsDisabled(true);
+    }
+
     async function refresh() {
-      loadRecentViews();
+      renderRecentViews(fetchRecentViews());
       const user = await getCurrentUser();
       if (!user) {
-        logsEl.innerHTML = `
-          <div class="list__item">
-            <div>
-              <strong>还没有登录</strong>
-              <small>先到登录页完成邮箱魔法链接登录。</small>
-            </div>
-            <span class="meta">offline</span>
-          </div>
-        `;
-        favsEl.innerHTML = `
-          <div class="list__item">
-            <div>
-              <strong>未登录</strong>
-              <small>收藏内容会在登录后出现。</small>
-            </div>
-            <span class="meta">offline</span>
-          </div>
-        `;
+        renderLoggedOutState();
         return;
       }
+
+      status.textContent = '正在同步你的价格记录和收藏...';
+      setControlsDisabled(false);
 
       const [loadedProducts, loadedStores, logs, favorites] = await Promise.all([
         fetchAllProducts(),
@@ -260,16 +273,28 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
       renderLogs(logs);
       renderFavorites(favorites);
+      status.textContent = logs.length || favorites.length
+        ? `已同步 ${logs.length} 条价格记录和 ${favorites.length} 条收藏。`
+        : '还没有个人价格记录，先保存第一笔吧。';
     }
 
     form?.addEventListener('submit', async (event) => {
       event.preventDefault();
       status.textContent = '正在保存...';
       try {
+        if (!productInput?.value) {
+          status.textContent = '先选择一个商品再保存。';
+          return;
+        }
+        const priceValue = Number(priceInput.value);
+        if (!Number.isFinite(priceValue) || priceValue <= 0) {
+          status.textContent = '请输入有效的价格。';
+          return;
+        }
         await savePersonalLog({
           product_id: productInput.value,
           store_id: storeInput.value || null,
-          price_yen: Number(priceInput.value),
+          price_yen: priceValue,
           note: noteInput.value.trim(),
           purchased_at: new Date().toISOString().slice(0, 10),
         });
@@ -283,6 +308,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     });
 
     favoriteProductButton?.addEventListener('click', async () => {
+      if (!productInput?.value) {
+        status.textContent = '先选择一个商品再收藏。';
+        return;
+      }
       try {
         await toggleFavorite('product', productInput.value);
         status.textContent = '已更新商品收藏。';
@@ -293,6 +322,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     });
 
     favoriteStoreButton?.addEventListener('click', async () => {
+      if (!storeInput?.value) {
+        status.textContent = '先选择一个门店再收藏。';
+        return;
+      }
       try {
         await toggleFavorite('store', storeInput.value);
         status.textContent = '已更新门店收藏。';
@@ -304,7 +337,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     clearRecentViewsButton?.addEventListener('click', () => {
       clearRecentViews();
-      loadRecentViews();
+      renderRecentViews(fetchRecentViews());
+      status.textContent = '已清空最近浏览。';
     });
 
     refresh();

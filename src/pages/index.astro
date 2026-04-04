@@ -83,7 +83,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <section class="tile tile--wide">
           <div class="section__header">
             <h3>搜索结果</h3>
-            <p id="search-status">正在读取真实商品。</p>
+            <p id="search-status">输入关键词、JAN 码或品牌名开始查价。</p>
           </div>
           <div class="list" id="search-results">
             <div class="list__item">
@@ -125,6 +125,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </div>
       <div class="grid">
         <section class="tile tile--wide">
+          <div class="notice" id="nearby-status" style="margin-bottom:12px;">先选一个商品，附近价格就会在这里出现。</div>
           <div class="list" id="nearby-results">
             <div class="list__item">
               <div>
@@ -139,6 +140,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="section__header">
             <h3>最近采样</h3>
           </div>
+          <div class="notice" id="recent-status" style="margin-bottom:12px;">正在读取最近价格采样。</div>
           <div class="list" id="recently-viewed">
             <div class="list__item">
               <div>
@@ -196,11 +198,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const status = document.querySelector('#search-status');
     const geolocateButton = document.querySelector('#geolocate-home');
     const popularProducts = document.querySelector('#popular-products');
+    const nearbyStatus = document.querySelector('#nearby-status');
     const nearbyResults = document.querySelector('#nearby-results');
     const heroProductLabel = document.querySelector('#hero-product-label');
     const heroPriceLabel = document.querySelector('#hero-price-label');
     const heroStoreLabel = document.querySelector('#hero-store-label');
     const recentlyViewed = document.querySelector('#recently-viewed');
+    const recentStatus = document.querySelector('#recent-status');
 
     let activeProduct = null;
 
@@ -218,6 +222,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     function renderProducts(items) {
       if (!items.length) {
+        status.textContent = '没有找到匹配商品，请试试更短的关键词、品牌名或 JAN 码。';
         popularProducts.innerHTML = `
           <div class="list__item">
             <div>
@@ -239,8 +244,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     async function renderNearbyForProduct(product) {
       if (!product) return;
+      if (nearbyStatus) nearbyStatus.textContent = `正在读取 ${product.name} 的门店价格。`;
       const prices = await fetchPricesForProduct(product.id);
       if (!prices.length) {
+        if (nearbyStatus) nearbyStatus.textContent = `${product.name} 还没有价格记录，先去商品页补第一笔。`;
         nearbyResults.innerHTML = `
           <div class="list__item">
             <div>
@@ -270,14 +277,27 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
       heroPriceLabel.textContent = `¥${Math.min(...prices.map((row) => row.price_yen))} 起`;
       heroStoreLabel.textContent = `${new Set(prices.map((row) => row.store_id)).size} 家门店`;
+      if (nearbyStatus) nearbyStatus.textContent = `${product.name} 已加载 ${prices.length} 条门店价格。`;
     }
 
     async function runSearch(term) {
+      const query = term.trim();
+      status.textContent = query ? `正在搜索“${query}”...` : '正在加载全部商品，输入关键词即可筛选。';
       const items = await searchProducts(term);
-      status.textContent = term ? `${items.length} 条结果` : '正在展示 Supabase 商品。';
+      if (query) {
+        status.textContent = items.length
+          ? `找到 ${items.length} 条匹配结果，点击即可进入商品页。`
+          : `没有找到“${query}”，可以换成品牌名、假名片段或 JAN 码。`;
+      } else {
+        status.textContent = items.length
+          ? `已加载 ${items.length} 个商品，直接输入关键词继续筛选。`
+          : '当前还没有商品数据，先在 Supabase 里导入商品。';
+      }
       renderProducts(items);
       if (items.length) {
         await renderNearbyForProduct(items[0]);
+      } else if (nearbyStatus) {
+        nearbyStatus.textContent = '先找到一个商品，附近价格才会显示。';
       }
     }
 
@@ -294,6 +314,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       try {
         const location = await geolocate();
         status.textContent = `当前位置：${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}。`;
+        if (nearbyStatus) nearbyStatus.textContent = activeProduct ? `正在按当前位置重排 ${activeProduct.name}。` : '先选一个商品，再按当前位置重排。';
         if (activeProduct) {
           const rows = await fetchNearbyPrices({ productId: activeProduct.id, lat: location.lat, lng: location.lng, radiusKm: 20 });
           nearbyResults.innerHTML = rows.length
@@ -310,9 +331,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               </div>
             `).join('')
             : nearbyResults.innerHTML;
+          if (nearbyStatus) {
+            nearbyStatus.textContent = rows.length
+              ? `已按当前位置重排 ${rows.length} 条价格。`
+              : `${activeProduct.name} 在当前位置附近还没有可比价格。`;
+          }
         }
       } catch (error) {
         status.textContent = `定位失败：${error.message}`;
+        if (nearbyStatus) nearbyStatus.textContent = '定位失败后仍可继续按商品名搜索。';
       } finally {
         geolocateButton.textContent = '使用当前位置';
       }
@@ -337,13 +364,20 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="list__item">
             <div>
               <strong>暂无采样</strong>
-              <small>先在 Supabase 里插入价格记录。</small>
+              <small>先在 Supabase 里插入价格记录，最近采样会自动出现在这里。</small>
             </div>
             <span class="meta">empty</span>
           </div>
         `;
+      if (recentStatus) {
+        recentStatus.textContent = rows.length
+          ? `已读取 ${rows.length} 条最近价格采样。`
+          : '当前没有最近价格采样。';
+      }
     }
+
     async function loadRecentPrices() {
+      if (recentStatus) recentStatus.textContent = '正在读取最近价格采样...';
       const rows = await fetchRecentPrices(6);
       renderRecentPrices(rows);
     }
@@ -351,9 +385,3 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     await Promise.all([loadRecentPrices(), runSearch('')]);
   </script>
 </BaseLayout>
-
-
-
-
-
-
