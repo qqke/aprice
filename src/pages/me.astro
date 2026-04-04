@@ -2,22 +2,27 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 <BaseLayout title="我的 - Aprice" description="查看个人价格记录、收藏和最近查看的药店商品。">
-  <section class="section">
+  <section class="section section--first-workspace">
     <div class="shell">
-      <div class="hero-banner">
-        <div class="hero-banner__inner">
-          <div class="hero-banner__eyebrow">Personal shelf</div>
-          <h1 class="product-title">你的价格历史，都在这里。</h1>
+      <div class="workspace-note">Personal shelf · 个人工作台</div>
+      <div class="section__header section__header--tight">
+        <div>
+          <h1 class="product-title" style="font-size: clamp(1.8rem, 3.6vw, 2.8rem);">你的价格历史，都在这里。</h1>
           <p class="product-sub">登录后可以保存个人购买价、收藏商品，并回看历史价格。</p>
+        </div>
+        <div class="pillrow">
+          <span class="pill">最近浏览</span>
+          <span class="pill">个人价格</span>
+          <span class="pill">收藏</span>
         </div>
       </div>
 
-      <div class="grid" style="margin-top:18px;">
+      <div class="grid">
         <section class="tile tile--wide">
-          <div class="section__header">
+          <div class="section__header section__header--tight">
             <div>
               <h2>个人价格记录</h2>
-              <p>这里会显示你的购买价、门店和备注。</p>
+              <p>你真正买过的价格，按时间往下看。</p>
             </div>
           </div>
           <div class="list" id="my-logs">
@@ -31,45 +36,49 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           </div>
         </section>
 
-        <section class="tile">
-          <div class="section__header">
+        <section class="tile tile--flow">
+          <div class="section__header section__header--tight">
             <div>
               <h3>最近浏览</h3>
               <p>从商品页自动记录你刚看过的药品。</p>
             </div>
             <button class="button button--ghost" id="clear-recent-views" type="button">清空</button>
           </div>
-          <div class="list" id="recent-views">
-            <div class="list__item">
+          <div class="feed" id="recent-views">
+            <div class="feed__item">
               <div>
                 <strong>暂无浏览记录</strong>
                 <small>从扫码或搜索点进商品后，会自动显示在这里。</small>
               </div>
-              <span class="meta">recent</span>
+              <span class="price">--</span>
             </div>
           </div>
         </section>
 
-        <section class="tile">
-          <div class="section__header">
-            <h3>收藏</h3>
-            <p>商品和门店都会列在这里。</p>
+        <section class="tile tile--flow">
+          <div class="section__header section__header--tight">
+            <div>
+              <h3>收藏</h3>
+              <p>商品和门店都会列在这里。</p>
+            </div>
           </div>
-          <div class="list" id="my-favorites">
-            <div class="list__item">
+          <div class="feed" id="my-favorites">
+            <div class="feed__item">
               <div>
                 <strong>等待加载</strong>
                 <small>登录后可以看到收藏列表。</small>
               </div>
-              <span class="meta">fav</span>
+              <span class="price">--</span>
             </div>
           </div>
         </section>
 
-        <section class="tile">
-          <div class="section__header">
-            <h3>快速记录</h3>
-            <p>把刚看到的价格先记下来。</p>
+        <section class="tile tile--wide">
+          <div class="section__header section__header--tight">
+            <div>
+              <h3>快速记录</h3>
+              <p>把刚看到的价格先记下来。</p>
+            </div>
           </div>
           <form class="form" id="log-form">
             <label class="field">
@@ -77,19 +86,21 @@ import BaseLayout from '../layouts/BaseLayout.astro';
                 <option value="">正在加载商品...</option>
               </select>
             </label>
-            <label class="field">
-              <select id="log-store">
-                <option value="">正在加载门店...</option>
-              </select>
-            </label>
-            <label class="field">
-              <input id="log-price" type="number" inputmode="numeric" placeholder="价格（円）" />
-            </label>
+            <div class="grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+              <label class="field">
+                <select id="log-store">
+                  <option value="">正在加载门店...</option>
+                </select>
+              </label>
+              <label class="field">
+                <input id="log-price" type="number" inputmode="numeric" placeholder="价格（円）" />
+              </label>
+            </div>
             <label class="field">
               <input id="log-note" placeholder="备注，例如会员价 / 促销 / 税后" />
             </label>
-            <button class="button" type="submit">保存记录</button>
             <div class="pillrow">
+              <button class="button" type="submit">保存记录</button>
               <button class="button button--ghost" id="favorite-product-button" type="button">收藏商品</button>
               <button class="button button--ghost" id="favorite-store-button" type="button">收藏门店</button>
             </div>
@@ -152,21 +163,24 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       if (!recentViewsEl) return;
       recentViewsEl.innerHTML = rows.length
         ? rows.map((item) => `
-          <a class="list__item" href="${resolveBase(`product/${item.id}/`)}">
+          <a class="feed__item" href="${resolveBase(`product/${item.id}/`)}">
             <div>
               <strong>${item.name || 'Unknown product'}</strong>
               <small>${item.brand || '品牌未知'} · ${item.pack || ''} · ${item.barcode || ''}</small>
             </div>
-            <span class="meta">${item.viewed_at ? formatDateTime(item.viewed_at) : ''}</span>
+            <div class="feed__meta">
+              <span class="price">查看</span>
+              <small>${item.viewed_at ? formatDateTime(item.viewed_at) : ''}</small>
+            </div>
           </a>
         `).join('')
         : `
-          <div class="list__item">
+          <div class="feed__item">
             <div>
               <strong>暂无浏览记录</strong>
               <small>从扫码或搜索点进商品后，会自动显示在这里。</small>
             </div>
-            <span class="meta">recent</span>
+            <span class="price">recent</span>
           </div>
         `;
     }
@@ -175,21 +189,24 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       if (!favsEl) return;
       favsEl.innerHTML = favorites.length
         ? favorites.map((fav) => `
-          <div class="list__item">
+          <div class="feed__item">
             <div>
               <strong>${fav.entity_type === 'product' ? productName(fav.entity_id) : storeName(fav.entity_id)}</strong>
               <small>${fav.entity_type === 'product' ? '商品' : '门店'} · ${fav.entity_id}</small>
             </div>
-            <span class="meta">${fav.created_at ? formatDateTime(fav.created_at) : ''}</span>
+            <div class="feed__meta">
+              <span class="price">收藏</span>
+              <small>${fav.created_at ? formatDateTime(fav.created_at) : ''}</small>
+            </div>
           </div>
         `).join('')
         : `
-          <div class="list__item">
+          <div class="feed__item">
             <div>
               <strong>暂无收藏</strong>
               <small>收藏商品或门店后会显示在这里。</small>
             </div>
-            <span class="meta">empty</span>
+            <span class="price">empty</span>
           </div>
         `;
     }
@@ -228,12 +245,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         </div>
       `;
       favsEl.innerHTML = `
-        <div class="list__item">
+        <div class="feed__item">
           <div>
             <strong>未登录</strong>
             <small>收藏内容会在登录后出现。</small>
           </div>
-          <span class="meta">offline</span>
+          <span class="price">offline</span>
         </div>
       `;
       status.textContent = '登录后才能保存个人记录、收藏商品和门店。';

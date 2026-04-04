@@ -21,17 +21,18 @@ export async function getStaticPaths() {
 const { product } = Astro.props as { product: Product };
 ---
 <BaseLayout title={`${product.name} - Aprice`} description={`${product.name} 的门店价格、附近比价和个人记录。`}>
-  <section class="section" id="product-page" data-product-id={product.id} data-product-name={product.name} data-product-brand={product.brand} data-product-pack={product.pack} data-product-barcode={product.barcode} data-product-tone={product.tone}>
+  <section class="section section--first-workspace" id="product-page" data-product-id={product.id} data-product-name={product.name} data-product-brand={product.brand} data-product-pack={product.pack} data-product-barcode={product.barcode} data-product-tone={product.tone}>
     <div class="shell">
-      <div class={`product-hero tone-${product.tone || 'sunset'}`}>
-        <div class="product-hero__overlay">
+      <div class="workspace-note">Product workspace · 商品工作台</div>
+      <div class={`product-hero tone-${product.tone || 'sunset'}`} style="min-height: 210px;">
+        <div class="product-hero__overlay" style="gap: 10px; padding: 20px;">
           <div class="pillrow">
             <span class="pill">{product.category}</span>
             <span class="pill">JAN {product.barcode}</span>
             <span class="pill">{product.brand}</span>
           </div>
-          <h1 class="product-title">{product.name}</h1>
-          <p class="product-sub">{product.description}</p>
+          <h1 class="product-title" style="font-size: clamp(1.8rem, 4vw, 3rem);">{product.name}</h1>
+          <p class="product-sub" style="max-width: 58ch;">{product.description}</p>
           <div class="pillrow">
             <button class="button button--ghost" id="favorite-product-button" type="button">收藏当前商品</button>
             <span class="pill" id="favorite-status">登录后可一键收藏。</span>
@@ -39,9 +40,9 @@ const { product } = Astro.props as { product: Product };
         </div>
       </div>
 
-      <div class="grid" style="margin-top:18px;">
+      <div class="grid" style="margin-top:16px;">
         <section class="tile tile--wide tile--flow">
-          <div class="section__header">
+          <div class="section__header section__header--tight">
             <div>
               <h2>价格流</h2>
               <p>同一商品在不同门店和会员条件下的参考价，按当前位置会自动重排。</p>
@@ -61,7 +62,7 @@ const { product } = Astro.props as { product: Product };
         </section>
 
         <section class="tile tile--flow">
-          <div class="section__header">
+          <div class="section__header section__header--tight">
             <h3>附近门店</h3>
             <p>价格流之外，也能快速扫到门店分布。</p>
           </div>
@@ -81,7 +82,7 @@ const { product } = Astro.props as { product: Product };
       <section class="section">
         <div class="grid">
           <section class="tile">
-            <div class="section__header">
+            <div class="section__header section__header--tight">
               <h3>个人记录</h3>
               <p>把你真实买到的价格直接记下来。</p>
             </div>
@@ -91,28 +92,34 @@ const { product } = Astro.props as { product: Product };
                   <option value="">正在加载门店...</option>
                 </select>
               </label>
-              <label class="field">
-                <input id="personal-price" type="number" inputmode="numeric" placeholder="你的购买价" />
-              </label>
-              <label class="field">
-                <input id="personal-note" placeholder="备注" />
-              </label>
+              <div class="grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+                <label class="field">
+                  <input id="personal-price" type="number" inputmode="numeric" placeholder="你的购买价" />
+                </label>
+                <label class="field">
+                  <input id="personal-note" placeholder="备注" />
+                </label>
+              </div>
               <button class="button" type="submit">保存到我的价格</button>
               <div class="notice" id="personal-status">登录后即可保存。</div>
             </form>
           </section>
 
           <section class="tile tile--wide">
-            <div class="section__header">
+            <div class="section__header section__header--tight">
               <h3>价格洞察</h3>
               <p>最低价、门店数量和当前参考。</p>
             </div>
-            <div class="hero-banner">
-              <div class="hero-banner__inner">
-                <div class="pillrow" id="insight-pills">
-                  <span class="pill">加载中</span>
+            <div class="feed">
+              <div class="feed__item feed__item--featured" style="padding: 18px;">
+                <div class="feed__copy">
+                  <div class="feed__kicker">Price snapshot</div>
+                  <div class="pillrow" id="insight-pills">
+                    <span class="pill">加载中</span>
+                  </div>
+                  <small>页面加载后会用真实 Supabase 价格刷新这里的摘要。</small>
                 </div>
-                <p class="product-sub">页面加载后会用真实 Supabase 价格刷新这里的摘要。</p>
+                <span class="price">live</span>
               </div>
             </div>
           </section>
