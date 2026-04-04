@@ -7,13 +7,14 @@ import { resolveBase } from '../lib/browser.js';
     <div class="shell">
       <div class="section__header section__header--tight">
         <div>
-          <h1>Login workspace · 登录工作台</h1>
-          <p>邮箱魔法链接登录，适合 GitHub Pages + Supabase 的静态部署。</p>
+          <div class="workspace-note">Auth workspace · 登录入口</div>
+          <h1 class="product-title" style="font-size: clamp(1.8rem, 3.8vw, 3rem);">邮箱登录后，个人数据才会生效。</h1>
+          <p class="product-sub">这个页面只负责 Supabase 魔法链接登录和当前会话检查。</p>
         </div>
         <div class="pillrow">
           <span class="pill">Magic link</span>
-          <span class="pill">Supabase Auth</span>
-          <span class="pill">Static site</span>
+          <span class="pill">Session</span>
+          <span class="pill">Profile</span>
         </div>
       </div>
 
@@ -22,8 +23,9 @@ import { resolveBase } from '../lib/browser.js';
           <div class="section__header section__header--tight">
             <div>
               <h3>发送登录链接</h3>
-              <p>输入邮箱后，我们会把登录邮件发到你的收件箱。</p>
+              <p>输入邮箱，我们会把登录邮件发到你的收件箱。</p>
             </div>
+            <span class="pill">Secure</span>
           </div>
 
           <form class="form" id="login-form">
@@ -31,7 +33,7 @@ import { resolveBase } from '../lib/browser.js';
               <input id="email" type="email" placeholder="name@example.com" autocomplete="email" required />
             </label>
             <button class="button" type="submit">发送登录链接</button>
-            <div class="notice" id="login-status">登录后可以保存个人价格记录、收藏商品和门店。</div>
+            <div class="notice notice--compact" id="login-status">登录后可以保存个人价格记录、收藏商品和门店。</div>
           </form>
 
           <div class="divider"></div>
@@ -47,7 +49,7 @@ import { resolveBase } from '../lib/browser.js';
           <div class="section__header section__header--tight">
             <div>
               <h3>当前会话</h3>
-              <p>会自动检查登录状态并显示角色信息。</p>
+              <p>这里显示登录状态和 profile 角色。</p>
             </div>
           </div>
 
@@ -144,6 +146,5 @@ import { resolveBase } from '../lib/browser.js';
     refreshSession();
   </script>
 </BaseLayout>
-
 
 

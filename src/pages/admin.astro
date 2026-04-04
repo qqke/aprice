@@ -16,7 +16,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         </div>
       </div>
 
-      <div class="notice" id="admin-status" style="margin-bottom:16px;">正在检查会话与权限。</div>
+      <div class="notice notice--warning" id="admin-status" style="margin-bottom:16px;">正在检查会话与权限。</div>
 
       <div class="grid">
         <section class="tile tile--wide tile--flow">
@@ -66,7 +66,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           </div>
           <div class="stack">
             <div class="workspace-note">
-              建议把这个页只分享给维护账号。普通用户即使打开，也会被权限判断拦住。
+              这个页只给维护账号使用。普通用户即使打开，也会被权限判断拦住。
             </div>
             <div class="list" id="admin-access">
               <div class="list__item">
@@ -602,5 +602,3 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     loadData();
   </script>
 </BaseLayout>
-
-

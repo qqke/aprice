@@ -219,6 +219,55 @@ img {
   gap: 22px;
 }
 
+.hero--tight {
+  padding-top: 22px;
+}
+
+.hero__grid--tight {
+  gap: 18px;
+}
+
+.hero__panel--tight {
+  border-radius: 32px;
+}
+
+.hero__copy--tight {
+  padding: 28px;
+  gap: 16px;
+}
+
+.hero__actions--tight {
+  gap: 10px;
+}
+
+.hero__stats--compact {
+  gap: 10px;
+}
+
+.stat--tight {
+  padding: 12px 14px;
+  border-radius: 18px;
+}
+
+.hero__scan--tight {
+  padding: 22px;
+}
+
+.scan-card--tight {
+  min-height: 340px;
+}
+
+.notice--compact {
+  padding: 12px 14px;
+  border-color: rgba(120, 240, 194, 0.1);
+}
+
+.notice--warning {
+  background: rgba(247, 178, 103, 0.09);
+  border-color: rgba(247, 178, 103, 0.18);
+  color: var(--text);
+}
+
 .eyebrow {
   display: inline-flex;
   align-items: center;
@@ -786,3 +835,4 @@ img {
     padding: 9px 12px;
   }
 }
+
