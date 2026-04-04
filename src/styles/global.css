@@ -132,6 +132,40 @@ img {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.nav a[aria-current='page'] {
+  border-color: rgba(120, 240, 194, 0.28);
+  background: rgba(120, 240, 194, 0.12);
+  color: var(--text);
+}
+
+.session-chip {
+  font-weight: 700;
+  min-width: 96px;
+  justify-content: center;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.session-chip:hover {
+  transform: translateY(-1px);
+}
+
+.session-chip--guest {
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--muted-strong);
+}
+
+.session-chip--member {
+  border-color: rgba(120, 240, 194, 0.24);
+  background: rgba(120, 240, 194, 0.1);
+  color: var(--text);
+}
+
+.session-chip--admin {
+  border-color: rgba(247, 178, 103, 0.28);
+  background: rgba(247, 178, 103, 0.12);
+  color: var(--text);
+}
+
 .page {
   padding-bottom: 72px;
 }
@@ -329,7 +363,8 @@ img {
 }
 
 .section__header h2,
-.section__header h3 {
+.section__header h3,
+.section__header h1 {
   margin: 0;
   font-size: 1.3rem;
 }
@@ -405,6 +440,7 @@ img {
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
 }
+
 .feed {
   display: grid;
   gap: 12px;
@@ -646,6 +682,23 @@ img {
   .topbar__inner {
     min-height: 64px;
     width: min(100vw - 20px, 1180px);
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 8px 0 10px;
+  }
+
+  .brand {
+    min-width: 0;
+  }
+
+  .nav {
+    width: 100%;
+    justify-content: flex-start;
+    order: 3;
+  }
+
+  .session-chip {
+    margin-left: auto;
   }
 
   .shell {
@@ -673,5 +726,3 @@ img {
     padding: 9px 12px;
   }
 }
-
-

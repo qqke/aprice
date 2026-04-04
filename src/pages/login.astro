@@ -1,32 +1,56 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { resolveBase } from '../lib/browser.js';
 ---
 <BaseLayout title="登录 - Aprice" description="Supabase 邮箱魔法链接登录，适合静态站点部署。">
-  <section class="section">
+  <section class="section section--first-workspace">
     <div class="shell">
-      <div class="hero-banner">
-        <div class="hero-banner__inner">
-          <div class="hero-banner__eyebrow">Account access</div>
-          <h1 class="product-title">邮箱魔法链接登录。</h1>
-          <p class="product-sub">适合 GitHub Pages 的静态前端，不需要自建会话服务器。</p>
+      <div class="section__header section__header--tight">
+        <div>
+          <h1>Login workspace · 登录工作台</h1>
+          <p>邮箱魔法链接登录，适合 GitHub Pages + Supabase 的静态部署。</p>
+        </div>
+        <div class="pillrow">
+          <span class="pill">Magic link</span>
+          <span class="pill">Supabase Auth</span>
+          <span class="pill">Static site</span>
         </div>
       </div>
 
-      <div class="grid" style="margin-top:18px;">
-        <section class="tile tile--wide">
+      <div class="grid">
+        <section class="tile tile--wide tile--flow">
+          <div class="section__header section__header--tight">
+            <div>
+              <h3>发送登录链接</h3>
+              <p>输入邮箱后，我们会把登录邮件发到你的收件箱。</p>
+            </div>
+          </div>
+
           <form class="form" id="login-form">
             <label class="field" for="email">
               <input id="email" type="email" placeholder="name@example.com" autocomplete="email" required />
             </label>
             <button class="button" type="submit">发送登录链接</button>
-            <div class="notice" id="login-status">如果配置了 Supabase，这里会发送一封登录邮件。</div>
+            <div class="notice" id="login-status">登录后可以保存个人价格记录、收藏商品和门店。</div>
           </form>
-        </section>
-        <section class="tile">
-          <div class="section__header">
-            <h3>当前会话</h3>
-            <p>登录后可查看个人价格记录和收藏。</p>
+
+          <div class="divider"></div>
+          <div class="stack">
+            <div class="workspace-note">
+              登录邮件通常会在几秒内送达。完成跳转后，返回本站即可继续使用个人功能。
+            </div>
+            <a class="button button--ghost" href={resolveBase('')}>返回首页继续搜索</a>
           </div>
+        </section>
+
+        <section class="tile tile--flow">
+          <div class="section__header section__header--tight">
+            <div>
+              <h3>当前会话</h3>
+              <p>会自动检查登录状态并显示角色信息。</p>
+            </div>
+          </div>
+
           <div class="list" id="session-state">
             <div class="list__item">
               <div>
@@ -36,6 +60,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <span class="meta">...</span>
             </div>
           </div>
+
           <div class="divider"></div>
           <button class="button button--ghost" id="logout-button" type="button">退出登录</button>
         </section>
@@ -44,7 +69,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   </section>
 
   <script type="module">
-    import { getSession, sendMagicLink, signOut, resolveBase } from '../lib/browser.js';
+    import { fetchCurrentProfile, getSession, resolveBase, sendMagicLink, signOut } from '../lib/browser.js';
 
     const form = document.querySelector('#login-form');
     const input = document.querySelector('#email');
@@ -62,19 +87,23 @@ import BaseLayout from '../layouts/BaseLayout.astro';
                 <strong>未登录</strong>
                 <small>你可以使用邮箱魔法链接继续。</small>
               </div>
-              <span class="meta">offline</span>
+              <span class="meta">guest</span>
             </div>
           `;
           return;
         }
 
+        const profile = await fetchCurrentProfile();
+        const role = profile?.role || 'member';
+        const label = profile?.full_name || session.user.email || '已登录用户';
+        const subtitle = role === 'admin' ? '管理员权限已开启' : '可以继续保存个人价格和收藏';
         sessionState.innerHTML = `
           <div class="list__item">
             <div>
-              <strong>${session.user.email || '已登录用户'}</strong>
-              <small>${session.user.user_metadata?.full_name || 'Aprice member'}</small>
+              <strong>${label}</strong>
+              <small>${subtitle}</small>
             </div>
-            <span class="meta">online</span>
+            <span class="meta">${role}</span>
           </div>
         `;
       } catch (error) {
@@ -115,5 +144,4 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     refreshSession();
   </script>
 </BaseLayout>
-
 

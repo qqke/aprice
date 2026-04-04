@@ -62,10 +62,11 @@ const nav = [
           }
 
           const profile = await fetchCurrentProfile();
-          const label = profile?.role === 'admin' ? '管理员' : (user.email || '已登录');
+          const isAdmin = profile?.role === 'admin';
+          const label = isAdmin ? '管理员' : (user.email || '已登录');
           chip.textContent = label;
-          chip.href = profile?.role === 'admin' ? resolveBase('admin/') : resolveBase('me/');
-          chip.className = profile?.role === 'admin' ? 'chip session-chip session-chip--admin' : 'chip session-chip session-chip--member';
+          chip.href = isAdmin ? resolveBase('admin/') : resolveBase('me/');
+          chip.className = isAdmin ? 'chip session-chip session-chip--admin' : 'chip session-chip session-chip--member';
         } catch {
           chip.textContent = '会话';
           chip.href = resolveBase('login/');
@@ -77,5 +78,3 @@ const nav = [
     </script>
   </body>
 </html>
-
-
