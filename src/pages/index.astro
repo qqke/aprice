@@ -143,11 +143,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         </section>
         <section class="tile tile--flow">
           <div class="section__header section__header--tight">
-            <h3>最近采样</h3>
-            <p>最近录入或更新的价格。</p>
+            <div>
+              <h3>最近采样</h3>
+              <p>最近录入或更新的价格，按最新时间排成一条线。</p>
+            </div>
+            <span class="pill">Timeline</span>
           </div>
           <div class="notice notice--compact" id="recent-status" style="margin-bottom:12px;">正在读取最近价格采样。</div>
-          <div class="feed" id="recently-viewed">
+          <div class="timeline" id="recently-viewed">
             <div class="feed__item">
               <div>
                 <strong>等待数据</strong>
@@ -195,6 +198,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const recentStatus = document.querySelector('#recent-status');
 
     let activeProduct = null;
+
+    function productBadge(item) {
+      const seed = (item?.id || item?.barcode || item?.name || 'P').toString();
+      const sum = Array.from(seed).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const palette = ['AZ', 'RX', 'MN', 'JP', 'SK', 'TR'];
+      return palette[sum % palette.length];
+    }
+
 
     function productCard(item, featured = false) {
       if (featured) {
@@ -375,29 +386,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     function renderRecentPrices(rows) {
       if (!recentlyViewed) return;
-      recentlyViewed.innerHTML = rows.length
-        ? rows.map((row, index) => index === 0 ? `
-          <a class="feed__item feed__item--featured" href="${resolveBase(`product/${row.products?.id || ''}/`)}">
-            <div class="feed__copy">
-              <div class="feed__kicker">最新采样</div>
-              <strong>${row.products?.name || 'Unknown product'}</strong>
-              <small>${row.stores?.name || 'Unknown store'} · ${row.stores?.city || ''} · ${row.is_member_price ? '会员价' : '公开价'}</small>
-            </div>
-            <div class="feed__meta">
-              <div class="price">${formatYen(row.price_yen)}</div>
-              <small>${row.collected_at ? new Date(row.collected_at).toLocaleDateString('ja-JP') : ''}</small>
-            </div>
-          </a>
-        ` : `
-          <a class="feed__item" href="${resolveBase(`product/${row.products?.id || ''}/`)}">
-            <div>
-              <strong>${row.products?.name || 'Unknown product'}</strong>
-              <small>${row.stores?.name || 'Unknown store'} · ${row.stores?.city || ''} · ${row.is_member_price ? '会员价' : '公开价'}</small>
-            </div>
-            <span class="price">${formatYen(row.price_yen)}</span>
-          </a>
-        `).join('')
-        : `
+      if (!rows.length) {
+        recentlyViewed.innerHTML = `
           <div class="feed__item">
             <div>
               <strong>暂无采样</strong>
@@ -406,13 +396,89 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             <span class="price">empty</span>
           </div>
         `;
+        if (recentStatus) {
+          recentStatus.textContent = '当前没有最近价格采样。';
+        }
+        return;
+      }
+
+      const groups = new Map();
+      for (const row of rows) {
+        const productId = row.products?.id || row.product_id || 'unknown';
+        if (!groups.has(productId)) {
+          groups.set(productId, []);
+        }
+        groups.get(productId).push(row);
+      }
+
+      recentlyViewed.innerHTML = Array.from(groups.values())
+        .slice(0, 3)
+        .map((groupRows) => {
+          const [latest, second] = groupRows;
+          const delta = second ? latest.price_yen - second.price_yen : null;
+          const trend = trendMeta(delta);
+          const rowDate = latest.collected_at ? new Date(latest.collected_at).toLocaleDateString('ja-JP') : '';
+          const groupHeading = `${latest.products?.name || 'Unknown product'} · ${groupRows.length} 条`;
+          const groupMeta = `${latest.stores?.name || 'Unknown store'} · ${latest.stores?.city || ''}`;
+          const productHref = resolveBase(`product/${latest.products?.id || ''}/`);
+          const badge = productBadge(latest.products || latest);
+
+          return `
+            <div class="timeline__group">
+              <div class="timeline__group-header">
+                <div>
+                  <strong>${groupHeading}</strong>
+                  <small>${groupMeta}</small>
+                </div>
+                <span class="pill ${trend.tone}">${trend.arrow} ${trend.label}</span>
+              </div>
+              <a class="timeline__item timeline__item--featured" href="${productHref}">
+                <div class="timeline__rail">
+                  <span class="timeline__dot"></span>
+                  <span class="timeline__line"></span>
+                </div>
+                <div class="feed__copy">
+                  <div class="timeline__icon ${trend.tone}">${badge}</div>
+                  <div class="feed__kicker ${trend.tone}">${trend.arrow} 最近采样</div>
+                  <strong>${latest.products?.name || 'Unknown product'}</strong>
+                  <small>${latest.stores?.name || 'Unknown store'} · ${latest.stores?.city || ''} · ${latest.is_member_price ? '会员价' : '公开价'}</small>
+                </div>
+                <div class="feed__meta">
+                  <div class="price">${formatYen(latest.price_yen)}</div>
+                  <small>${rowDate}</small>
+                  <span class="pill ${trend.tone}">${trend.arrow} ${trend.label}</span>
+                </div>
+              </a>
+              ${groupRows.slice(1, 2).map((row, index) => {
+                const nextRow = groupRows[index + 2];
+                const rowTrend = trendMeta(nextRow ? row.price_yen - nextRow.price_yen : null);
+                const secondaryHref = resolveBase(`product/${row.products?.id || ''}/`);
+                return `
+                  <a class="timeline__item" href="${secondaryHref}">
+                    <div class="timeline__rail">
+                      <span class="timeline__dot"></span>
+                      <span class="timeline__line"></span>
+                    </div>
+                    <div>
+                      <strong>${row.products?.name || 'Unknown product'}</strong>
+                      <small>${row.stores?.name || 'Unknown store'} · ${row.stores?.city || ''} · ${row.is_member_price ? '会员价' : '公开价'}</small>
+                    </div>
+                    <div class="feed__meta">
+                      <span class="price">${formatYen(row.price_yen)}</span>
+                      <small class="trend__delta ${rowTrend.tone}">${rowTrend.arrow} ${rowTrend.label}</small>
+                    </div>
+                  </a>
+                `;
+              }).join('')}
+            </div>
+          `;
+        })
+        .join('');
+
       if (recentStatus) {
-        recentStatus.textContent = rows.length
-          ? `已读取 ${rows.length} 条最近价格采样。`
-          : '当前没有最近价格采样。';
+        recentStatus.textContent = `已读取 ${rows.length} 条最近价格采样，按 ${groups.size} 个商品分组显示。`;
       }
     }
-
     async function loadRecentPrices() {
       if (recentStatus) recentStatus.textContent = '正在读取最近价格采样...';
       try {
@@ -435,6 +501,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     await Promise.all([loadRecentPrices(), runSearch('')]);
   </script>
 </BaseLayout>
+
+
+
+
+
 
 
 

@@ -13,7 +13,7 @@
     "check": "astro check",
     "precheck": "node scripts/sync-browser-assets.mjs",
     "pretest": "node scripts/sync-browser-assets.mjs",
-    "test": "node tests/browser-runtime.test.mjs && node tests/built-home-page-smoke.mjs"
+    "test": "node tests/browser-runtime.test.mjs && node tests/built-home-page-smoke.mjs && node tests/home-page-browser.test.mjs && node tests/product-page-browser.test.mjs && node tests/scan-page-browser.test.mjs && node tests/login-page-browser.test.mjs && node tests/me-page-browser.test.mjs && node tests/admin-page-browser.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
@@ -22,6 +22,8 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.8",
     "@types/node": "^22.15.21",
+    "playwright": "^1.59.1",
     "typescript": "^5.8.3"
   }
 }
+

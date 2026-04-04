@@ -205,6 +205,19 @@ const { product } = Astro.props as { product: Product };
     let stores = [];
     let activeStoreId = '';
 
+    function toTime(value) {
+      const time = new Date(value || 0).getTime();
+      return Number.isFinite(time) ? time : 0;
+    }
+
+
+    function trendMeta(delta) {
+      if (delta === null) return { label: '最新', tone: 'trend--flat', arrow: '→' };
+      if (delta === 0) return { label: '持平', tone: 'trend--flat', arrow: '→' };
+      if (delta > 0) return { label: `上涨 ${formatYen(delta)}`, tone: 'trend--up', arrow: '↑' };
+      return { label: `下跌 ${formatYen(Math.abs(delta))}`, tone: 'trend--down', arrow: '↓' };
+    }
+
     function syncFavoriteStoreButton() {
       if (favoriteStoreButton) {
         favoriteStoreButton.disabled = !activeStoreId;
@@ -213,29 +226,8 @@ const { product } = Astro.props as { product: Product };
 
     function renderPrices(rows) {
       if (!priceList) return;
-      priceList.innerHTML = rows.length
-        ? rows.map((row, index) => index === 0 ? `
-          <a class="feed__item feed__item--featured" href="${resolveBase(`product/${productId}/`)}">
-            <div class="feed__copy">
-              <div class="feed__kicker">最低价 · ${row.is_member_price ? '会员价' : '公开价'}</div>
-              <strong>${row.stores?.name || 'Unknown store'}</strong>
-              <small>${row.stores?.address || ''} · ${row.stores?.hours || ''}</small>
-            </div>
-            <div class="feed__meta">
-              <div class="price">¥${row.price_yen}</div>
-              <small>${row.stores?.city || ''}${row.distance_km !== null && row.distance_km !== undefined ? ` · ${formatDistance(row.distance_km)}` : ''}</small>
-            </div>
-          </a>
-        ` : `
-          <a class="feed__item" href="${resolveBase(`product/${productId}/`)}">
-            <div>
-              <strong>${row.stores?.name || 'Unknown store'}</strong>
-              <small>${row.stores?.address || ''} · ${row.stores?.hours || ''} · ${row.is_member_price ? '会员价' : '公开价'}${row.distance_km !== null && row.distance_km !== undefined ? ` · ${formatDistance(row.distance_km)}` : ''}</small>
-            </div>
-            <span class="price">¥${row.price_yen}</span>
-          </a>
-        `).join('')
-        : `
+      if (!rows.length) {
+        priceList.innerHTML = `
           <div class="feed__item">
             <div>
               <strong>暂无价格</strong>
@@ -244,8 +236,60 @@ const { product } = Astro.props as { product: Product };
             <span class="price">empty</span>
           </div>
         `;
-    }
+        return;
+      }
 
+      const minPrice = Math.min(...rows.map((row) => row.price_yen));
+
+      priceList.innerHTML = rows.map((row, index) => {
+        const gap = row.price_yen - minPrice;
+        const gapPercent = minPrice > 0 ? Math.round((gap / minPrice) * 100) : 0;
+        const gapTier = gap === 0
+          ? { tone: 'trend--flat', label: '最低价', percent: '0%', bar: 'gap--best', ratio: 1 }
+          : gap <= 150
+            ? { tone: 'trend--up', label: `高 ${formatYen(gap)}`, percent: `+${gapPercent}%`, bar: 'gap--near', ratio: 0.72 }
+            : gap <= 400
+              ? { tone: 'trend--down', label: `高 ${formatYen(gap)}`, percent: `+${gapPercent}%`, bar: 'gap--mid', ratio: 0.45 }
+              : { tone: 'trend--down', label: `高 ${formatYen(gap)}`, percent: `+${gapPercent}%`, bar: 'gap--far', ratio: 0.22 };
+        const priceHref = resolveBase(`product/${productId}/`);
+        const distanceLabel = row.distance_km !== null && row.distance_km !== undefined ? ` · ${formatDistance(row.distance_km)}` : '';
+        const barWidth = Math.max(12, Math.round(gapTier.ratio * 100));
+        return index === 0 ? `
+          <a class="feed__item feed__item--featured" href="${priceHref}">
+            <div class="feed__copy">
+              <div class="feed__kicker">最低价 · ${row.is_member_price ? '会员价' : '公开价'}</div>
+              <strong>${row.stores?.name || 'Unknown store'}</strong>
+              <small>${row.stores?.address || ''} · ${row.stores?.hours || ''}</small>
+            </div>
+            <div class="feed__meta">
+              <div class="price">¥${row.price_yen}</div>
+              <small>${row.stores?.city || ''}${distanceLabel}</small>
+              <span class="pill ${gapTier.tone}">${gapTier.label} · ${gapTier.percent}</span>
+              <small class="trend__delta ${gapTier.tone}">${gapTier.percent} · ${gapPercent}%</small>
+              <div class="price-gap">
+                <span class="price-gap__label ${gapTier.bar}">${gapTier.label}</span>
+                <span class="price-gap__track"><span class="price-gap__fill ${gapTier.bar}" style="width:${barWidth}%"></span></span>
+              </div>
+            </div>
+          </a>
+        ` : `
+          <a class="feed__item" href="${priceHref}">
+            <div>
+              <strong>${row.stores?.name || 'Unknown store'}</strong>
+              <small>${row.stores?.address || ''} · ${row.stores?.hours || ''} · ${row.is_member_price ? '会员价' : '公开价'}${distanceLabel}</small>
+            </div>
+            <div class="feed__meta">
+              <span class="price">¥${row.price_yen}</span>
+              <span class="pill ${gapTier.tone}">${gapTier.label} · ${gapTier.percent}</span>
+              <small class="trend__delta ${gapTier.tone}">${gapTier.percent} · ${gapPercent}%</small>
+              <div class="price-gap">
+                <span class="price-gap__track"><span class="price-gap__fill ${gapTier.bar}" style="width:${barWidth}%"></span></span>
+              </div>
+            </div>
+          </a>
+        `;
+      }).join('');
+    }
     function renderNearbyStores(rows) {
       if (!nearbyStoreList) return;
       activeStoreId = rows[0]?.store_id || '';
@@ -311,8 +355,30 @@ const { product } = Astro.props as { product: Product };
       const storeCount = new Set(rows.map((row) => row.store_id)).size;
       const gapToMin = latest ? latest.price_yen - minPrice : 0;
       const older = rows[1];
+      const latestTime = toTime(latest?.collected_at);
+      const sevenDaysAgo = latestTime ? latestTime - 7 * 24 * 60 * 60 * 1000 : 0;
+      const windowRows = latestTime
+        ? rows.filter((row) => toTime(row.collected_at) >= sevenDaysAgo)
+        : rows.slice(0, 1);
+      const windowFirst = windowRows[windowRows.length - 1];
+      const windowLast = windowRows[0];
+      const windowDelta = windowFirst && windowLast ? windowLast.price_yen - windowFirst.price_yen : null;
+      const windowLabel = windowDelta === null
+        ? '近7天暂无趋势'
+        : windowDelta === 0
+          ? '近7天持平'
+          : windowDelta > 0
+            ? `近7天上涨 ${formatYen(windowDelta)}`
+            : `近7天下降 ${formatYen(Math.abs(windowDelta))}`;
       const priceDelta = older ? latest.price_yen - older.price_yen : null;
+      const priceTrend = trendMeta(priceDelta);
+      const summaryTrend = trendMeta(windowDelta);
       const trend = gapToMin === 0 ? '当前就是最低价' : (gapToMin > 0 ? `比最低价高 ${formatYen(gapToMin)}` : `比最低价低 ${formatYen(Math.abs(gapToMin))}`);
+      const gapLabel = gapToMin === 0
+        ? '与最低价相同'
+        : gapToMin > 0
+          ? `比最低价高 ${formatYen(gapToMin)}`
+          : `比最低价低 ${formatYen(Math.abs(gapToMin))}`;
       const change = priceDelta === null
         ? '暂无上次采样'
         : priceDelta === 0
@@ -325,8 +391,11 @@ const { product } = Astro.props as { product: Product };
         <span class="pill">最低价 ¥${minPrice}</span>
         <span class="pill">最高价 ¥${maxPrice}</span>
         <span class="pill">${storeCount} 家门店</span>
-        <span class="pill">${trend}</span>
-        <span class="pill">${change}</span>
+        <span class="pill ${priceTrend.tone}">${priceTrend.arrow} ${trend}</span>
+        <span class="pill ${priceTrend.tone}">${priceTrend.arrow} ${gapLabel}</span>
+        <span class="pill ${priceTrend.tone}">${priceTrend.arrow} ${change}</span>
+        <span class="pill ${priceTrend.tone}">${priceTrend.arrow} ${priceTrend.label}</span>
+        <span class="pill ${summaryTrend.tone}">${summaryTrend.arrow} ${windowLabel}</span>
         <span class="pill">最新采样：${latest?.stores?.name || 'unknown'}</span>
       `;
 
@@ -344,13 +413,13 @@ const { product } = Astro.props as { product: Product };
           return index === 0 ? `
             <div class="feed__item feed__item--featured">
               <div class="feed__copy">
-                <div class="feed__kicker">最新采样</div>
+                <div class="feed__kicker ${summaryTrend.tone}">${summaryTrend.arrow} ${windowLabel}</div>
                 <strong>${row.stores?.name || 'Unknown store'}</strong>
                 <small>${row.stores?.city || ''} · ${row.stores?.pref || ''} · ${row.is_member_price ? '会员价' : '公开价'}</small>
               </div>
               <div class="feed__meta">
                 <div class="price">${formatYen(row.price_yen)}</div>
-                <small>${deltaLabel}</small>
+                <small class="trend__delta">${deltaLabel}</small>
               </div>
             </div>
           ` : `
@@ -361,7 +430,7 @@ const { product } = Astro.props as { product: Product };
               </div>
               <div class="feed__meta">
                 <span class="price">${formatYen(row.price_yen)}</span>
-                <small>${deltaLabel}</small>
+                <small class="trend__delta">${deltaLabel}</small>
               </div>
             </div>
           `;
@@ -498,6 +567,10 @@ const { product } = Astro.props as { product: Product };
     Promise.all([loadStores(), loadPrices()]);
   </script>
 </BaseLayout>
+
+
+
+
 
 
 

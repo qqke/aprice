@@ -67,6 +67,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <button class="button button--ghost" type="button" data-favorite-filter="product">商品</button>
               <button class="button button--ghost" type="button" data-favorite-filter="store">门店</button>
             </div>
+            <div class="pillrow" aria-label="收藏排序">
+              <button class="button button--ghost button--active" type="button" data-favorite-sort="recent">最近添加</button>
+              <button class="button button--ghost" type="button" data-favorite-sort="oldest">最早添加</button>
+            </div>
           </div>
           <div class="feed" id="my-favorites">
             <div class="feed__item">
@@ -139,6 +143,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const favsEl = document.querySelector('#my-favorites');
     const favoritesSummary = document.querySelector('#favorites-summary');
     const favoriteFilterButtons = document.querySelectorAll('[data-favorite-filter]');
+    const favoriteSortButtons = document.querySelectorAll('[data-favorite-sort]');
     const form = document.querySelector('#log-form');
     const status = document.querySelector('#log-status');
     const productInput = document.querySelector('#log-product');
@@ -153,6 +158,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     let stores = [];
     let favorites = [];
     let favoriteFilter = 'all';
+    let favoriteSort = 'recent';
 
     function setControlsDisabled(disabled) {
       formControls.forEach((control) => {
@@ -167,6 +173,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     function storeName(id) {
       return stores.find((item) => item.id === id)?.name || id;
+    }
+
+    function compareFavoriteDates(a, b) {
+      const left = new Date(a.created_at || 0).getTime();
+      const right = new Date(b.created_at || 0).getTime();
+      return favoriteSort === 'oldest' ? left - right : right - left;
     }
 
     function renderRecentViews(rows) {
@@ -197,11 +209,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     function renderFavorites(favoritesList) {
       if (!favsEl) return;
-      const filtered = favoritesList.filter((fav) => favoriteFilter === 'all' || fav.entity_type === favoriteFilter);
+      const filtered = favoritesList
+        .filter((fav) => favoriteFilter === 'all' || fav.entity_type === favoriteFilter)
+        .slice()
+        .sort(compareFavoriteDates);
+
       if (favoritesSummary) {
         favoritesSummary.textContent = favoritesList.length
-          ? `共 ${favoritesList.length} 项收藏，当前显示 ${filtered.length} 项。`
-          : '登录后可以看到收藏列表.';
+          ? `共 ${favoritesList.length} 项收藏，当前显示 ${filtered.length} 项，按${favoriteSort === 'recent' ? '最近添加' : '最早添加'}排序。`
+          : '登录后可以看到收藏列表。';
       }
       favsEl.innerHTML = filtered.length
         ? filtered.map((fav) => `
@@ -232,6 +248,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       favoriteFilter = nextFilter;
       favoriteFilterButtons.forEach((button) => {
         const selected = button.dataset.favoriteFilter === favoriteFilter;
+        button.classList.toggle('button--active', selected);
+      });
+      renderFavorites(favorites);
+    }
+
+    function applyFavoriteSort(nextSort) {
+      favoriteSort = nextSort;
+      favoriteSortButtons.forEach((button) => {
+        const selected = button.dataset.favoriteSort === favoriteSort;
         button.classList.toggle('button--active', selected);
       });
       renderFavorites(favorites);
@@ -408,17 +433,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       });
     });
 
+    favoriteSortButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        applyFavoriteSort(button.dataset.favoriteSort || 'recent');
+      });
+    });
+
     refresh();
   </script>
 </BaseLayout>
-
-
-
-
-
-
-
-
-
-
-

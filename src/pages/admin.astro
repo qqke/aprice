@@ -547,9 +547,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     productList?.addEventListener('click', async (event) => {
       const target = event.target;
-      if (!(target instanceof HTMLElement)) return;
-      const editId = target.dataset.editProduct;
-      const deleteId = target.dataset.deleteProduct;
+      const button = target instanceof Element ? target.closest('button') : null;
+      if (!button) return;
+      const editId = button.dataset.editProduct;
+      const deleteId = button.dataset.deleteProduct;
       if (editId) {
         populateProductForm(products.find((item) => item.id === editId));
       }
@@ -563,9 +564,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     storeList?.addEventListener('click', async (event) => {
       const target = event.target;
-      if (!(target instanceof HTMLElement)) return;
-      const editId = target.dataset.editStore;
-      const deleteId = target.dataset.deleteStore;
+      const button = target instanceof Element ? target.closest('button') : null;
+      if (!button) return;
+      const editId = button.dataset.editStore;
+      const deleteId = button.dataset.deleteStore;
       if (editId) {
         populateStoreForm(stores.find((item) => item.id === editId));
       }
@@ -579,9 +581,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     priceList?.addEventListener('click', async (event) => {
       const target = event.target;
-      if (!(target instanceof HTMLElement)) return;
-      const editId = target.dataset.editPrice;
-      const deleteId = target.dataset.deletePrice;
+      const button = target instanceof Element ? target.closest('button') : null;
+      if (!button) return;
+      const editId = button.dataset.editPrice;
+      const deleteId = button.dataset.deletePrice;
       if (editId) {
         const item = prices.find((entry) => entry.id === editId);
         if (item) populatePriceForm(item);
@@ -602,6 +605,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     loadData();
   </script>
 </BaseLayout>
+
 
 
 
