@@ -1,6 +1,6 @@
-const runtimeConfig = globalThis.__APriceConfig || {};
-const SUPABASE_URL = String(import.meta.env?.PUBLIC_SUPABASE_URL || runtimeConfig.supabaseUrl || '').trim();
-const SUPABASE_ANON_KEY = String(import.meta.env?.PUBLIC_SUPABASE_ANON_KEY || runtimeConfig.supabaseAnonKey || '').trim();
+const CONFIG = globalThis.__APriceConfig || {};
+const SUPABASE_URL = String(CONFIG.supabaseUrl || '').trim();
+const SUPABASE_ANON_KEY = String(CONFIG.supabaseAnonKey || '').trim();
 
 function ensureConfigured() {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {

@@ -5,9 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
+    "predev": "node scripts/sync-browser-assets.mjs",
     "build": "astro build",
+    "prebuild": "node scripts/sync-browser-assets.mjs",
     "preview": "astro preview",
-    "check": "astro check"
+    "prepreview": "node scripts/sync-browser-assets.mjs",
+    "check": "astro check",
+    "precheck": "node scripts/sync-browser-assets.mjs",
+    "pretest": "node scripts/sync-browser-assets.mjs",
+    "test": "node tests/browser-runtime.test.mjs && node tests/built-home-page-smoke.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",

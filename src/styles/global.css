@@ -321,6 +321,12 @@ img {
   box-shadow: none;
 }
 
+.button--active {
+  border-color: rgba(120, 240, 194, 0.24);
+  background: rgba(120, 240, 194, 0.12);
+  color: var(--text);
+}
+
 .hero__stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

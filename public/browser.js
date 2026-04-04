@@ -9,12 +9,11 @@ import {
   restInsert,
   restRpc,
 } from './supabase-rest.js';
-import { createClient } from '@supabase/supabase-js';
 
-const runtimeConfig = globalThis.__APriceConfig || {};
-const SUPABASE_URL = String(import.meta.env?.PUBLIC_SUPABASE_URL || runtimeConfig.supabaseUrl || '').trim();
-const SUPABASE_ANON_KEY = String(import.meta.env?.PUBLIC_SUPABASE_ANON_KEY || runtimeConfig.supabaseAnonKey || '').trim();
-const BASE_URL = String(import.meta.env?.BASE_URL || runtimeConfig.baseUrl || '/').trim() || '/';
+const CONFIG = globalThis.__APriceConfig || {};
+const SUPABASE_URL = String(CONFIG.supabaseUrl || '').trim();
+const SUPABASE_ANON_KEY = String(CONFIG.supabaseAnonKey || '').trim();
+const BASE_URL = String(CONFIG.baseUrl || '/');
 
 const RECENT_VIEWS_KEY = 'aprice:recent-views';
 
@@ -29,7 +28,7 @@ function ensureConfigured() {
 async function getSupabaseClient() {
   ensureConfigured();
   if (!supabaseClientPromise) {
-    supabaseClientPromise = Promise.resolve(
+    supabaseClientPromise = import('https://esm.sh/@supabase/supabase-js@2.49.1').then(({ createClient }) =>
       createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         auth: {
           persistSession: true,

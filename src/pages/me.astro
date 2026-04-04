@@ -60,6 +60,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             <div>
               <h3>收藏</h3>
               <p>商品和门店收藏都会列在这里。</p>
+              <small class="muted" id="favorites-summary">正在读取收藏。</small>
+            </div>
+            <div class="pillrow" aria-label="收藏筛选">
+              <button class="button button--ghost button--active" type="button" data-favorite-filter="all">全部</button>
+              <button class="button button--ghost" type="button" data-favorite-filter="product">商品</button>
+              <button class="button button--ghost" type="button" data-favorite-filter="store">门店</button>
             </div>
           </div>
           <div class="feed" id="my-favorites">
@@ -131,6 +137,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const recentViewsEl = document.querySelector('#recent-views');
     const clearRecentViewsButton = document.querySelector('#clear-recent-views');
     const favsEl = document.querySelector('#my-favorites');
+    const favoritesSummary = document.querySelector('#favorites-summary');
+    const favoriteFilterButtons = document.querySelectorAll('[data-favorite-filter]');
     const form = document.querySelector('#log-form');
     const status = document.querySelector('#log-status');
     const productInput = document.querySelector('#log-product');
@@ -143,6 +151,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const formControls = [productInput, storeInput, priceInput, noteInput, favoriteProductButton, favoriteStoreButton];
     let products = [];
     let stores = [];
+    let favorites = [];
+    let favoriteFilter = 'all';
 
     function setControlsDisabled(disabled) {
       formControls.forEach((control) => {
@@ -185,10 +195,16 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         `;
     }
 
-    function renderFavorites(favorites) {
+    function renderFavorites(favoritesList) {
       if (!favsEl) return;
-      favsEl.innerHTML = favorites.length
-        ? favorites.map((fav) => `
+      const filtered = favoritesList.filter((fav) => favoriteFilter === 'all' || fav.entity_type === favoriteFilter);
+      if (favoritesSummary) {
+        favoritesSummary.textContent = favoritesList.length
+          ? `共 ${favoritesList.length} 项收藏，当前显示 ${filtered.length} 项。`
+          : '登录后可以看到收藏列表.';
+      }
+      favsEl.innerHTML = filtered.length
+        ? filtered.map((fav) => `
           <div class="feed__item">
             <div>
               <strong>${fav.entity_type === 'product' ? productName(fav.entity_id) : storeName(fav.entity_id)}</strong>
@@ -204,12 +220,21 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         : `
           <div class="feed__item">
             <div>
-              <strong>暂无收藏</strong>
-              <small>收藏商品或门店后会显示在这里。</small>
+              <strong>${favoritesList.length ? '当前筛选下没有收藏' : '暂无收藏'}</strong>
+              <small>${favoritesList.length ? '换个筛选条件看看，或者先收藏商品或门店。' : '收藏商品或门店后会显示在这里。'}</small>
             </div>
             <span class="price">empty</span>
           </div>
         `;
+    }
+
+    function applyFavoriteFilter(nextFilter) {
+      favoriteFilter = nextFilter;
+      favoriteFilterButtons.forEach((button) => {
+        const selected = button.dataset.favoriteFilter === favoriteFilter;
+        button.classList.toggle('button--active', selected);
+      });
+      renderFavorites(favorites);
     }
 
     function renderLogs(logs) {
@@ -269,7 +294,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       status.textContent = '正在同步你的价格记录和收藏...';
       setControlsDisabled(false);
 
-      const [loadedProducts, loadedStores, logs, favorites] = await Promise.all([
+      const [loadedProducts, loadedStores, logs, loadedFavorites] = await Promise.all([
         fetchAllProducts(),
         fetchAllStores(),
         fetchPersonalLogs(user.id),
@@ -277,6 +302,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       ]);
       products = loadedProducts;
       stores = loadedStores;
+      favorites = loadedFavorites;
 
       if (productInput) {
         productInput.innerHTML = products.length
@@ -374,6 +400,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       } catch (error) {
         status.textContent = `收藏失败：${error.message}`;
       }
+    });
+
+    favoriteFilterButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        applyFavoriteFilter(button.dataset.favoriteFilter || 'all');
+      });
     });
 
     refresh();
