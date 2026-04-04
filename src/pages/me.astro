@@ -7,8 +7,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <div class="workspace-note">Personal shelf · 个人工作台</div>
       <div class="section__header section__header--tight">
         <div>
-          <h1 class="product-title" style="font-size: clamp(1.8rem, 3.6vw, 2.8rem);">你的价格历史，都在这里。</h1>
-          <p class="product-sub">登录后可以保存个人购买价、收藏商品，并回看历史价格。</p>
+          <h1 class="product-title" style="font-size: clamp(1.8rem, 3.6vw, 2.8rem);">你的价格历史和收藏，都在这里。</h1>
+          <p class="product-sub">登录后可记录购买价、收藏商品和门店，并随时回看。</p>
         </div>
         <div class="pillrow">
           <span class="pill">最近浏览</span>
@@ -22,14 +22,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="section__header section__header--tight">
             <div>
               <h2>个人价格记录</h2>
-              <p>你真正买过的价格，按时间往下看。</p>
+              <p>你真正买过的价格，按时间看。</p>
             </div>
           </div>
           <div class="list" id="my-logs">
             <div class="list__item">
               <div>
-                <strong>等待登录</strong>
-                <small>登录后会自动读取你的价格历史。</small>
+                <strong>先登录</strong>
+                <small>登录后会自动同步你的个人价格历史。</small>
               </div>
               <span class="meta">me</span>
             </div>
@@ -40,7 +40,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="section__header section__header--tight">
             <div>
               <h3>最近浏览</h3>
-              <p>从商品页自动记录你刚看过的药品。</p>
+              <p>商品页会自动把刚看过的药品放进来。</p>
             </div>
             <button class="button button--ghost" id="clear-recent-views" type="button">清空</button>
           </div>
@@ -59,7 +59,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="section__header section__header--tight">
             <div>
               <h3>收藏</h3>
-              <p>商品和门店都会列在这里。</p>
+              <p>商品和门店收藏都会列在这里。</p>
             </div>
           </div>
           <div class="feed" id="my-favorites">
@@ -77,7 +77,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="section__header section__header--tight">
             <div>
               <h3>快速记录</h3>
-              <p>把刚看到的价格先记下来。</p>
+              <p>把刚看到的价格直接记一笔。</p>
             </div>
           </div>
           <form class="form" id="log-form">
@@ -104,7 +104,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <button class="button button--ghost" id="favorite-product-button" type="button">收藏商品</button>
               <button class="button button--ghost" id="favorite-store-button" type="button">收藏门店</button>
             </div>
-            <div class="notice" id="log-status">正在确认登录状态。</div>
+            <div class="notice notice--compact" id="log-status">正在确认登录状态。</div>
           </form>
         </section>
       </div>
@@ -238,7 +238,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       logsEl.innerHTML = `
         <div class="list__item">
           <div>
-            <strong>还没有登录</strong>
+            <strong>先登录</strong>
             <small>先到登录页完成邮箱魔法链接登录。</small>
           </div>
           <span class="meta">offline</span>
@@ -361,6 +361,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     refresh();
   </script>
 </BaseLayout>
+
 
 
 
