@@ -7,4 +7,9 @@ export default defineConfig({
   base: repoBase,
   trailingSlash: 'always',
   output: 'static',
+  vite: {
+    resolve: {
+      preserveSymlinks: true,
+    },
+  },
 });

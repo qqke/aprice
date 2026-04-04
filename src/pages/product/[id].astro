@@ -1,26 +1,29 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { demoProducts, demoStores, demoPrices } from '../../lib/catalog.js';
+import { fetchPublicProducts } from '../../lib/supabase-rest.js';
 
-export function getStaticPaths() {
-  return demoProducts.map((product) => ({ params: { id: product.id }, props: { product } }));
+type Product = {
+  id: string;
+  barcode: string;
+  name: string;
+  brand: string;
+  pack: string;
+  category: string;
+  tone?: string;
+  description: string;
+};
+
+export async function getStaticPaths() {
+  const products = ((await fetchPublicProducts({ limit: 500, order: 'updated_at.desc' })) ?? []) as Product[];
+  return products.map((product) => ({ params: { id: product.id }, props: { product } }));
 }
 
-const { product } = Astro.props;
-const base = import.meta.env.BASE_URL || '/';
-const prices = demoPrices.filter((price) => price.product_id === product.id);
-const sortedStores = prices
-  .map((price) => ({
-    ...price,
-    store: demoStores.find((store) => store.id === price.store_id) ?? null,
-  }))
-  .sort((a, b) => a.price_yen - b.price_yen);
-const nearestStore = demoStores.find((store) => store.id === prices[0]?.store_id) || demoStores[0];
+const { product } = Astro.props as { product: Product };
 ---
 <BaseLayout title={`${product.name} - Aprice`} description={`${product.name} 的门店价格、附近比价和个人记录。`}>
-  <section class="section">
+  <section class="section" id="product-page" data-product-id={product.id} data-product-name={product.name}>
     <div class="shell">
-      <div class={`product-hero tone-${product.tone}`}>
+      <div class={`product-hero tone-${product.tone || 'sunset'}`}>
         <div class="product-hero__overlay">
           <div class="pillrow">
             <span class="pill">{product.category}</span>
@@ -41,20 +44,15 @@ const nearestStore = demoStores.find((store) => store.id === prices[0]?.store_id
             </div>
             <button class="button button--ghost" id="geo-sort" type="button">按当前位置重排</button>
           </div>
-          <div class="notice" id="geo-status" style="margin-bottom:12px;">默认按价格显示。点击按钮后会请求定位并按附近门店重排。</div>
+          <div class="notice" id="geo-status" style="margin-bottom:12px;">正在载入 Supabase 价格数据。</div>
           <div class="list" id="price-list">
-            {sortedStores.map((row) => (
-              <div class="list__item">
-                <div>
-                  <strong>{row.store?.name}</strong>
-                  <small>{row.store?.address} · {row.store?.hours} · {row.is_member_price ? '会员价' : '公开价'}</small>
-                </div>
-                <div style="text-align:right;">
-                  <div class="price">¥{row.price_yen}</div>
-                  <small>{row.source}</small>
-                </div>
+            <div class="list__item">
+              <div>
+                <strong>加载中</strong>
+                <small>请稍等，正在拉取真实门店价格。</small>
               </div>
-            ))}
+              <span class="meta">loading</span>
+            </div>
           </div>
         </section>
         <section class="tile">
@@ -62,23 +60,14 @@ const nearestStore = demoStores.find((store) => store.id === prices[0]?.store_id
             <h3>附近门店</h3>
             <p>后续可以接入定位排序。</p>
           </div>
-          <div class="list">
+          <div class="list" id="nearby-store-list">
             <div class="list__item">
               <div>
-                <strong>{nearestStore?.name}</strong>
-                <small>{nearestStore?.city} · {nearestStore?.pref}</small>
+                <strong>加载中</strong>
+                <small>门店列表正在读取。</small>
               </div>
-              <span class="meta">closest</span>
+              <span class="meta">loading</span>
             </div>
-            {demoStores.slice(0, 3).map((store) => (
-              <div class="list__item">
-                <div>
-                  <strong>{store.chain_name}</strong>
-                  <small>{store.address}</small>
-                </div>
-                <span class="meta">{store.hours}</span>
-              </div>
-            ))}
           </div>
         </section>
       </div>
@@ -93,7 +82,7 @@ const nearestStore = demoStores.find((store) => store.id === prices[0]?.store_id
             <form class="form" id="personal-log-form">
               <label class="field">
                 <select id="personal-store">
-                  {demoStores.map((store) => <option value={store.id}>{store.name}</option>)}
+                  <option value="">正在加载门店...</option>
                 </select>
               </label>
               <label class="field">
@@ -109,17 +98,15 @@ const nearestStore = demoStores.find((store) => store.id === prices[0]?.store_id
           <section class="tile tile--wide">
             <div class="section__header">
               <h3>价格洞察</h3>
-              <p>最便宜价格、门店数量和当前参考。</p>
+              <p>最低价、门店数量和当前参考。</p>
             </div>
             <div class="hero-banner">
               <div class="hero-banner__inner">
-                <div class="pillrow">
-                  <span class="pill">最低价 ¥{Math.min(...prices.map((row) => row.price_yen))}</span>
-                  <span class="pill">{prices.length} 家门店</span>
-                  <span class="pill">最常见采样地点：东京</span>
+                <div class="pillrow" id="insight-pills">
+                  <span class="pill">加载中</span>
                 </div>
                 <p class="product-sub">
-                  在真实项目里，这块会按你的位置、收藏和历史记录做二次排序。当前版本已经保留完整的数据结构。
+                  这块会在页面加载后用真实 Supabase 价格刷新。
                 </p>
               </div>
             </div>
@@ -129,9 +116,22 @@ const nearestStore = demoStores.find((store) => store.id === prices[0]?.store_id
     </div>
   </section>
 
-  <script type="module" define:vars={{ productId: product.id }}>
-    import { getCurrentUser, savePersonalLog, formatYen, resolveBase, geolocate, fetchNearbyPrices, formatDistance } from '../../lib/browser.js';
+  <script type="module" define:vars={{ productId: product.id, productName: product.name }}>
+    import {
+      fetchAllStores,
+      fetchNearbyPrices,
+      fetchPricesForProduct,
+      formatDistance,
+      formatYen,
+      geolocate,
+      getCurrentUser,
+      resolveBase,
+      savePersonalLog,
+    } from '../../lib/browser.js';
 
+    const page = document.querySelector('#product-page');
+    const productId = page?.dataset.productId || '';
+    const productName = page?.dataset.productName || '';
     const form = document.querySelector('#personal-log-form');
     const store = document.querySelector('#personal-store');
     const price = document.querySelector('#personal-price');
@@ -140,21 +140,94 @@ const nearestStore = demoStores.find((store) => store.id === prices[0]?.store_id
     const geoButton = document.querySelector('#geo-sort');
     const geoStatus = document.querySelector('#geo-status');
     const priceList = document.querySelector('#price-list');
+    const nearbyStoreList = document.querySelector('#nearby-store-list');
+    const insightPills = document.querySelector('#insight-pills');
 
-    function renderRows(rows) {
+    let stores = [];
+
+    function renderPrices(rows) {
       if (!priceList) return;
-      priceList.innerHTML = rows.map((row) => `
-        <div class="list__item">
-          <div>
-            <strong>${row.store?.name || row.stores?.name || 'Unknown store'}</strong>
-            <small>${row.store?.address || row.stores?.address || ''} · ${row.store?.hours || row.stores?.hours || ''} · ${row.is_member_price ? '会员价' : '公开价'}${row.distance_km !== null && row.distance_km !== undefined ? ` · ${formatDistance(row.distance_km)}` : ''}</small>
+      priceList.innerHTML = rows.length
+        ? rows.map((row) => `
+          <div class="list__item">
+            <div>
+              <strong>${row.stores?.name || 'Unknown store'}</strong>
+              <small>${row.stores?.address || ''} · ${row.stores?.hours || ''} · ${row.is_member_price ? '会员价' : '公开价'}${row.distance_km !== null && row.distance_km !== undefined ? ` · ${formatDistance(row.distance_km)}` : ''}</small>
+            </div>
+            <div style="text-align:right;">
+              <div class="price">¥${row.price_yen}</div>
+              <small>${row.source || 'manual'}</small>
+            </div>
           </div>
-          <div style="text-align:right;">
-            <div class="price">¥${row.price_yen}</div>
-            <small>${row.source || 'manual'}</small>
+        `).join('')
+        : `
+          <div class="list__item">
+            <div>
+              <strong>暂无价格</strong>
+              <small>这件商品还没有 Supabase 价格记录。</small>
+            </div>
+            <span class="meta">empty</span>
           </div>
-        </div>
-      `).join('');
+        `;
+    }
+
+    function renderNearbyStores(rows) {
+      if (!nearbyStoreList) return;
+      nearbyStoreList.innerHTML = rows.length
+        ? rows.map((row) => `
+          <div class="list__item">
+            <div>
+              <strong>${row.stores?.name || 'Unknown store'}</strong>
+              <small>${row.stores?.city || ''} · ${row.stores?.pref || ''}</small>
+            </div>
+            <span class="meta">${row.stores?.hours || ''}</span>
+          </div>
+        `).join('')
+        : `
+          <div class="list__item">
+            <div>
+              <strong>没有附近数据</strong>
+              <small>请先给门店补充坐标和价格。</small>
+            </div>
+            <span class="meta">empty</span>
+          </div>
+        `;
+    }
+
+    function renderInsights(rows) {
+      if (!insightPills) return;
+      if (!rows.length) {
+        insightPills.innerHTML = '<span class="pill">暂无价格数据</span>';
+        return;
+      }
+      const minPrice = Math.min(...rows.map((row) => row.price_yen));
+      const storeCount = new Set(rows.map((row) => row.store_id)).size;
+      const latest = rows[0];
+      insightPills.innerHTML = `
+        <span class="pill">最低价 ¥${minPrice}</span>
+        <span class="pill">${storeCount} 家门店</span>
+        <span class="pill">最新采样：${latest?.stores?.name || 'unknown'}</span>
+      `;
+    }
+
+    async function loadPrices() {
+      const rows = await fetchPricesForProduct(productId);
+      renderPrices(rows);
+      renderNearbyStores(rows);
+      renderInsights(rows);
+      if (store && stores.length) {
+        store.innerHTML = stores.map((item) => `<option value="${item.id}">${item.name}</option>`).join('');
+      }
+      if (geoStatus) geoStatus.textContent = rows.length ? `已加载 ${rows.length} 条价格记录。` : `当前还没有 ${productName} 的价格记录。`;
+    }
+
+    async function loadStores() {
+      stores = await fetchAllStores();
+      if (store) {
+        store.innerHTML = stores.length
+          ? stores.map((item) => `<option value="${item.id}">${item.name}</option>`).join('')
+          : '<option value="">暂无门店</option>';
+      }
     }
 
     geoButton?.addEventListener('click', async () => {
@@ -163,7 +236,8 @@ const nearestStore = demoStores.find((store) => store.id === prices[0]?.store_id
       try {
         const location = await geolocate();
         const rows = await fetchNearbyPrices({ productId, lat: location.lat, lng: location.lng, radiusKm: 20 });
-        renderRows(rows);
+        renderPrices(rows);
+        renderNearbyStores(rows);
         geoStatus.textContent = `已按当前位置重排，定位点：${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}。`;
       } catch (error) {
         geoStatus.textContent = `定位失败：${error.message}`;
@@ -194,5 +268,9 @@ const nearestStore = demoStores.find((store) => store.id === prices[0]?.store_id
         status.textContent = `保存失败：${error.message}`;
       }
     });
+
+    Promise.all([loadStores(), loadPrices()]);
   </script>
 </BaseLayout>
+
+

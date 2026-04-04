@@ -4,6 +4,7 @@ create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text unique,
   full_name text,
+  role text not null default 'user',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -142,7 +143,230 @@ create policy "favorites owner insert" on favorites for insert with check (auth.
 create policy "favorites owner update" on favorites for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "favorites owner delete" on favorites for delete using (auth.uid() = user_id);
 
-create or replace function handle_new_user()
+create or replace function is_admin_user()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists(
+    select 1
+    from public.profiles
+    where id = auth.uid() and role = 'admin'
+  );
+$$;
+
+create or replace function require_admin_user()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_admin_user() then
+    raise exception 'admin privileges required';
+  end if;
+end;
+$$;
+
+create or replace function admin_upsert_product(payload jsonb)
+returns products
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result products;
+begin
+  perform require_admin_user();
+
+  insert into public.products (
+    id,
+    barcode,
+    name,
+    brand,
+    pack,
+    category,
+    tone,
+    description
+  )
+  values (
+    coalesce(nullif(payload->>'id', ''), nullif(payload->>'barcode', '')),
+    coalesce(payload->>'barcode', ''),
+    coalesce(payload->>'name', ''),
+    coalesce(payload->>'brand', ''),
+    coalesce(payload->>'pack', ''),
+    coalesce(payload->>'category', ''),
+    coalesce(nullif(payload->>'tone', ''), 'sunset'),
+    coalesce(payload->>'description', '')
+  )
+  on conflict (id) do update
+    set barcode = excluded.barcode,
+        name = excluded.name,
+        brand = excluded.brand,
+        pack = excluded.pack,
+        category = excluded.category,
+        tone = excluded.tone,
+        description = excluded.description,
+        updated_at = now()
+  returning * into result;
+
+  return result;
+end;
+$$;
+
+create or replace function admin_upsert_store(payload jsonb)
+returns stores
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result stores;
+begin
+  perform require_admin_user();
+
+  insert into public.stores (
+    id,
+    name,
+    chain_name,
+    address,
+    city,
+    pref,
+    lat,
+    lng,
+    hours
+  )
+  values (
+    coalesce(nullif(payload->>'id', ''), nullif(payload->>'name', '')),
+    coalesce(payload->>'name', ''),
+    coalesce(payload->>'chain_name', ''),
+    coalesce(payload->>'address', ''),
+    coalesce(payload->>'city', ''),
+    coalesce(payload->>'pref', ''),
+    coalesce((nullif(payload->>'lat', ''))::double precision, 0),
+    coalesce((nullif(payload->>'lng', ''))::double precision, 0),
+    coalesce(payload->>'hours', '')
+  )
+  on conflict (id) do update
+    set name = excluded.name,
+        chain_name = excluded.chain_name,
+        address = excluded.address,
+        city = excluded.city,
+        pref = excluded.pref,
+        lat = excluded.lat,
+        lng = excluded.lng,
+        hours = excluded.hours,
+        updated_at = now()
+  returning * into result;
+
+  return result;
+end;
+$$;
+
+create or replace function admin_upsert_price(payload jsonb)
+returns prices
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result prices;
+begin
+  perform require_admin_user();
+
+  insert into public.prices (
+    id,
+    product_id,
+    store_id,
+    price_yen,
+    is_member_price,
+    source,
+    note,
+    collected_at
+  )
+  values (
+    coalesce(nullif(payload->>'id', '')::uuid, gen_random_uuid()),
+    coalesce(payload->>'product_id', ''),
+    coalesce(payload->>'store_id', ''),
+    nullif(payload->>'price_yen', '')::integer,
+    coalesce((nullif(payload->>'is_member_price', ''))::boolean, false),
+    coalesce(payload->>'source', 'manual'),
+    coalesce(payload->>'note', ''),
+    coalesce((nullif(payload->>'collected_at', ''))::timestamptz, now())
+  )
+  on conflict (id) do update
+    set product_id = excluded.product_id,
+        store_id = excluded.store_id,
+        price_yen = excluded.price_yen,
+        is_member_price = excluded.is_member_price,
+        source = excluded.source,
+        note = excluded.note,
+        collected_at = excluded.collected_at,
+        updated_at = now()
+  returning * into result;
+
+  return result;
+end;
+$$;
+
+create or replace function admin_delete_product(target_id text)
+returns products
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result products;
+begin
+  perform require_admin_user();
+
+  delete from public.products
+  where id = target_id
+  returning * into result;
+
+  return result;
+end;
+$$;
+
+create or replace function admin_delete_store(target_id text)
+returns stores
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result stores;
+begin
+  perform require_admin_user();
+
+  delete from public.stores
+  where id = target_id
+  returning * into result;
+
+  return result;
+end;
+$$;
+
+create or replace function admin_delete_price(target_id uuid)
+returns prices
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result prices;
+begin
+  perform require_admin_user();
+
+  delete from public.prices
+  where id = target_id
+  returning * into result;
+
+  return result;
+end;
+$$;create or replace function handle_new_user()
 returns trigger
 language plpgsql
 security definer
@@ -163,3 +387,8 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
 after insert on auth.users
 for each row execute function handle_new_user();
+
+
+
+
+

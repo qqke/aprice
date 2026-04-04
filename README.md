@@ -9,6 +9,7 @@
 - 模糊查询：支持商品名、品牌、条码号搜索
 - 用户登录：Supabase 邮箱魔法链接
 - 个人价格记录：保存购买价、门店、备注和历史
+- 收藏：支持收藏商品和门店
 
 ## 本地开发
 
@@ -36,6 +37,7 @@ ASTRO_BASE_PATH=/aprice/
 2. 可选执行 `supabase/seed.sql`
 3. 在 Supabase Auth 中启用邮箱登录
 4. 把站点地址加入邮件回调允许列表
+5. 需要后台写权限时，把对应用户的 `profiles.role` 设为 `admin`
 
 ## GitHub Pages
 
@@ -43,4 +45,4 @@ ASTRO_BASE_PATH=/aprice/
 
 ## 备注
 
-当前仓库内含 demo 数据，所以即使还没连上 Supabase，页面也能先演示完整流程。
+`supabase/seed.sql` 只用于初始化测试数据，不参与运行时逻辑。

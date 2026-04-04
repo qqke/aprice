@@ -1,53 +1,32 @@
 import {
-  demoFavorites,
-  demoLogs,
-  demoPriceRows,
-  demoProducts,
-  demoStores,
-  findDemoProductByBarcode,
-  findDemoProductById,
-} from './catalog.js';
+  escapeIlike,
+  fetchPublicProductByBarcode,
+  fetchPublicProductById,
+  fetchPublicProducts,
+  fetchPublicStores,
+  restDelete,
+  restGet,
+  restInsert,
+  restRpc,
+} from './supabase-rest.js';
+import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL?.trim() || '';
 const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY?.trim() || '';
-const HAS_SUPABASE = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 const BASE_URL = import.meta.env.BASE_URL || '/';
-
-const storageKeys = {
-  demoSession: 'aprice:demo-session',
-  logs: 'aprice:logs',
-  favorites: 'aprice:favorites',
-};
 
 let supabaseClientPromise = null;
 
-function normalize(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase();
-}
-
-function cleanBarcode(value) {
-  return String(value || '').replace(/\D/g, '').trim();
-}
-
-function readJson(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
+function ensureConfigured() {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error('Missing Supabase environment variables');
   }
 }
 
-function writeJson(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
-
 async function getSupabaseClient() {
-  if (!HAS_SUPABASE) return null;
+  ensureConfigured();
   if (!supabaseClientPromise) {
-    supabaseClientPromise = import('https://esm.sh/@supabase/supabase-js@2').then(({ createClient }) =>
+    supabaseClientPromise = Promise.resolve(
       createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         auth: {
           persistSession: true,
@@ -58,6 +37,10 @@ async function getSupabaseClient() {
     );
   }
   return supabaseClientPromise;
+}
+
+function cleanBarcode(value) {
+  return String(value || '').replace(/\D/g, '').trim();
 }
 
 function distanceKm(lat1, lng1, lat2, lng2) {
@@ -71,30 +54,17 @@ function distanceKm(lat1, lng1, lat2, lng2) {
   return 2 * r * Math.asin(Math.sqrt(a));
 }
 
-function localProducts() {
-  return demoProducts.slice();
-}
-
-function localPricesForProduct(productId) {
-  return demoPriceRows(productId);
-}
-
 export function resolveBase(pathname = '') {
   const base = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
   const cleanPath = String(pathname || '').replace(/^\//, '');
-  if (!cleanPath) {
-    return base;
-  }
+  if (!cleanPath) return base;
   return `${base.replace(/\/$/, '')}/${cleanPath}`;
 }
 
 export async function getSession() {
-  if (HAS_SUPABASE) {
-    const client = await getSupabaseClient();
-    const { data } = await client.auth.getSession();
-    return data.session ?? null;
-  }
-  return readJson(storageKeys.demoSession, null);
+  const client = await getSupabaseClient();
+  const { data } = await client.auth.getSession();
+  return data.session ?? null;
 }
 
 export async function getCurrentUser() {
@@ -103,116 +73,142 @@ export async function getCurrentUser() {
 }
 
 export async function sendMagicLink(email) {
-  if (!HAS_SUPABASE) {
-    const session = {
-      user: {
-        id: 'demo-user',
-        email,
-        user_metadata: { full_name: email.split('@')[0] || 'Demo User' },
-      },
-    };
-    writeJson(storageKeys.demoSession, session);
-    return { ok: true, mode: 'demo' };
-  }
-
   const client = await getSupabaseClient();
   const redirectTo = `${window.location.origin}${resolveBase('login/')}`;
   const { error } = await client.auth.signInWithOtp({
     email,
     options: { emailRedirectTo: redirectTo },
   });
-
   if (error) throw error;
-  return { ok: true, mode: 'supabase' };
+  return { ok: true };
+}
+
+export async function fetchCurrentProfile() {
+  const session = await getSession();
+  if (!session?.user) return null;
+  const rows = await restGet('profiles', {
+    query: {
+      select: 'id,email,full_name,role,created_at,updated_at',
+      id: `eq.${session.user.id}`,
+      limit: 1,
+    },
+    token: session.access_token,
+  });
+  return rows?.[0] ?? null;
+}
+
+export async function adminUpsertProduct(payload) {
+  const session = await getSession();
+  if (!session?.user) throw new Error('Please sign in first');
+  return restRpc('admin_upsert_product', payload, { token: session.access_token });
+}
+
+export async function adminUpsertStore(payload) {
+  const session = await getSession();
+  if (!session?.user) throw new Error('Please sign in first');
+  return restRpc('admin_upsert_store', payload, { token: session.access_token });
+}
+
+export async function adminUpsertPrice(payload) {
+  const session = await getSession();
+  if (!session?.user) throw new Error('Please sign in first');
+  return restRpc('admin_upsert_price', payload, { token: session.access_token });
+}
+export async function adminDeleteProduct(targetId) {
+  const session = await getSession();
+  if (!session?.user) throw new Error('Please sign in first');
+  return restRpc('admin_delete_product', { target_id: targetId }, { token: session.access_token });
+}
+
+export async function adminDeleteStore(targetId) {
+  const session = await getSession();
+  if (!session?.user) throw new Error('Please sign in first');
+  return restRpc('admin_delete_store', { target_id: targetId }, { token: session.access_token });
+}
+
+export async function adminDeletePrice(targetId) {
+  const session = await getSession();
+  if (!session?.user) throw new Error('Please sign in first');
+  return restRpc('admin_delete_price', { target_id: targetId }, { token: session.access_token });
 }
 
 export async function signOut() {
-  if (!HAS_SUPABASE) {
-    localStorage.removeItem(storageKeys.demoSession);
-    return;
-  }
-
   const client = await getSupabaseClient();
-  await client.auth.signOut();
+  const { error } = await client.auth.signOut();
+  if (error) throw error;
 }
 
 export async function searchProducts(term = '') {
   const q = term.trim();
-  if (!q) {
-    return HAS_SUPABASE ? await fetchAllProducts() : localProducts();
+  if (!q) return fetchAllProducts();
+
+  const pattern = `%${escapeIlike(q)}%`;
+  const barcode = cleanBarcode(q);
+  const orParts = [
+    `name.ilike.${pattern}`,
+    `brand.ilike.${pattern}`,
+    `category.ilike.${pattern}`,
+  ];
+  if (barcode) {
+    orParts.push(`barcode.ilike.%${barcode}%`);
   }
 
-  if (!HAS_SUPABASE) {
-    const needle = normalize(q);
-    return localProducts().filter((product) => {
-      return [product.name, product.brand, product.barcode, product.category]
-        .map(normalize)
-        .some((value) => value.includes(needle));
-    });
-  }
-
-  const client = await getSupabaseClient();
-  const { data, error } = await client
-    .from('products')
-    .select('*')
-    .or(`name.ilike.%${q}%,brand.ilike.%${q}%,barcode.ilike.%${cleanBarcode(q)}%,category.ilike.%${q}%`)
-    .order('updated_at', { ascending: false })
-    .limit(20);
-
-  if (error) throw error;
-  return data ?? [];
+  return restGet('products', {
+    query: {
+      select: '*',
+      or: `(${orParts.join(',')})`,
+      order: 'updated_at.desc',
+      limit: 20,
+    },
+  });
 }
 
 export async function fetchAllProducts() {
-  if (!HAS_SUPABASE) return localProducts();
-  const client = await getSupabaseClient();
-  const { data, error } = await client.from('products').select('*').order('updated_at', { ascending: false }).limit(100);
-  if (error) throw error;
-  return data ?? [];
+  return fetchPublicProducts({ limit: 100, order: 'updated_at.desc' });
+}
+
+export async function fetchAllStores() {
+  return fetchPublicStores({ limit: 200, order: 'updated_at.desc' });
+}
+
+export async function fetchRecentPrices(limit = 10) {
+  return restGet('prices', {
+    query: {
+      select: 'id, product_id, store_id, price_yen, is_member_price, source, note, collected_at, created_at, updated_at, stores:store_id (id, name, city, pref), products:product_id (id, name, barcode, brand)',
+      order: 'collected_at.desc',
+      limit,
+    },
+  });
 }
 
 export async function fetchProductById(id) {
   if (!id) return null;
-  if (!HAS_SUPABASE) return findDemoProductById(id);
-
-  const client = await getSupabaseClient();
-  const { data, error } = await client.from('products').select('*').eq('id', id).maybeSingle();
-  if (error) throw error;
-  return data ?? null;
+  return fetchPublicProductById(id);
 }
 
 export async function fetchProductByBarcode(barcode) {
   const cleaned = cleanBarcode(barcode);
   if (!cleaned) return null;
-  if (!HAS_SUPABASE) return findDemoProductByBarcode(cleaned);
-
-  const client = await getSupabaseClient();
-  const { data, error } = await client.from('products').select('*').eq('barcode', cleaned).maybeSingle();
-  if (error) throw error;
-  return data ?? null;
+  return fetchPublicProductByBarcode(cleaned);
 }
 
 export async function fetchPricesForProduct(productId) {
   if (!productId) return [];
-  if (!HAS_SUPABASE) return localPricesForProduct(productId);
-
-  const client = await getSupabaseClient();
-  const { data, error } = await client
-    .from('prices')
-    .select(
-      'id, product_id, store_id, price_yen, is_member_price, source, collected_at, note, stores:store_id (id, name, chain_name, address, city, pref, lat, lng, hours), products:product_id (id, name, barcode, brand, pack, tone)',
-    )
-    .eq('product_id', productId)
-    .order('collected_at', { ascending: false });
-  if (error) throw error;
-  return data ?? [];
+  return restGet('prices', {
+    query: {
+      select:
+        'id, product_id, store_id, price_yen, is_member_price, source, collected_at, note, stores:store_id (id, name, chain_name, address, city, pref, lat, lng, hours), products:product_id (id, name, barcode, brand, pack, tone)',
+      product_id: `eq.${productId}`,
+      order: 'collected_at.desc',
+    },
+  });
 }
 
 export async function fetchNearbyPrices({ productId, lat, lng, radiusKm = 8 }) {
   const rows = await fetchPricesForProduct(productId);
   return rows
     .map((row) => {
-      const store = row.store || row.stores || null;
+      const store = row.stores || null;
       if (!store || typeof store.lat !== 'number' || typeof store.lng !== 'number') {
         return { ...row, distance_km: null };
       }
@@ -232,110 +228,82 @@ export async function fetchNearbyPrices({ productId, lat, lng, radiusKm = 8 }) {
 
 export async function fetchPersonalLogs(userId) {
   if (!userId) return [];
-  if (!HAS_SUPABASE) {
-    return [...demoLogs.filter((log) => log.user_id === userId), ...readJson(storageKeys.logs, [])]
-      .filter((log) => log.user_id === userId)
-      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
-  }
-
-  const client = await getSupabaseClient();
-  const { data, error } = await client
-    .from('user_price_logs')
-    .select('*, products:product_id (*), stores:store_id (*)')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return data ?? [];
+  const session = await getSession();
+  return restGet('user_price_logs', {
+    query: {
+      select: '*, products:product_id (*), stores:store_id (*)',
+      user_id: `eq.${userId}`,
+      order: 'created_at.desc',
+    },
+    token: session?.access_token,
+  });
 }
 
 export async function savePersonalLog(entry) {
   if (!entry?.product_id || !entry?.price_yen) {
     throw new Error('product_id and price_yen are required');
   }
-
-  if (!HAS_SUPABASE) {
-    const session = readJson(storageKeys.demoSession, null);
-    if (!session?.user) {
-      throw new Error('Please sign in first');
-    }
-    const logs = readJson(storageKeys.logs, []);
-    const next = {
-      id: crypto.randomUUID(),
-      user_id: session.user.id,
-      created_at: new Date().toISOString(),
-      ...entry,
-    };
-    logs.unshift(next);
-    writeJson(storageKeys.logs, logs);
-    return next;
+  const session = await getSession();
+  if (!session?.user) {
+    throw new Error('Please sign in first');
   }
-
-  const client = await getSupabaseClient();
-  const user = await getCurrentUser();
-  const payload = {
-    ...entry,
-    user_id: user.id,
-  };
-  const { data, error } = await client.from('user_price_logs').insert(payload).select('*').single();
-  if (error) throw error;
-  return data;
+  return restInsert(
+    'user_price_logs',
+    {
+      ...entry,
+      user_id: session.user.id,
+    },
+    { token: session.access_token },
+  );
 }
 
 export async function fetchFavorites(userId) {
   if (!userId) return [];
-  if (!HAS_SUPABASE) {
-    return demoFavorites
-      .filter((item) => item.user_id === userId)
-      .concat(readJson(storageKeys.favorites, []).filter((item) => item.user_id === userId));
-  }
-
-  const client = await getSupabaseClient();
-  const { data, error } = await client.from('favorites').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-  if (error) throw error;
-  return data ?? [];
+  const session = await getSession();
+  return restGet('favorites', {
+    query: {
+      select: '*',
+      user_id: `eq.${userId}`,
+      order: 'created_at.desc',
+    },
+    token: session?.access_token,
+  });
 }
 
 export async function toggleFavorite(entityType, entityId) {
-  const user = await getCurrentUser();
-  if (!user) throw new Error('Please sign in first');
+  const session = await getSession();
+  if (!session?.user) throw new Error('Please sign in first');
 
-  if (!HAS_SUPABASE) {
-    const favorites = readJson(storageKeys.favorites, []);
-    const index = favorites.findIndex((item) => item.user_id === user.id && item.entity_type === entityType && item.entity_id === entityId);
-    if (index >= 0) {
-      favorites.splice(index, 1);
-    } else {
-      favorites.unshift({
-        id: crypto.randomUUID(),
-        user_id: user.id,
-        entity_type: entityType,
-        entity_id: entityId,
-        created_at: new Date().toISOString(),
-      });
-    }
-    writeJson(storageKeys.favorites, favorites);
-    return;
-  }
-
-  const client = await getSupabaseClient();
-  const { data: existing } = await client
-    .from('favorites')
-    .select('*')
-    .eq('user_id', user.id)
-    .eq('entity_type', entityType)
-    .eq('entity_id', entityId)
-    .maybeSingle();
-
-  if (existing?.id) {
-    await client.from('favorites').delete().eq('id', existing.id);
-    return;
-  }
-
-  await client.from('favorites').insert({
-    user_id: user.id,
-    entity_type: entityType,
-    entity_id: entityId,
+  const existing = await restGet('favorites', {
+    query: {
+      select: 'id',
+      user_id: `eq.${session.user.id}`,
+      entity_type: `eq.${entityType}`,
+      entity_id: `eq.${entityId}`,
+      limit: 1,
+    },
+    token: session.access_token,
   });
+
+  if (existing?.[0]?.id) {
+    await restDelete('favorites', {
+      query: { id: `eq.${existing[0].id}` },
+      token: session.access_token,
+    });
+    return { action: 'removed' };
+  }
+
+  await restInsert(
+    'favorites',
+    {
+      user_id: session.user.id,
+      entity_type: entityType,
+      entity_id: entityId,
+    },
+    { token: session.access_token },
+  );
+
+  return { action: 'added' };
 }
 
 export async function geolocate() {
@@ -388,18 +356,8 @@ export function formatDistance(value) {
   return `${value.toFixed(1)} km`;
 }
 
-export function getDemoProductById(id) {
-  return findDemoProductById(id);
-}
 
-export function getDemoPricesForProduct(productId) {
-  return demoPriceRows(productId);
-}
 
-export function getDemoProducts() {
-  return demoProducts.slice();
-}
 
-export function getDemoStores() {
-  return demoStores.slice();
-}
+
+
