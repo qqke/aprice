@@ -150,6 +150,8 @@ const { product } = Astro.props as { product: Product };
     const price = document.querySelector('#personal-price');
     const note = document.querySelector('#personal-note');
     const status = document.querySelector('#personal-status');
+    const favoriteButton = document.querySelector('#favorite-product-button');
+    const favoriteStatus = document.querySelector('#favorite-status');
     const geoButton = document.querySelector('#geo-sort');
     const geoStatus = document.querySelector('#geo-status');
     const priceList = document.querySelector('#price-list');
@@ -243,6 +245,24 @@ const { product } = Astro.props as { product: Product };
       }
     }
 
+    favoriteButton?.addEventListener('click', async () => {
+      const user = await getCurrentUser();
+      if (!user) {
+        if (favoriteStatus) favoriteStatus.textContent = '请先登录后再收藏。';
+        window.location.assign(resolveBase('login/'));
+        return;
+      }
+
+      try {
+        const result = await toggleFavorite('product', productId);
+        if (favoriteStatus) {
+          favoriteStatus.textContent = result.action === 'added' ? '已收藏当前商品。' : '已取消收藏。';
+        }
+      } catch (error) {
+        if (favoriteStatus) favoriteStatus.textContent = `收藏失败：${error.message}`;
+      }
+    });
+
     geoButton?.addEventListener('click', async () => {
       if (!geoStatus) return;
       geoStatus.textContent = '正在获取位置...';
@@ -285,6 +305,7 @@ const { product } = Astro.props as { product: Product };
     Promise.all([loadStores(), loadPrices()]);
   </script>
 </BaseLayout>
+
 
 
 
