@@ -2,12 +2,13 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 <BaseLayout title="管理 - Aprice" description="维护商品、门店和价格记录的后台页面。">
-  <section class="section">
+  <section class="section section--first-workspace">
     <div class="shell">
-      <div class="section__header">
+      <div class="section__header section__header--tight">
         <div>
-          <h1>管理</h1>
-          <p>这个页面通过 Supabase RPC 写入商品、门店和价格。只有 role = admin 的登录用户可用。</p>
+          <div class="workspace-note">Admin workspace · 管理工作台</div>
+          <h1 class="product-title" style="font-size: clamp(1.8rem, 3.8vw, 3rem);">商品、门店、价格，一屏维护。</h1>
+          <p class="product-sub">只有 `role = admin` 的登录用户可用。这里通过 Supabase RPC 写入基础数据和价格采样。</p>
         </div>
         <div class="pillrow">
           <a class="button button--ghost" href={`${import.meta.env.BASE_URL || '/'}login/`}>切换账号</a>
@@ -18,8 +19,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <div class="notice" id="admin-status" style="margin-bottom:16px;">正在检查会话与权限。</div>
 
       <div class="grid">
-        <section class="tile tile--wide">
-          <div class="section__header">
+        <section class="tile tile--wide tile--flow">
+          <div class="section__header section__header--tight">
             <div>
               <h2>商品</h2>
               <p>新增、更新或删除产品基础信息。</p>
@@ -29,27 +30,58 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <button class="button button--ghost" id="product-delete" type="button">删除</button>
             </div>
           </div>
-          <form class="form" id="product-form">
-            <label class="field"><input id="product-id" placeholder="id，例如 loxonin-s" /></label>
-            <label class="field"><input id="product-barcode" placeholder="barcode / JAN" /></label>
-            <label class="field"><input id="product-name" placeholder="名称" /></label>
-            <label class="field"><input id="product-brand" placeholder="品牌" /></label>
-            <label class="field"><input id="product-pack" placeholder="规格" /></label>
-            <label class="field"><input id="product-category" placeholder="分类" /></label>
-            <label class="field">
-              <select id="product-tone">
-                <option value="sunset">sunset</option>
-                <option value="mint">mint</option>
-                <option value="azure">azure</option>
-              </select>
-            </label>
-            <label class="field"><textarea id="product-description" rows="4" placeholder="描述"></textarea></label>
+          <form class="form admin-form" id="product-form">
+            <div class="admin-form__row admin-form__row--two">
+              <label class="field"><input id="product-id" placeholder="id，例如 loxonin-s" /></label>
+              <label class="field"><input id="product-barcode" placeholder="barcode / JAN" /></label>
+            </div>
+            <div class="admin-form__row admin-form__row--two">
+              <label class="field"><input id="product-name" placeholder="名称" /></label>
+              <label class="field"><input id="product-brand" placeholder="品牌" /></label>
+            </div>
+            <div class="admin-form__row admin-form__row--two">
+              <label class="field"><input id="product-pack" placeholder="规格" /></label>
+              <label class="field"><input id="product-category" placeholder="分类" /></label>
+            </div>
+            <div class="admin-form__row admin-form__row--two">
+              <label class="field">
+                <select id="product-tone">
+                  <option value="sunset">sunset</option>
+                  <option value="mint">mint</option>
+                  <option value="azure">azure</option>
+                </select>
+              </label>
+              <label class="field"><input id="product-description" placeholder="简短描述" /></label>
+            </div>
             <button class="button" type="submit">保存商品</button>
           </form>
         </section>
 
-        <section class="tile tile--wide">
-          <div class="section__header">
+        <section class="tile tile--flow">
+          <div class="section__header section__header--tight">
+            <div>
+              <h3>当前权限</h3>
+              <p>登录后会检查角色并加载后台数据。</p>
+            </div>
+          </div>
+          <div class="stack">
+            <div class="workspace-note">
+              建议把这个页只分享给维护账号。普通用户即使打开，也会被权限判断拦住。
+            </div>
+            <div class="list" id="admin-access">
+              <div class="list__item">
+                <div>
+                  <strong>等待验证</strong>
+                  <small>会先读取当前会话，再检查 profile.role。</small>
+                </div>
+                <span class="meta">check</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="tile tile--wide tile--flow">
+          <div class="section__header section__header--tight">
             <div>
               <h2>门店</h2>
               <p>新增、更新或删除门店坐标与营业信息。</p>
@@ -59,22 +91,32 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <button class="button button--ghost" id="store-delete" type="button">删除</button>
             </div>
           </div>
-          <form class="form" id="store-form">
-            <label class="field"><input id="store-id" placeholder="id，例如 shibuya-matsumoto" /></label>
-            <label class="field"><input id="store-name" placeholder="门店名" /></label>
-            <label class="field"><input id="store-chain" placeholder="连锁名" /></label>
-            <label class="field"><input id="store-address" placeholder="地址" /></label>
-            <label class="field"><input id="store-city" placeholder="城市" /></label>
-            <label class="field"><input id="store-pref" placeholder="都道府县" /></label>
-            <label class="field"><input id="store-lat" type="number" step="0.000001" placeholder="纬度" /></label>
-            <label class="field"><input id="store-lng" type="number" step="0.000001" placeholder="经度" /></label>
-            <label class="field"><input id="store-hours" placeholder="营业时间" /></label>
+          <form class="form admin-form" id="store-form">
+            <div class="admin-form__row admin-form__row--two">
+              <label class="field"><input id="store-id" placeholder="id，例如 shibuya-matsumoto" /></label>
+              <label class="field"><input id="store-name" placeholder="门店名" /></label>
+            </div>
+            <div class="admin-form__row admin-form__row--two">
+              <label class="field"><input id="store-chain" placeholder="连锁名" /></label>
+              <label class="field"><input id="store-hours" placeholder="营业时间" /></label>
+            </div>
+            <div class="admin-form__row admin-form__row--two">
+              <label class="field"><input id="store-address" placeholder="地址" /></label>
+              <label class="field"><input id="store-city" placeholder="城市" /></label>
+            </div>
+            <div class="admin-form__row admin-form__row--two">
+              <label class="field"><input id="store-pref" placeholder="都道府县" /></label>
+              <div class="admin-form__row admin-form__row--two admin-form__row--nested">
+                <label class="field"><input id="store-lat" type="number" step="0.000001" placeholder="纬度" /></label>
+                <label class="field"><input id="store-lng" type="number" step="0.000001" placeholder="经度" /></label>
+              </div>
+            </div>
             <button class="button" type="submit">保存门店</button>
           </form>
         </section>
 
-        <section class="tile tile--wide">
-          <div class="section__header">
+        <section class="tile tile--wide tile--flow">
+          <div class="section__header section__header--tight">
             <div>
               <h2>价格</h2>
               <p>录入公开价格或会员价，或删除最近采样。</p>
@@ -84,17 +126,19 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <button class="button button--ghost" id="price-delete" type="button">删除</button>
             </div>
           </div>
-          <form class="form" id="price-form">
-            <label class="field">
-              <select id="price-product"></select>
-            </label>
-            <label class="field">
-              <select id="price-store"></select>
-            </label>
-            <label class="field"><input id="price-yen" type="number" inputmode="numeric" placeholder="价格（円）" /></label>
-            <label class="field"><input id="price-source" placeholder="来源，例如 store shelf / community" /></label>
-            <label class="field"><input id="price-note" placeholder="备注" /></label>
-            <label class="field"><input id="price-collected" type="datetime-local" /></label>
+          <form class="form admin-form" id="price-form">
+            <div class="admin-form__row admin-form__row--two">
+              <label class="field"><select id="price-product"></select></label>
+              <label class="field"><select id="price-store"></select></label>
+            </div>
+            <div class="admin-form__row admin-form__row--two">
+              <label class="field"><input id="price-yen" type="number" inputmode="numeric" placeholder="价格（円）" /></label>
+              <label class="field"><input id="price-source" placeholder="来源，例如 store shelf / community" /></label>
+            </div>
+            <div class="admin-form__row admin-form__row--two">
+              <label class="field"><input id="price-note" placeholder="备注" /></label>
+              <label class="field"><input id="price-collected" type="datetime-local" /></label>
+            </div>
             <label class="field field--inline">
               <input id="price-member" type="checkbox" />
               <span>会员价</span>
@@ -103,24 +147,24 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           </form>
         </section>
 
-        <section class="tile">
-          <div class="section__header">
+        <section class="tile tile--flow">
+          <div class="section__header section__header--tight">
             <h3>最近商品</h3>
             <p>点击可回填到表单。</p>
           </div>
           <div class="list" id="admin-products"></div>
         </section>
 
-        <section class="tile">
-          <div class="section__header">
+        <section class="tile tile--flow">
+          <div class="section__header section__header--tight">
             <h3>最近门店</h3>
             <p>点击可回填到表单。</p>
           </div>
           <div class="list" id="admin-stores"></div>
         </section>
 
-        <section class="tile tile--wide">
-          <div class="section__header">
+        <section class="tile tile--wide tile--flow">
+          <div class="section__header section__header--tight">
             <h3>最近价格</h3>
             <p>可用于快速检查录入结果。</p>
           </div>
@@ -148,6 +192,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     } from '../lib/browser.js';
 
     const status = document.querySelector('#admin-status');
+    const accessState = document.querySelector('#admin-access');
     const logoutButton = document.querySelector('#admin-logout');
     const productForm = document.querySelector('#product-form');
     const storeForm = document.querySelector('#store-form');
@@ -336,10 +381,32 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       const [user, profile] = await Promise.all([getCurrentUser(), fetchCurrentProfile()]);
       if (!user) {
         if (status) status.textContent = '请先登录，再用 role=admin 的账号进入管理页。';
+        if (accessState) {
+          accessState.innerHTML = `
+            <div class="list__item">
+              <div>
+                <strong>未登录</strong>
+                <small>需要先登录才能继续。</small>
+              </div>
+              <span class="meta">guest</span>
+            </div>
+          `;
+        }
         return false;
       }
       if (profile?.role !== 'admin') {
         if (status) status.textContent = `当前账号不是管理员。当前 role: ${profile?.role || 'unknown'}`;
+        if (accessState) {
+          accessState.innerHTML = `
+            <div class="list__item">
+              <div>
+                <strong>${profile?.email || user.email || '已登录用户'}</strong>
+                <small>当前角色不足以访问管理功能。</small>
+              </div>
+              <span class="meta">${profile?.role || 'unknown'}</span>
+            </div>
+          `;
+        }
         return false;
       }
 
@@ -357,6 +424,17 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       renderStores();
       renderPrices();
       if (status) status.textContent = `已登录为 ${profile.email || user.email}，可以开始维护数据。`;
+      if (accessState) {
+        accessState.innerHTML = `
+          <div class="list__item">
+            <div>
+              <strong>${profile.email || user.email || 'admin'}</strong>
+              <small>管理员权限已开启。</small>
+            </div>
+            <span class="meta">admin</span>
+          </div>
+        `;
+      }
       return true;
     }
 
@@ -524,5 +602,3 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     loadData();
   </script>
 </BaseLayout>
-
-
