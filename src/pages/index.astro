@@ -199,13 +199,19 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     let activeProduct = null;
 
-    function productBadge(item) {
+        function productBadge(item) {
       const seed = (item?.id || item?.barcode || item?.name || 'P').toString();
       const sum = Array.from(seed).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      const palette = ['AZ', 'RX', 'MN', 'JP', 'SK', 'TR'];
+      const palette = [
+        { label: 'AZ', tone: 'badge--mint' },
+        { label: 'RX', tone: 'badge--sky' },
+        { label: 'MN', tone: 'badge--sun' },
+        { label: 'JP', tone: 'badge--violet' },
+        { label: 'SK', tone: 'badge--leaf' },
+        { label: 'TR', tone: 'badge--sand' },
+      ];
       return palette[sum % palette.length];
     }
-
 
     function productCard(item, featured = false) {
       if (featured) {
@@ -438,7 +444,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
                   <span class="timeline__line"></span>
                 </div>
                 <div class="feed__copy">
-                  <div class="timeline__icon ${trend.tone}">${badge}</div>
+                  <div class="timeline__icon ${badge.tone}">${badge.label}</div>
                   <div class="feed__kicker ${trend.tone}">${trend.arrow} 最近采样</div>
                   <strong>${latest.products?.name || 'Unknown product'}</strong>
                   <small>${latest.stores?.name || 'Unknown store'} · ${latest.stores?.city || ''} · ${latest.is_member_price ? '会员价' : '公开价'}</small>

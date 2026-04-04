@@ -264,10 +264,11 @@ const { product } = Astro.props as { product: Product };
             <div class="feed__meta">
               <div class="price">¥${row.price_yen}</div>
               <small>${row.stores?.city || ''}${distanceLabel}</small>
-              <span class="pill ${gapTier.tone}">${gapTier.label} · ${gapTier.percent}</span>
+              <span class="pill ${gapTier.tone}">${gapTier.label}</span>
               <small class="trend__delta ${gapTier.tone}">${gapTier.percent} · ${gapPercent}%</small>
               <div class="price-gap">
                 <span class="price-gap__label ${gapTier.bar}">${gapTier.label}</span>
+                <span class="price-gap__percent ${gapTier.tone}">${gapTier.percent}</span>
                 <span class="price-gap__track"><span class="price-gap__fill ${gapTier.bar}" style="width:${barWidth}%"></span></span>
               </div>
             </div>
@@ -280,7 +281,7 @@ const { product } = Astro.props as { product: Product };
             </div>
             <div class="feed__meta">
               <span class="price">¥${row.price_yen}</span>
-              <span class="pill ${gapTier.tone}">${gapTier.label} · ${gapTier.percent}</span>
+              <span class="pill ${gapTier.tone}">${gapTier.label}</span>
               <small class="trend__delta ${gapTier.tone}">${gapTier.percent} · ${gapPercent}%</small>
               <div class="price-gap">
                 <span class="price-gap__track"><span class="price-gap__fill ${gapTier.bar}" style="width:${barWidth}%"></span></span>

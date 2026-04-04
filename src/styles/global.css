@@ -614,16 +614,40 @@ img {
 }
 
 
-.timeline__icon {
-  width: fit-content;
-  min-width: 50px;
-  padding: 7px 10px;
-  border-radius: 14px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  text-align: center;
+.timeline__icon.badge--mint {
+  color: #b6ffd9;
+  border: 1px solid rgba(120, 240, 194, 0.18);
+  background: rgba(120, 240, 194, 0.14);
+}
+
+.timeline__icon.badge--sky {
+  color: #d8ecff;
+  border: 1px solid rgba(118, 183, 255, 0.18);
+  background: rgba(118, 183, 255, 0.14);
+}
+
+.timeline__icon.badge--sun {
+  color: #ffe8c7;
+  border: 1px solid rgba(247, 178, 103, 0.2);
+  background: rgba(247, 178, 103, 0.14);
+}
+
+.timeline__icon.badge--violet {
+  color: #eadcff;
+  border: 1px solid rgba(186, 155, 255, 0.2);
+  background: rgba(186, 155, 255, 0.14);
+}
+
+.timeline__icon.badge--leaf {
+  color: #d9ffd8;
+  border: 1px solid rgba(145, 232, 139, 0.18);
+  background: rgba(145, 232, 139, 0.12);
+}
+
+.timeline__icon.badge--sand {
+  color: #ffe3c4;
+  border: 1px solid rgba(255, 205, 145, 0.18);
+  background: rgba(255, 205, 145, 0.12);
 }
 
 .timeline__item {
@@ -800,6 +824,12 @@ img {
   text-transform: uppercase;
 }
 
+.price-gap__percent {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
 .price-gap__track {
   display: block;
   width: 100%;
