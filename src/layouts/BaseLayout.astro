@@ -39,11 +39,42 @@ const nav = [
             </a>
           ))}
         </nav>
+        <a class="chip session-chip" id="session-chip" href={`${base}login/`}>未登录</a>
       </div>
     </header>
     <main class="page">
       <slot />
     </main>
+    <script type="module">
+      import { fetchCurrentProfile, getCurrentUser, resolveBase } from '../lib/browser.js';
+
+      const chip = document.querySelector('#session-chip');
+
+      async function refreshSessionChip() {
+        if (!chip) return;
+        try {
+          const user = await getCurrentUser();
+          if (!user) {
+            chip.textContent = '未登录';
+            chip.href = resolveBase('login/');
+            chip.className = 'chip session-chip session-chip--guest';
+            return;
+          }
+
+          const profile = await fetchCurrentProfile();
+          const label = profile?.role === 'admin' ? '管理员' : (user.email || '已登录');
+          chip.textContent = label;
+          chip.href = profile?.role === 'admin' ? resolveBase('admin/') : resolveBase('me/');
+          chip.className = profile?.role === 'admin' ? 'chip session-chip session-chip--admin' : 'chip session-chip session-chip--member';
+        } catch {
+          chip.textContent = '会话';
+          chip.href = resolveBase('login/');
+          chip.className = 'chip session-chip session-chip--guest';
+        }
+      }
+
+      refreshSessionChip();
+    </script>
   </body>
 </html>
 

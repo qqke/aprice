@@ -30,6 +30,26 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             </div>
           </div>
         </section>
+
+        <section class="tile">
+          <div class="section__header">
+            <div>
+              <h3>最近浏览</h3>
+              <p>从商品页自动记录你刚看过的药品。</p>
+            </div>
+            <button class="button button--ghost" id="clear-recent-views" type="button">清空</button>
+          </div>
+          <div class="list" id="recent-views">
+            <div class="list__item">
+              <div>
+                <strong>暂无浏览记录</strong>
+                <small>从扫码或搜索点进商品后，会自动显示在这里。</small>
+              </div>
+              <span class="meta">recent</span>
+            </div>
+          </div>
+        </section>
+
         <section class="tile">
           <div class="section__header">
             <h3>收藏</h3>
@@ -45,6 +65,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             </div>
           </div>
         </section>
+
         <section class="tile">
           <div class="section__header">
             <h3>快速记录</h3>
@@ -85,7 +106,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       fetchAllStores,
       fetchFavorites,
       fetchPersonalLogs,
+      fetchRecentViews,
+      clearRecentViews,
       getCurrentUser,
+      resolveBase,
       savePersonalLog,
       toggleFavorite,
       formatDateTime,
@@ -93,6 +117,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     } from '../lib/browser.js';
 
     const logsEl = document.querySelector('#my-logs');
+    const recentViewsEl = document.querySelector('#recent-views');
+    const clearRecentViewsButton = document.querySelector('#clear-recent-views');
     const favsEl = document.querySelector('#my-favorites');
     const form = document.querySelector('#log-form');
     const status = document.querySelector('#log-status');
@@ -112,6 +138,33 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     function storeName(id) {
       return stores.find((item) => item.id === id)?.name || id;
+    }
+
+    function renderRecentViews(rows) {
+      if (!recentViewsEl) return;
+      recentViewsEl.innerHTML = rows.length
+        ? rows.map((item) => `
+          <a class="list__item" href="${resolveBase(`product/${item.id}/`)}">
+            <div>
+              <strong>${item.name || 'Unknown product'}</strong>
+              <small>${item.brand || '品牌未知'} · ${item.pack || ''} · ${item.barcode || ''}</small>
+            </div>
+            <span class="meta">${item.viewed_at ? formatDateTime(item.viewed_at) : ''}</span>
+          </a>
+        `).join('')
+        : `
+          <div class="list__item">
+            <div>
+              <strong>暂无浏览记录</strong>
+              <small>从扫码或搜索点进商品后，会自动显示在这里。</small>
+            </div>
+            <span class="meta">recent</span>
+          </div>
+        `;
+    }
+
+    function loadRecentViews() {
+      renderRecentViews(fetchRecentViews());
     }
 
     function renderFavorites(favorites) {
@@ -161,6 +214,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     }
 
     async function refresh() {
+      loadRecentViews();
       const user = await getCurrentUser();
       if (!user) {
         logsEl.innerHTML = `
@@ -248,11 +302,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       }
     });
 
+    clearRecentViewsButton?.addEventListener('click', () => {
+      clearRecentViews();
+      loadRecentViews();
+    });
+
     refresh();
   </script>
 </BaseLayout>
-
-
-
-
-

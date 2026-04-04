@@ -14,6 +14,7 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL?.trim() || '';
 const SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY?.trim() || '';
 const BASE_URL = import.meta.env.BASE_URL || '/';
+const RECENT_VIEWS_KEY = 'aprice:recent-views';
 
 let supabaseClientPromise = null;
 
@@ -354,6 +355,51 @@ export function formatDateTime(value) {
 export function formatDistance(value) {
   if (value === null || value === undefined) return 'unknown';
   return `${value.toFixed(1)} km`;
+}
+function readRecentViews() {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(RECENT_VIEWS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeRecentViews(rows) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(RECENT_VIEWS_KEY, JSON.stringify(rows));
+  } catch {
+    // Ignore storage quota / privacy mode issues.
+  }
+}
+
+export function fetchRecentViews() {
+  return readRecentViews();
+}
+
+export function recordRecentView(product) {
+  if (!product?.id) return [];
+  const next = {
+    id: product.id,
+    name: product.name || '',
+    brand: product.brand || '',
+    pack: product.pack || '',
+    barcode: product.barcode || '',
+    tone: product.tone || 'sunset',
+    viewed_at: new Date().toISOString(),
+  };
+  const rows = readRecentViews().filter((item) => item.id !== next.id);
+  rows.unshift(next);
+  writeRecentViews(rows.slice(0, 12));
+  return rows;
+}
+
+export function clearRecentViews() {
+  writeRecentViews([]);
 }
 
 

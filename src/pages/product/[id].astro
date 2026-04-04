@@ -21,7 +21,7 @@ export async function getStaticPaths() {
 const { product } = Astro.props as { product: Product };
 ---
 <BaseLayout title={`${product.name} - Aprice`} description={`${product.name} 的门店价格、附近比价和个人记录。`}>
-  <section class="section" id="product-page" data-product-id={product.id} data-product-name={product.name}>
+  <section class="section" id="product-page" data-product-id={product.id} data-product-name={product.name} data-product-brand={product.brand} data-product-pack={product.pack} data-product-barcode={product.barcode} data-product-tone={product.tone}>
     <div class="shell">
       <div class={`product-hero tone-${product.tone || 'sunset'}`}>
         <div class="product-hero__overlay">
@@ -116,7 +116,7 @@ const { product } = Astro.props as { product: Product };
     </div>
   </section>
 
-  <script type="module" define:vars={{ productId: product.id, productName: product.name }}>
+  <script type="module" define:vars={{ productId: product.id, productName: product.name, productBrand: product.brand, productPack: product.pack, productBarcode: product.barcode, productTone: product.tone }}>
     import {
       fetchAllStores,
       fetchNearbyPrices,
@@ -125,6 +125,7 @@ const { product } = Astro.props as { product: Product };
       formatYen,
       geolocate,
       getCurrentUser,
+      recordRecentView,
       resolveBase,
       savePersonalLog,
     } from '../../lib/browser.js';
@@ -132,6 +133,18 @@ const { product } = Astro.props as { product: Product };
     const page = document.querySelector('#product-page');
     const productId = page?.dataset.productId || '';
     const productName = page?.dataset.productName || '';
+    const productBrand = page?.dataset.productBrand || '';
+    const productPack = page?.dataset.productPack || '';
+    const productBarcode = page?.dataset.productBarcode || '';
+    const productTone = page?.dataset.productTone || 'sunset';
+    recordRecentView({
+      id: productId,
+      name: productName,
+      brand: productBrand,
+      pack: productPack,
+      barcode: productBarcode,
+      tone: productTone,
+    });
     const form = document.querySelector('#personal-log-form');
     const store = document.querySelector('#personal-store');
     const price = document.querySelector('#personal-price');
@@ -272,5 +285,8 @@ const { product } = Astro.props as { product: Product };
     Promise.all([loadStores(), loadPrices()]);
   </script>
 </BaseLayout>
+
+
+
 
 
