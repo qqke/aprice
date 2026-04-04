@@ -7,7 +7,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     <div class="shell hero__grid hero__grid--tight">
       <div class="hero__panel hero__panel--tight">
         <div class="hero__copy hero__copy--tight">
-          <div class="eyebrow">Price workspace · 日本药店比价</div>
+          <div class="eyebrow">Aprice · 日本药店比价</div>
           <h1 class="headline">查价格、比门店、记下买价。</h1>
           <p class="lead">
             扫码、搜索和定位共用同一份价格数据，适合在手机上快速查价和回填记录。
@@ -23,10 +23,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <div class="hero__copy hero__copy--tight hero__summary">
           <div class="section__header section__header--tight" style="margin:0;">
             <div>
-              <h2>实时入口</h2>
-              <p>扫描、搜索和定位三种入口共用同一套价格数据。</p>
+              <h2>常用入口</h2>
+              <p>扫码、搜索和定位共用同一套价格数据。</p>
             </div>
-            <span class="pill">Online</span>
+            <span class="pill">在线</span>
           </div>
 
           <div class="list list--compact">
@@ -35,21 +35,21 @@ import BaseLayout from '../layouts/BaseLayout.astro';
                 <strong>扫码查价</strong>
                 <small>JAN 条码直接进入商品页。</small>
               </div>
-              <span class="meta">scan</span>
+              <span class="meta">扫码</span>
             </div>
             <div class="list__item">
               <div>
                 <strong>模糊搜索</strong>
                 <small>商品名、品牌和假名片段都能命中。</small>
               </div>
-              <span class="meta">search</span>
+              <span class="meta">搜索</span>
             </div>
             <div class="list__item">
               <div>
                 <strong>附近排序</strong>
                 <small>按当前位置重排门店价格。</small>
               </div>
-              <span class="meta">nearby</span>
+              <span class="meta">附近</span>
             </div>
           </div>
 
@@ -69,13 +69,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     <div class="shell">
       <div class="section__header section__header--tight">
         <div>
-          <h2>快速搜索</h2>
-          <p>支持商品名、品牌、拼写片段、假名片段和 JAN 条码。</p>
+          <h2>搜索</h2>
+          <p>支持商品名、品牌名、假名片段和 JAN 条码。</p>
         </div>
         <div class="pillrow">
-          <span class="pill">Name</span>
-          <span class="pill">Brand</span>
-          <span class="pill">JAN</span>
+          <span class="pill">名称</span>
+          <span class="pill">品牌</span>
+          <span class="pill">条码</span>
         </div>
       </div>
       <div class="searchbar">
@@ -115,8 +115,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     <div class="shell">
       <div class="section__header section__header--tight">
         <div>
-          <h2>附近价格</h2>
-          <p>打开定位后，会用当前商品的门店价格做附近排序。</p>
+          <h2>附近比价</h2>
+          <p>打开定位后，会按当前位置重排门店价格。</p>
         </div>
         <button class="button button--ghost" id="geolocate-home" type="button">使用当前位置</button>
       </div>
@@ -496,6 +496,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     await Promise.all([loadRecentPrices(), runSearch('')]);
   </script>
 </BaseLayout>
+
 
 
 

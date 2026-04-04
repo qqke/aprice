@@ -23,7 +23,7 @@ const { product } = Astro.props as { product: Product };
 <BaseLayout title={`${product.name} - Aprice`} description={`${product.name} 的门店价格、附近比价和个人记录。`}>
   <section class="section section--first-workspace" id="product-page" data-product-id={product.id} data-product-name={product.name} data-product-brand={product.brand} data-product-pack={product.pack} data-product-barcode={product.barcode} data-product-tone={product.tone}>
     <div class="shell">
-      <div class="eyebrow">Product · 商品工作台</div>
+      <div class="eyebrow">商品 · 价格工作台</div>
       <div class={`product-hero tone-${product.tone || 'sunset'}`} style="min-height: 210px;">
         <div class="product-hero__overlay" style="gap: 10px; padding: 20px;">
           <div class="pillrow">
@@ -548,6 +548,7 @@ const { product } = Astro.props as { product: Product };
     Promise.all([loadStores(), loadPrices()]);
   </script>
 </BaseLayout>
+
 
 
 
