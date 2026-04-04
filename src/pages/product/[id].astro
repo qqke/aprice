@@ -35,6 +35,7 @@ const { product } = Astro.props as { product: Product };
           <p class="product-sub" style="max-width: 58ch;">{product.description}</p>
           <div class="pillrow">
             <button class="button button--ghost" id="favorite-product-button" type="button">收藏当前商品</button>
+            <button class="button button--ghost" id="favorite-store-button" type="button">收藏当前门店</button>
             <span class="pill" id="favorite-status">登录后可一键收藏。</span>
           </div>
         </div>
@@ -49,7 +50,7 @@ const { product } = Astro.props as { product: Product };
             </div>
             <button class="button button--ghost" id="geo-sort" type="button">按当前位置重排</button>
           </div>
-          <div class="notice" id="geo-status" style="margin-bottom:12px;">正在读取 Supabase 价格。</div>
+          <div class="notice notice--compact" id="geo-status" style="margin-bottom:12px;">正在读取 Supabase 价格。</div>
           <div class="feed" id="price-list">
             <div class="feed__item">
               <div>
@@ -63,10 +64,12 @@ const { product } = Astro.props as { product: Product };
 
         <section class="tile tile--flow">
           <div class="section__header section__header--tight">
-            <h3>附近门店</h3>
-            <p>价格流之外，也能快速扫到门店分布。</p>
+            <div>
+              <h3>附近门店</h3>
+              <p>价格流之外，也能快速扫到门店分布。</p>
+            </div>
           </div>
-          <div class="notice" id="nearby-status" style="margin-bottom:12px;">门店列表会跟着价格一起出现。</div>
+          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">门店列表会跟着价格一起出现。</div>
           <div class="feed" id="nearby-store-list">
             <div class="feed__item">
               <div>
@@ -101,7 +104,7 @@ const { product } = Astro.props as { product: Product };
                 </label>
               </div>
               <button class="button" type="submit">保存到我的价格</button>
-              <div class="notice" id="personal-status">登录后即可写入个人购买价。</div>
+              <div class="notice notice--compact" id="personal-status">登录后即可写入个人购买价。</div>
             </form>
           </section>
 
@@ -166,6 +169,7 @@ const { product } = Astro.props as { product: Product };
     const note = document.querySelector('#personal-note');
     const status = document.querySelector('#personal-status');
     const favoriteButton = document.querySelector('#favorite-product-button');
+    const favoriteStoreButton = document.querySelector('#favorite-store-button');
     const favoriteStatus = document.querySelector('#favorite-status');
     const geoButton = document.querySelector('#geo-sort');
     const geoStatus = document.querySelector('#geo-status');
@@ -175,6 +179,13 @@ const { product } = Astro.props as { product: Product };
     const insightPills = document.querySelector('#insight-pills');
 
     let stores = [];
+    let activeStoreId = '';
+
+    function syncFavoriteStoreButton() {
+      if (favoriteStoreButton) {
+        favoriteStoreButton.disabled = !activeStoreId;
+      }
+    }
 
     function renderPrices(rows) {
       if (!priceList) return;
@@ -213,9 +224,11 @@ const { product } = Astro.props as { product: Product };
 
     function renderNearbyStores(rows) {
       if (!nearbyStoreList) return;
+      activeStoreId = rows[0]?.store_id || '';
+      syncFavoriteStoreButton();
       nearbyStoreList.innerHTML = rows.length
         ? rows.map((row, index) => index === 0 ? `
-          <a class="feed__item feed__item--featured" href="${resolveBase(`product/${productId}/`)}">
+          <div class="feed__item feed__item--featured">
             <div class="feed__copy">
               <div class="feed__kicker">当前聚焦</div>
               <strong>${row.stores?.name || 'Unknown store'}</strong>
@@ -224,16 +237,20 @@ const { product } = Astro.props as { product: Product };
             <div class="feed__meta">
               <div class="price">¥${row.price_yen}</div>
               <small>${row.stores?.hours || ''}</small>
+              <button class="button button--ghost" type="button" data-favorite-store="${row.store_id}">收藏门店</button>
             </div>
-          </a>
+          </div>
         ` : `
-          <a class="feed__item" href="${resolveBase(`product/${productId}/`)}">
+          <div class="feed__item">
             <div>
               <strong>${row.stores?.name || 'Unknown store'}</strong>
               <small>${row.stores?.city || ''} · ${row.stores?.pref || ''}</small>
             </div>
-            <span class="price">¥${row.price_yen}</span>
-          </a>
+            <div class="feed__meta">
+              <span class="price">¥${row.price_yen}</span>
+              <button class="button button--ghost" type="button" data-favorite-store="${row.store_id}">收藏门店</button>
+            </div>
+          </div>
         `).join('')
         : `
           <div class="feed__item">
@@ -252,12 +269,19 @@ const { product } = Astro.props as { product: Product };
         insightPills.innerHTML = '<span class="pill">暂无价格数据</span>';
         return;
       }
-      const minPrice = Math.min(...rows.map((row) => row.price_yen));
-      const storeCount = new Set(rows.map((row) => row.store_id)).size;
+
       const latest = rows[0];
+      const minPrice = Math.min(...rows.map((row) => row.price_yen));
+      const maxPrice = Math.max(...rows.map((row) => row.price_yen));
+      const storeCount = new Set(rows.map((row) => row.store_id)).size;
+      const gapToMin = latest ? latest.price_yen - minPrice : 0;
+      const trend = gapToMin === 0 ? '当前就是最低价' : (gapToMin > 0 ? `比最低价高 ${formatYen(gapToMin)}` : `比最低价低 ${formatYen(Math.abs(gapToMin))}`);
+
       insightPills.innerHTML = `
         <span class="pill">最低价 ¥${minPrice}</span>
+        <span class="pill">最高价 ¥${maxPrice}</span>
         <span class="pill">${storeCount} 家门店</span>
+        <span class="pill">${trend}</span>
         <span class="pill">最新采样：${latest?.stores?.name || 'unknown'}</span>
       `;
     }
@@ -301,6 +325,52 @@ const { product } = Astro.props as { product: Product };
       }
     });
 
+    favoriteStoreButton?.addEventListener('click', async () => {
+      const user = await getCurrentUser();
+      if (!user) {
+        if (favoriteStatus) favoriteStatus.textContent = '请先登录后再收藏门店。';
+        window.location.assign(resolveBase('login/'));
+        return;
+      }
+
+      if (!activeStoreId) {
+        if (favoriteStatus) favoriteStatus.textContent = '当前还没有可收藏的门店。';
+        return;
+      }
+
+      try {
+        const result = await toggleFavorite('store', activeStoreId);
+        if (favoriteStatus) {
+          favoriteStatus.textContent = result.action === 'added' ? '已收藏当前门店。' : '已取消门店收藏。';
+        }
+      } catch (error) {
+        if (favoriteStatus) favoriteStatus.textContent = `收藏失败：${error.message}`;
+      }
+    });
+
+    nearbyStoreList?.addEventListener('click', async (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const storeId = target.dataset.favoriteStore;
+      if (!storeId) return;
+
+      const user = await getCurrentUser();
+      if (!user) {
+        if (favoriteStatus) favoriteStatus.textContent = '请先登录后再收藏门店。';
+        window.location.assign(resolveBase('login/'));
+        return;
+      }
+
+      try {
+        const result = await toggleFavorite('store', storeId);
+        if (favoriteStatus) {
+          favoriteStatus.textContent = result.action === 'added' ? '已收藏门店。' : '已取消门店收藏。';
+        }
+      } catch (error) {
+        if (favoriteStatus) favoriteStatus.textContent = `收藏失败：${error.message}`;
+      }
+    });
+
     geoButton?.addEventListener('click', async () => {
       if (!geoStatus) return;
       geoStatus.textContent = '正在获取位置...';
@@ -309,6 +379,7 @@ const { product } = Astro.props as { product: Product };
         const rows = await fetchNearbyPrices({ productId, lat: location.lat, lng: location.lng, radiusKm: 20 });
         renderPrices(rows);
         renderNearbyStores(rows);
+        renderInsights(rows);
         geoStatus.textContent = `已按当前位置重排，定位点：${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}。`;
         if (nearbyStatus) nearbyStatus.textContent = rows.length ? `已按当前位置筛出 ${rows.length} 条门店价格。` : '当前位置附近还没有可比价格。';
       } catch (error) {
@@ -344,7 +415,3 @@ const { product } = Astro.props as { product: Product };
     Promise.all([loadStores(), loadPrices()]);
   </script>
 </BaseLayout>
-
-
-
-
