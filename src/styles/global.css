@@ -91,7 +91,7 @@ img {
 .topbar__inner {
   width: min(1180px, calc(100vw - 32px));
   margin: 0 auto;
-  min-height: 72px;
+  min-height: 68px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -181,13 +181,13 @@ img {
 .hero {
   position: relative;
   overflow: clip;
-  padding: 38px 0 28px;
+  padding: 30px 0 20px;
 }
 
 .hero__grid {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
-  gap: 24px;
+  gap: 18px;
   align-items: stretch;
 }
 
@@ -214,9 +214,9 @@ img {
 }
 
 .hero__copy {
-  padding: 42px;
+  padding: 36px;
   display: grid;
-  gap: 22px;
+  gap: 18px;
 }
 
 .hero--tight {
@@ -224,7 +224,7 @@ img {
 }
 
 .hero__grid--tight {
-  gap: 18px;
+  gap: 14px;
 }
 
 .hero__panel--tight {
@@ -232,8 +232,8 @@ img {
 }
 
 .hero__copy--tight {
-  padding: 28px;
-  gap: 16px;
+  padding: 24px;
+  gap: 14px;
 }
 
 .hero__actions--tight {
@@ -245,20 +245,20 @@ img {
 }
 
 .stat--tight {
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-radius: 18px;
 }
 
 .hero__scan--tight {
-  padding: 22px;
+  padding: 18px;
 }
 
 .scan-card--tight {
-  min-height: 340px;
+  min-height: 300px;
 }
 
 .notice--compact {
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-color: rgba(120, 240, 194, 0.1);
 }
 
@@ -282,7 +282,7 @@ img {
 .headline {
   margin: 0;
   max-width: 10ch;
-  font-size: clamp(3rem, 6vw, 5.5rem);
+  font-size: clamp(2.6rem, 5vw, 5rem);
   line-height: 0.94;
   letter-spacing: -0.05em;
 }
@@ -291,7 +291,7 @@ img {
   margin: 0;
   max-width: 54ch;
   color: var(--muted);
-  font-size: 1.05rem;
+  font-size: 1rem;
 }
 
 .hero__actions {
@@ -306,7 +306,7 @@ img {
   justify-content: center;
   gap: 10px;
   border: 0;
-  padding: 14px 18px;
+  padding: 12px 16px;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--accent), #b7ffe7);
   color: #04100a;
@@ -335,14 +335,14 @@ img {
 
 .stat {
   border-radius: 24px;
-  padding: 14px 16px;
+  padding: 12px 14px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .stat strong {
   display: block;
-  font-size: 1.2rem;
+  font-size: 1.08rem;
 }
 
 .stat span {
@@ -353,8 +353,8 @@ img {
 .hero__scan {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 28px;
+  gap: 14px;
+  padding: 24px;
 }
 
 .scan-card {
@@ -453,7 +453,8 @@ img {
 .workspace-note {
   display: inline-flex;
   width: fit-content;
-  padding: 8px 12px;
+  justify-self: start;
+  padding: 7px 10px;
   border-radius: 999px;
   border: 1px solid rgba(120, 240, 194, 0.16);
   background: rgba(120, 240, 194, 0.08);
@@ -474,7 +475,7 @@ img {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.04);
@@ -503,7 +504,7 @@ img {
 .grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 16px;
+  gap: 14px;
 }
 
 .tile {
@@ -528,7 +529,7 @@ img {
   grid-template-columns: 1fr auto;
   gap: 12px;
   align-items: center;
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.03);
@@ -544,7 +545,7 @@ img {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 14px;
   align-items: start;
-  padding: 16px 18px;
+  padding: 14px 16px;
   border-radius: 22px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background:
@@ -662,7 +663,7 @@ img {
   grid-template-columns: 24px minmax(0, 1fr) auto;
   gap: 14px;
   align-items: start;
-  padding: 16px 18px;
+  padding: 14px 16px;
   border-radius: 22px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background:
@@ -677,7 +678,7 @@ img {
 }
 
 .timeline__item--featured {
-  padding: 20px 18px;
+  padding: 18px 16px;
   border-color: rgba(120, 240, 194, 0.18);
   background:
     radial-gradient(circle at top right, rgba(120, 240, 194, 0.12), transparent 28%),
@@ -725,7 +726,7 @@ img {
 }
 
 .tile--flow {
-  padding: 22px;
+  padding: 18px;
 }
 
 .list__item strong {
@@ -753,7 +754,7 @@ img {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 7px 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -786,6 +787,7 @@ img {
   align-items: center;
   gap: 6px;
   width: fit-content;
+  justify-self: start;
   margin-bottom: 6px;
   padding: 5px 10px;
   border-radius: 999px;
@@ -905,9 +907,9 @@ img {
 }
 
 .hero-banner__inner {
-  padding: 28px;
+  padding: 24px;
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .hero-banner__eyebrow {
@@ -1000,7 +1002,7 @@ img {
 }
 
 .notice {
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-radius: 16px;
   background: rgba(120, 240, 194, 0.08);
   border: 1px solid rgba(120, 240, 194, 0.15);
@@ -1036,7 +1038,7 @@ img {
   }
 
   .hero__copy {
-    padding: 28px;
+    padding: 24px;
   }
 
   .headline {
