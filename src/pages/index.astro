@@ -137,14 +137,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         </section>
         <section class="tile">
           <div class="section__header">
-            <h3>最近查看</h3>
-            <p>个人偏好和收藏会在这里聚合。</p>
+            <h3>最近采样</h3>
           </div>
           <div class="list" id="recently-viewed">
             <div class="list__item">
               <div>
                 <strong>等待数据</strong>
-                <small>登录后可根据你的最近浏览/收藏扩展。</small>
+                <small>正在从 Supabase 读取最近价格。</small>
               </div>
               <span class="meta">ready</span>
             </div>
@@ -183,7 +182,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     import {
       fetchNearbyPrices,
       fetchPricesForProduct,
+      fetchRecentPrices,
       formatDistance,
+      formatYen,
       geolocate,
       resolveBase,
       searchProducts,
@@ -317,19 +318,40 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       }
     });
 
-    recentlyViewed.innerHTML = `
-      <div class="list__item">
-        <div>
-          <strong>Supabase 已连接</strong>
-          <small>登录后可继续扩展最近浏览和收藏追踪。</small>
-        </div>
-        <span class="meta">live</span>
-      </div>
-    `;
+    function renderRecentPrices(rows) {
+      if (!recentlyViewed) return;
+      recentlyViewed.innerHTML = rows.length
+        ? rows.map((row) => `
+          <div class="list__item">
+            <div>
+              <strong>${row.products?.name || 'Unknown product'}</strong>
+              <small>${row.stores?.name || 'Unknown store'} · ${row.stores?.city || ''} · ${row.is_member_price ? '会员价' : '公开价'}</small>
+            </div>
+            <div style="text-align:right;">
+              <div class="price">${formatYen(row.price_yen)}</div>
+              <small>${row.collected_at ? new Date(row.collected_at).toLocaleDateString('ja-JP') : ''}</small>
+            </div>
+          </div>
+        `).join('')
+        : `
+          <div class="list__item">
+            <div>
+              <strong>暂无采样</strong>
+              <small>先在 Supabase 里插入价格记录。</small>
+            </div>
+            <span class="meta">empty</span>
+          </div>
+        `;
+    }
+    async function loadRecentPrices() {
+      const rows = await fetchRecentPrices(6);
+      renderRecentPrices(rows);
+    }
 
-    runSearch('');
+    await Promise.all([loadRecentPrices(), runSearch('')]);
   </script>
 </BaseLayout>
+
 
 
 
