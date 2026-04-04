@@ -650,6 +650,13 @@ img {
   background: rgba(255, 205, 145, 0.12);
 }
 
+.search-result__badge {
+  margin-bottom: 8px;
+  min-width: 42px;
+  padding: 6px 8px;
+  font-size: 0.64rem;
+}
+
 .timeline__item {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr) auto;

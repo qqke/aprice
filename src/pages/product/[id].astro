@@ -167,7 +167,7 @@ const { product } = Astro.props as { product: Product };
       resolveBase,
       savePersonalLog,
       toggleFavorite,
-    } from '../../lib/browser.js';
+    } from '/aprice/browser.js';
 
     const page = document.querySelector('#product-page');
     const productId = page?.dataset.productId || '';
@@ -568,6 +568,7 @@ const { product } = Astro.props as { product: Product };
     Promise.all([loadStores(), loadPrices()]);
   </script>
 </BaseLayout>
+
 
 
 
