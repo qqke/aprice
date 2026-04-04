@@ -9,7 +9,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="hero-banner__eyebrow">Scan mode</div>
           <h1 class="product-title">把相机对准条码。</h1>
           <p class="product-sub">
-            GitHub Pages 上也能跑的轻量扫码页。支持 BarcodeDetector，若浏览器不支持则回退到手动输入。
+            GitHub Pages 上也能跑的轻量扫码页。支持 BarcodeDetector，若浏览器不支持则回退到手动输入和当前帧识别。
           </p>
         </div>
       </div>
@@ -25,7 +25,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             <div class="pillrow">
               <button class="button" id="start-scan" type="button">启动相机</button>
               <button class="button button--ghost" id="stop-scan" type="button">停止</button>
-              <button class="button button--ghost" id="snap-scan" type="button">尝试识别</button>
+              <button class="button button--ghost" id="snap-scan" type="button">尝试识别当前帧</button>
+            </div>
+            <div class="notice">
+              小提示：需要 HTTPS 才能打开相机。若自动识别失败，可以对准条码后点“尝试识别当前帧”，或者直接手动输入 JAN 码。
             </div>
           </div>
         </section>
@@ -36,10 +39,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           </div>
           <div class="form">
             <label class="field" for="barcode-input">
-              <input id="barcode-input" inputmode="numeric" placeholder="例如 4987188161027" />
+              <input id="barcode-input" autofocus inputmode="numeric" placeholder="例如 4987188161027" />
             </label>
             <button class="button" id="barcode-search" type="button">查找商品</button>
-            <div class="notice" id="scan-status">等待扫码。</div>
+            <div class="notice" id="scan-status">等待扫码。你也可以直接输入 JAN 码。</div>
           </div>
         </section>
       </div>
@@ -70,6 +73,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     import { fetchProductByBarcode, resolveBase } from '../lib/browser.js';
 
     const video = document.querySelector('#camera');
+    const capture = document.querySelector('#capture');
     const startButton = document.querySelector('#start-scan');
     const stopButton = document.querySelector('#stop-scan');
     const snapButton = document.querySelector('#snap-scan');
@@ -120,8 +124,33 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       renderProduct(null);
     }
 
+    async function detectFromFrame(source) {
+      if (!detector) {
+        status.textContent = '当前浏览器没有 BarcodeDetector，请直接输入条码。';
+        return;
+      }
+      if (!source) {
+        status.textContent = '请先启动相机，再尝试识别。';
+        return;
+      }
+
+      try {
+        const barcodes = await detector.detect(source);
+        if (barcodes?.length) {
+          const code = barcodes[0].rawValue;
+          if (code) {
+            await lookup(code);
+            return;
+          }
+        }
+        status.textContent = '当前画面没有识别到条码，请再靠近一点。';
+      } catch (error) {
+        status.textContent = `识别失败：${error.message}`;
+      }
+    }
+
     async function scanFrame() {
-      if (!detector || !video.videoWidth) {
+      if (!detector || !video?.videoWidth) {
         rafId = requestAnimationFrame(scanFrame);
         return;
       }
@@ -153,7 +182,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         video.srcObject = stream;
         await video.play();
         detector = 'BarcodeDetector' in window ? new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128'] }) : null;
-        status.textContent = detector ? '相机已启动，正在寻找条码...' : '相机已启动，但当前浏览器没有 BarcodeDetector。请使用手动输入。';
+        status.textContent = detector ? '相机已启动，正在寻找条码...' : '相机已启动，但当前浏览器没有 BarcodeDetector。可以用“尝试识别当前帧”或手动输入。';
         if (rafId) cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(scanFrame);
       } catch (error) {
@@ -173,9 +202,16 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     startButton?.addEventListener('click', startCamera);
     stopButton?.addEventListener('click', stopCamera);
     snapButton?.addEventListener('click', async () => {
-      const code = input?.value?.trim();
-      if (!code) return;
-      await lookup(code);
+      if (!video?.videoWidth || !capture) {
+        status.textContent = '请先启动相机后再尝试识别。';
+        return;
+      }
+
+      capture.width = video.videoWidth;
+      capture.height = video.videoHeight;
+      const context = capture.getContext('2d');
+      context?.drawImage(video, 0, 0, capture.width, capture.height);
+      await detectFromFrame(capture);
     });
 
     searchButton?.addEventListener('click', async () => {
@@ -186,7 +222,20 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       }
       await lookup(code);
     });
+
+    input?.addEventListener('keydown', async (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        const code = input.value?.trim();
+        if (!code) {
+          status.textContent = '请输入条码。';
+          return;
+        }
+        await lookup(code);
+      }
+    });
+
+    window.addEventListener('beforeunload', stopCamera);
+    status.textContent = '等待扫码。点击“启动相机”后会使用后摄像头。';
   </script>
 </BaseLayout>
-
-
