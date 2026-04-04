@@ -128,7 +128,7 @@ const { product } = Astro.props as { product: Product };
     </div>
   </section>
 
-  <script type="module">
+  <script type="module" is:inline>
     import {
       fetchAllStores,
       fetchNearbyPrices,
@@ -344,3 +344,4 @@ const { product } = Astro.props as { product: Product };
     Promise.all([loadStores(), loadPrices()]);
   </script>
 </BaseLayout>
+

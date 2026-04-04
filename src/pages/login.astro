@@ -68,7 +68,7 @@ import { resolveBase } from '../lib/browser.js';
     </div>
   </section>
 
-  <script type="module">
+  <script type="module" is:inline>
     import { fetchCurrentProfile, getSession, resolveBase, sendMagicLink, signOut } from '../lib/browser.js';
 
     const form = document.querySelector('#login-form');
@@ -144,4 +144,6 @@ import { resolveBase } from '../lib/browser.js';
     refreshSession();
   </script>
 </BaseLayout>
+
+
 

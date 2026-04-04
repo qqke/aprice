@@ -160,7 +160,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     </div>
   </section>
 
-  <script type="module">
+  <script type="module" is:inline>
     import {
       fetchNearbyPrices,
       fetchPricesForProduct,
@@ -403,3 +403,5 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     await Promise.all([loadRecentPrices(), runSearch('')]);
   </script>
 </BaseLayout>
+
+

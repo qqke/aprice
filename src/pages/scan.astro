@@ -69,7 +69,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     </div>
   </section>
 
-  <script type="module">
+  <script type="module" is:inline>
     import { fetchProductByBarcode, resolveBase } from '../lib/browser.js';
 
     const video = document.querySelector('#camera');
@@ -240,4 +240,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     startCamera();
   </script>
 </BaseLayout>
+
+
 
