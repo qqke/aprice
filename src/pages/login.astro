@@ -7,14 +7,12 @@ import { resolveBase } from '../lib/browser.js';
     <div class="shell">
       <div class="section__header section__header--tight">
         <div>
-          <div class="workspace-note">Auth workspace · 登录入口</div>
+          <div class="eyebrow">Auth · 登录入口</div>
           <h1 class="product-title" style="font-size: clamp(1.8rem, 3.8vw, 3rem);">邮箱登录后，个人数据才会生效。</h1>
           <p class="product-sub">这个页面只负责 Supabase 魔法链接登录和当前会话检查。</p>
         </div>
         <div class="pillrow">
-          <span class="pill">Magic link</span>
-          <span class="pill">Session</span>
-          <span class="pill">Profile</span>
+          <span class="pill">Supabase Auth</span>
         </div>
       </div>
 
@@ -38,9 +36,7 @@ import { resolveBase } from '../lib/browser.js';
 
           <div class="divider"></div>
           <div class="stack">
-            <div class="workspace-note">
-              登录邮件通常会在几秒内送达。完成跳转后，返回本站即可继续使用个人功能。
-            </div>
+            <div class="notice notice--compact">登录邮件通常会在几秒内送达。完成跳转后，返回本站即可继续使用个人功能。</div>
             <a class="button button--ghost" href={resolveBase('')}>返回首页继续搜索</a>
           </div>
         </section>
@@ -56,10 +52,10 @@ import { resolveBase } from '../lib/browser.js';
           <div class="list" id="session-state">
             <div class="list__item">
               <div>
-                <strong>未加载</strong>
+                <strong>正在检查会话</strong>
                 <small>页面会自动检查当前会话。</small>
               </div>
-              <span class="meta">...</span>
+              <span class="meta">status</span>
             </div>
           </div>
 

@@ -239,15 +239,8 @@ img {
 .hero__actions--tight {
   gap: 10px;
 }
-
-.hero__stats--compact {
-  gap: 10px;
-}
-
-.stat--tight {
-  padding: 10px 12px;
-  border-radius: 18px;
-}
+
+
 
 .hero__scan--tight {
   padding: 18px;
@@ -326,29 +319,10 @@ img {
   background: rgba(120, 240, 194, 0.12);
   color: var(--text);
 }
-
-.hero__stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.stat {
-  border-radius: 24px;
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.stat strong {
-  display: block;
-  font-size: 1.08rem;
-}
-
-.stat span {
-  color: var(--muted);
-  font-size: 0.9rem;
-}
+
+
+
+
 
 .hero__scan {
   display: flex;
@@ -449,21 +423,7 @@ img {
   color: var(--muted);
   max-width: 62ch;
 }
-
-.workspace-note {
-  display: inline-flex;
-  width: fit-content;
-  justify-self: start;
-  padding: 7px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(120, 240, 194, 0.16);
-  background: rgba(120, 240, 194, 0.08);
-  color: var(--accent);
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
+
 
 .searchbar {
   display: grid;
@@ -1087,9 +1047,6 @@ img {
     padding-top: 22px;
   }
 
-  .hero__stats {
-    grid-template-columns: 1fr;
-  }
 
   .searchbar {
     grid-template-columns: 1fr;

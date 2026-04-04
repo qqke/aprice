@@ -4,7 +4,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 <BaseLayout title="我的 - Aprice" description="查看个人价格记录、收藏和最近查看的药店商品。">
   <section class="section section--first-workspace">
     <div class="shell">
-      <div class="workspace-note">Personal shelf · 个人工作台</div>
+      <div class="eyebrow">Personal shelf · 个人工作台</div>
       <div class="section__header section__header--tight">
         <div>
           <h1 class="product-title" style="font-size: clamp(1.8rem, 3.6vw, 2.8rem);">你的价格历史和收藏，都在这里。</h1>
@@ -75,7 +75,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="feed" id="my-favorites">
             <div class="feed__item">
               <div>
-                <strong>等待加载</strong>
+                <strong>正在读取收藏</strong>
                 <small>登录后可以看到收藏列表。</small>
               </div>
               <span class="price">--</span>
@@ -239,7 +239,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <strong>${favoritesList.length ? '当前筛选下没有收藏' : '暂无收藏'}</strong>
               <small>${favoritesList.length ? '换个筛选条件看看，或者先收藏商品或门店。' : '收藏商品或门店后会显示在这里。'}</small>
             </div>
-            <span class="price">empty</span>
+            <span class="price">暂无</span>
           </div>
         `;
     }
@@ -280,7 +280,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <strong>还没有记录</strong>
               <small>现在就把第一笔价格记下来。</small>
             </div>
-            <span class="meta">empty</span>
+            <span class="meta">暂无</span>
           </div>
         `;
     }

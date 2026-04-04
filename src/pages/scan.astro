@@ -6,10 +6,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     <div class="shell">
       <div class="hero-banner">
         <div class="hero-banner__inner">
-          <div class="hero-banner__eyebrow">Scan mode</div>
-          <h1 class="product-title">把相机对准条码。</h1>
+          <div class="hero-banner__eyebrow">扫码入口</div>
+          <h1 class="product-title">扫描 JAN 码，直接进入商品页。</h1>
           <p class="product-sub">
-            GitHub Pages 上也能跑的轻量扫码页。支持 BarcodeDetector，若浏览器不支持则回退到手动输入和当前帧识别。
+            相机、条码识别和手动输入统一在一个页面里。浏览器不支持时会自动回退到手动输入。
           </p>
         </div>
       </div>
@@ -27,9 +27,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <button class="button button--ghost" id="stop-scan" type="button">停止</button>
               <button class="button button--ghost" id="snap-scan" type="button">尝试识别当前帧</button>
             </div>
-            <div class="notice">
-              小提示：需要 HTTPS 才能打开相机。若自动识别失败，可以对准条码后点“尝试识别当前帧”，或者直接手动输入 JAN 码。
-            </div>
+            <div class="notice notice--compact">需要 HTTPS 才能打开相机。若自动识别失败，可以直接手动输入 JAN 码。</div>
           </div>
         </section>
         <section class="tile">
@@ -42,7 +40,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <input id="barcode-input" autofocus inputmode="numeric" placeholder="例如 4987188161027" />
             </label>
             <button class="button" id="barcode-search" type="button">查找商品</button>
-            <div class="notice" id="scan-status">等待扫码。你也可以直接输入 JAN 码。</div>
+            <div class="notice" id="scan-status">等待扫描或直接输入 JAN 码。</div>
           </div>
         </section>
       </div>
@@ -61,7 +59,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
                 <strong>尚未识别</strong>
                 <small>启动相机或输入条码后，结果会显示在这里。</small>
               </div>
-              <span class="meta">waiting</span>
+              <span class="meta">ready</span>
             </div>
           </div>
         </div>
@@ -94,7 +92,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <strong>没有找到对应商品</strong>
               <small>请确认条码是否正确，或者去首页做模糊搜索。</small>
             </div>
-            <span class="meta">empty</span>
+            <span class="meta">暂无</span>
           </div>
         `;
         return;
@@ -236,7 +234,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     });
 
     window.addEventListener('beforeunload', stopCamera);
-    status.textContent = '等待扫码。点击“启动相机”后会使用后摄像头。';
+    status.textContent = '等待扫描或手动输入条码。';
     startCamera();
   </script>
 </BaseLayout>

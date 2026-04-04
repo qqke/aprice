@@ -2,59 +2,63 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 <BaseLayout title="Aprice - 日本本地药店比价" description="扫码、搜索、比较附近药店价格，并保存个人价格记录。">
+  
   <section class="hero hero--tight">
     <div class="shell hero__grid hero__grid--tight">
       <div class="hero__panel hero__panel--tight">
         <div class="hero__copy hero__copy--tight">
-          <div class="workspace-note">Price workspace · 日本药店比价</div>
+          <div class="eyebrow">Price workspace · 日本药店比价</div>
           <h1 class="headline">查价格、比门店、记下买价。</h1>
           <p class="lead">
-            扫码、搜索、附近比价和个人记录放在同一个静态工作台里，适合在手机上快速查价。
+            扫码、搜索和定位共用同一份价格数据，适合在手机上快速查价和回填记录。
           </p>
           <div class="hero__actions hero__actions--tight">
             <a class="button" href={`${import.meta.env.BASE_URL || '/'}scan/`}>开始扫码查价</a>
             <a class="button button--ghost" href={`${import.meta.env.BASE_URL || '/'}me/`}>打开个人工作台</a>
           </div>
-          <div class="hero__stats hero__stats--compact">
-            <div class="stat stat--tight">
-              <strong>JAN 扫码</strong>
-              <span>识别条码后直接跳商品页</span>
-            </div>
-            <div class="stat stat--tight">
-              <strong>附近比价</strong>
-              <span>按距离和价格看门店差异</span>
-            </div>
-            <div class="stat stat--tight">
-              <strong>个人记录</strong>
-              <span>保存购买价、门店和备注</span>
-            </div>
-          </div>
         </div>
       </div>
 
       <aside class="hero__panel hero__panel--tight">
-        <div class="hero__scan hero__scan--tight">
+        <div class="hero__copy hero__copy--tight hero__summary">
           <div class="section__header section__header--tight" style="margin:0;">
             <div>
-              <h2>即时查价面板</h2>
-              <p>先搜商品，再看附近门店。</p>
+              <h2>实时入口</h2>
+              <p>扫描、搜索和定位三种入口共用同一套价格数据。</p>
             </div>
-            <span class="pill">Supabase live</span>
+            <span class="pill">Online</span>
           </div>
 
-          <div class="scan-card scan-card--tight">
-            <div class="scan-card__inner">
-              <div class="pillrow">
-                <span class="pill">JAN 4987188161027</span>
-                <span class="pill">实时搜索</span>
+          <div class="list list--compact">
+            <div class="list__item">
+              <div>
+                <strong>扫码查价</strong>
+                <small>JAN 条码直接进入商品页。</small>
               </div>
-              <div class="scan-frame" aria-hidden="true"></div>
-              <div class="pillrow">
-                <span class="pill" id="hero-product-label">加载中</span>
-                <span class="pill" id="hero-price-label">¥-- 起</span>
-              </div>
+              <span class="meta">scan</span>
             </div>
-            <div class="scan-beam"></div>
+            <div class="list__item">
+              <div>
+                <strong>模糊搜索</strong>
+                <small>商品名、品牌和假名片段都能命中。</small>
+              </div>
+              <span class="meta">search</span>
+            </div>
+            <div class="list__item">
+              <div>
+                <strong>附近排序</strong>
+                <small>按当前位置重排门店价格。</small>
+              </div>
+              <span class="meta">nearby</span>
+            </div>
+          </div>
+
+          <div class="notice notice--compact">
+            <div>
+              <strong id="hero-product-label">待选择商品</strong>
+              <small id="hero-price-label">¥-- 起</small>
+            </div>
+            <span class="meta">live</span>
           </div>
         </div>
       </aside>
@@ -93,10 +97,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="list" id="search-results">
             <div class="list__item">
               <div>
-                <strong>等待输入</strong>
+                <strong>等待搜索</strong>
                 <small>搜索后会显示可点击的商品结果。</small>
               </div>
-              <span class="meta">idle</span>
+              <span class="meta">ready</span>
             </div>
           </div>
         </section>
@@ -108,8 +112,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="feed" id="popular-products">
             <div class="feed__item">
               <div>
-                <strong>加载中</strong>
-                <small>Supabase 商品列表正在读取。</small>
+                <strong>正在读取商品</strong>
+                <small>Supabase 商品列表正在加载。</small>
               </div>
               <span class="price">--</span>
             </div>
@@ -137,7 +141,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
                 <strong>等待商品</strong>
                 <small>选择一个商品后就会显示价格分布。</small>
               </div>
-              <span class="meta">idle</span>
+              <span class="meta">ready</span>
             </div>
           </div>
         </section>
@@ -153,8 +157,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="timeline" id="recently-viewed">
             <div class="feed__item">
               <div>
-                <strong>等待数据</strong>
-                <small>正在从 Supabase 读取最近价格。</small>
+                <strong>正在读取数据</strong>
+                <small>最近价格会在这里自动更新。</small>
               </div>
               <span class="price">--</span>
             </div>
@@ -251,7 +255,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <strong>暂无商品</strong>
               <small>先在 Supabase 里插入商品数据。</small>
             </div>
-            <span class="price">empty</span>
+            <span class="price">暂无</span>
           </div>
         `;
         results.innerHTML = `
@@ -260,7 +264,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <strong>暂无商品</strong>
               <small>先在 Supabase 里插入商品数据。</small>
             </div>
-            <span class="meta">empty</span>
+            <span class="meta">暂无</span>
           </div>
         `;
         return;
@@ -293,7 +297,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
                 <strong>${product.name}</strong>
                 <small>当前还没有价格记录。</small>
               </div>
-              <span class="meta">empty</span>
+              <span class="meta">暂无</span>
             </div>
           `;
           heroPriceLabel.textContent = '¥-- 起';
@@ -408,7 +412,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <strong>暂无采样</strong>
               <small>先在 Supabase 里插入价格记录，最近采样会自动出现在这里。</small>
             </div>
-            <span class="price">empty</span>
+            <span class="price">暂无</span>
           </div>
         `;
         if (recentStatus) {

@@ -6,7 +6,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     <div class="shell">
       <div class="section__header section__header--tight">
         <div>
-          <div class="workspace-note">Admin workspace · 管理工作台</div>
+          <div class="eyebrow">Admin · 管理工作台</div>
           <h1 class="product-title" style="font-size: clamp(1.8rem, 3.8vw, 3rem);">商品、门店、价格，一屏维护。</h1>
           <p class="product-sub">只有 `role = admin` 的登录用户可用。这里通过 Supabase RPC 写入基础数据和价格采样。</p>
         </div>
@@ -65,9 +65,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             </div>
           </div>
           <div class="stack">
-            <div class="workspace-note">
-              这个页只给维护账号使用。普通用户即使打开，也会被权限判断拦住。
-            </div>
+            <div class="notice notice--compact">这个页只给维护账号使用。普通用户即使打开，也会被权限判断拦住。</div>
             <div class="list" id="admin-access">
               <div class="list__item">
                 <div>
@@ -249,13 +247,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     function elValue(field) {
       if (!field) return '';
-      if ('checked' in field) return field.checked ? 'true' : 'false';
+      if (field instanceof HTMLInputElement && field.type === 'checkbox') return field.checked ? 'true' : 'false';
       return field.value?.trim?.() ?? '';
     }
 
     function setValue(field, value = '') {
       if (!field) return;
-      if ('checked' in field) {
+      if (field instanceof HTMLInputElement && field.type === 'checkbox') {
         field.checked = value === true || value === 'true';
         return;
       }
@@ -337,7 +335,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             </div>
           </div>
         `).join('')
-        : '<div class="list__item"><div><strong>暂无商品</strong><small>先保存一条商品。</small></div><span class="meta">empty</span></div>';
+        : '<div class="list__item"><div><strong>暂无商品</strong><small>先保存一条商品。</small></div><span class="meta">暂无</span></div>';
     }
 
     function renderStores() {
@@ -355,7 +353,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             </div>
           </div>
         `).join('')
-        : '<div class="list__item"><div><strong>暂无门店</strong><small>先保存一条门店。</small></div><span class="meta">empty</span></div>';
+        : '<div class="list__item"><div><strong>暂无门店</strong><small>先保存一条门店。</small></div><span class="meta">暂无</span></div>';
     }
 
     function renderPrices() {
@@ -374,7 +372,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             </div>
           </div>
         `).join('')
-        : '<div class="list__item"><div><strong>暂无价格</strong><small>先保存一条价格。</small></div><span class="meta">empty</span></div>';
+        : '<div class="list__item"><div><strong>暂无价格</strong><small>先保存一条价格。</small></div><span class="meta">暂无</span></div>';
     }
 
     async function loadData() {
@@ -605,6 +603,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     loadData();
   </script>
 </BaseLayout>
+
 
 
 
