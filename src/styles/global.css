@@ -425,10 +425,10 @@ img {
 }
 
 
-.searchbar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+
+
+[hidden] {
+  display: none !important;
 }
 
 .field {
@@ -441,7 +441,6 @@ img {
   background: rgba(255, 255, 255, 0.04);
   color: var(--text);
 }
-
 .field--inline {
   justify-content: flex-start;
 }
@@ -1061,6 +1060,8 @@ img {
     padding: 9px 12px;
   }
 }
+
+
 
 
 

@@ -133,18 +133,38 @@ export async function subscribeAuthState(callback) {
   });
   return () => data.subscription.unsubscribe();
 }
-export async function fetchCurrentProfile() {
-  const session = await getSession();
-  if (!session?.user) return null;
+async function fetchProfileRow(session, includeRole = true) {
+  const select = includeRole ? 'id,email,full_name,role,created_at,updated_at' : 'id,email,full_name,created_at,updated_at';
   const rows = await restGet('profiles', {
     query: {
-      select: 'id,email,full_name,role,created_at,updated_at',
+      select,
       id: `eq.${session.user.id}`,
       limit: 1,
     },
     token: session.access_token,
   });
   return rows?.[0] ?? null;
+}
+
+export async function fetchCurrentProfile() {
+  const session = await getSession();
+  if (!session?.user) return null;
+
+  try {
+    return await fetchProfileRow(session, true);
+  } catch (error) {
+    const message = String(error?.message || '');
+    const code = String(error?.code || '');
+    // 旧库里如果还没有 profiles.role，就回退到不含 role 的安全查询，避免整页会话读取失败。
+    if (code === '42703' || message.includes('profiles.role does not exist')) {
+      const profile = await fetchProfileRow(session, false);
+      if (profile && !('role' in profile)) {
+        profile.role = 'member';
+      }
+      return profile;
+    }
+    throw error;
+  }
 }
 
 export async function adminUpsertProduct(payload) {
@@ -462,6 +482,7 @@ export function recordRecentView(product) {
 export function clearRecentViews() {
   writeRecentViews([]);
 }
+
 
 
 

@@ -176,7 +176,7 @@ import { resolveBase } from '../lib/browser.js';
 
       if (passwordInput) {
         passwordInput.required = showPassword;
-        passwordInput.autocomplete = mode === 'register' ? 'new-password' : 'current-password';
+        passwordInput.autocomplete = mode === 'login' ? 'current-password' : 'new-password';
       }
       if (confirmPasswordInput) {
         confirmPasswordInput.required = showConfirm;
@@ -203,6 +203,24 @@ import { resolveBase } from '../lib/browser.js';
         return '两次输入的密码不一致。';
       }
       return '';
+    }
+
+    // 把 Supabase 的常见英文错误翻成更容易理解的中文，减少用户误会。
+    function formatAuthError(error, submitMode) {
+      const message = String(error?.message || '');
+      if (message.includes('Invalid login credentials')) {
+        return '邮箱或密码不正确；如果这是刚注册的账号，请先确认邮箱。';
+      }
+      if (message.includes('Email not confirmed')) {
+        return '邮箱还没有确认，请先去邮件里点击确认链接。';
+      }
+      if (message.includes('Password should be at least')) {
+        return '密码长度不够，请至少设置 8 位。';
+      }
+      if (submitMode === 'request-reset' && message.includes('For security purposes')) {
+        return '如果这个邮箱存在，我们会发送重置链接。请检查收件箱和垃圾箱。';
+      }
+      return message || '未知错误，请稍后再试。';
     }
 
     // 读取当前会话并渲染顶部状态卡，登录、登出和重置后都会自动刷新。
@@ -280,6 +298,10 @@ import { resolveBase } from '../lib/browser.js';
           if (status) status.textContent = '登录成功，已同步当前会话。';
         } else if (submitMode === 'register') {
           const result = await signUpWithEmailPassword({ email, password });
+          if (emailInput) emailInput.value = email;
+          if (passwordInput) passwordInput.value = '';
+          if (confirmPasswordInput) confirmPasswordInput.value = '';
+          setMode('login');
           if (result?.session) {
             if (status) status.textContent = '注册成功，已自动登录。';
           } else {
@@ -291,10 +313,12 @@ import { resolveBase } from '../lib/browser.js';
         } else if (submitMode === 'reset-password') {
           await updatePassword(password);
           setMode('login');
+          if (passwordInput) passwordInput.value = '';
+          if (confirmPasswordInput) confirmPasswordInput.value = '';
           if (status) status.textContent = '密码已更新。';
         }
       } catch (error) {
-        if (status) status.textContent = `操作失败：${error.message}`;
+        if (status) status.textContent = `操作失败：${formatAuthError(error, submitMode)}`;
       } finally {
         if (status) delete status.dataset.locked;
         if (submitMode !== 'reset-password') {
@@ -348,6 +372,9 @@ import { resolveBase } from '../lib/browser.js';
     });
   </script>
 </BaseLayout>
+
+
+
 
 
 

@@ -153,6 +153,32 @@ async function main() {
       });
     });
 
+    await page.route('**/rest/v1/profiles**', async (route) => {
+      const url = route.request().url();
+      if (url.includes('role')) {
+        await route.fulfill({
+          status: 400,
+          contentType: 'application/json; charset=utf-8',
+          body: JSON.stringify({ code: '42703', message: 'column profiles.role does not exist' }),
+        });
+        return;
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json; charset=utf-8',
+        body: JSON.stringify([
+          {
+            id: 'member-1',
+            email: 'name@example.com',
+            full_name: 'Member User',
+            created_at: '2026-04-04T00:00:00.000Z',
+            updated_at: '2026-04-04T00:00:00.000Z',
+          },
+        ]),
+      });
+    });
+
     await page.route('**/rest/v1/**', async (route) => {
       await route.fulfill({
         status: 200,
@@ -217,4 +243,6 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
+
 
