@@ -215,9 +215,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     function productCard(item, featured = false) {
       if (featured) {
+        const badge = productBadge(item);
         return `
           <a class="feed__item feed__item--featured" href="${resolveBase(`product/${item.id}/`)}">
             <div class="feed__copy">
+              <div class="timeline__icon ${badge.tone}">${badge.label}</div>
               <div class="feed__kicker">热门商品</div>
               <strong>${item.name}</strong>
               <small>${item.brand} · ${item.pack}</small>
@@ -229,7 +231,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           </a>
         `;
       }
-
       return `
         <a class="feed__item" href="${resolveBase(`product/${item.id}/`)}">
           <div>
