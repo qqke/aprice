@@ -40,7 +40,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <input id="barcode-input" autofocus inputmode="numeric" placeholder="例如 4987188161027" />
             </label>
             <button class="button" id="barcode-search" type="button">查找商品</button>
-            <div class="notice" id="scan-status">等待扫描或直接输入 JAN 码。</div>
+            <div class="notice" id="scan-status">扫描条码，或直接输入 JAN 码。</div>
           </div>
         </section>
       </div>
@@ -238,6 +238,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     startCamera();
   </script>
 </BaseLayout>
+
 
 
 

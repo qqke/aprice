@@ -55,7 +55,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
           <div class="notice notice--compact">
             <div>
-              <strong id="hero-product-label">待选择商品</strong>
+              <strong id="hero-product-label">尚未选中商品</strong>
               <small id="hero-price-label">¥-- 起</small>
             </div>
             <span class="meta">live</span>
@@ -95,13 +95,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             <span class="pill">Search</span>
           </div>
           <div class="list" id="search-results">
-            <div class="list__item">
-              <div>
-                <strong>等待搜索</strong>
-                <small>搜索后会显示可点击的商品结果。</small>
-              </div>
-              <span class="meta">ready</span>
-            </div>
+            <div class="notice notice--compact">命中结果会在这里展开。</div>
           </div>
         </section>
         <section class="tile tile--flow">
@@ -110,13 +104,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             <p>先从最近更新的几款开始。</p>
           </div>
           <div class="feed" id="popular-products">
-            <div class="feed__item">
-              <div>
-                <strong>正在读取商品</strong>
-                <small>Supabase 商品列表正在加载。</small>
-              </div>
-              <span class="price">--</span>
-            </div>
+            <div class="notice notice--compact">最新更新的商品会在这里出现。</div>
           </div>
         </section>
       </div>
@@ -134,15 +122,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </div>
       <div class="grid">
         <section class="tile tile--wide tile--flow">
-          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">先选一个商品，附近价格就会在这里出现。</div>
+          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">选中商品后，这里显示附近价格。</div>
           <div class="list" id="nearby-results">
-            <div class="list__item">
-              <div>
-                <strong>等待商品</strong>
-                <small>选择一个商品后就会显示价格分布。</small>
-              </div>
-              <span class="meta">ready</span>
-            </div>
+            <div class="notice notice--compact">选中商品后，这里显示附近价格。</div>
           </div>
         </section>
         <section class="tile tile--flow">
@@ -153,15 +135,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             </div>
             <span class="pill">Timeline</span>
           </div>
-          <div class="notice notice--compact" id="recent-status" style="margin-bottom:12px;">正在读取最近价格采样。</div>
+          <div class="notice notice--compact" id="recent-status" style="margin-bottom:12px;">正在同步最近采样。</div>
           <div class="timeline" id="recently-viewed">
-            <div class="feed__item">
-              <div>
-                <strong>正在读取数据</strong>
-                <small>最近价格会在这里自动更新。</small>
-              </div>
-              <span class="price">--</span>
-            </div>
+            <div class="notice notice--compact">最近采样会在这里按时间线更新。</div>
           </div>
         </section>
       </div>
@@ -520,6 +496,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     await Promise.all([loadRecentPrices(), runSearch('')]);
   </script>
 </BaseLayout>
+
 
 
 

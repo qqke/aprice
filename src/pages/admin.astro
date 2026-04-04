@@ -67,13 +67,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="stack">
             <div class="notice notice--compact">这个页只给维护账号使用。普通用户即使打开，也会被权限判断拦住。</div>
             <div class="list" id="admin-access">
-              <div class="list__item">
-                <div>
-                  <strong>等待验证</strong>
-                  <small>会先读取当前会话，再检查 profile.role。</small>
-                </div>
-                <span class="meta">check</span>
-              </div>
+              <div class="notice notice--compact">会先读取当前会话，再检查 profile.role。</div>
             </div>
           </div>
         </section>
