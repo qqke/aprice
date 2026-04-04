@@ -49,10 +49,12 @@ const nav = [
       <slot />
     </main>
     <script type="module" is:inline>
-      import { fetchCurrentProfile, getCurrentUser, resolveBase } from '/aprice/browser.js';
+      import { fetchCurrentProfile, getCurrentUser, resolveBase, subscribeAuthState } from '/aprice/browser.js';
 
       const chip = document.querySelector('#session-chip');
+      let unsubscribeAuth = null;
 
+      // 顶栏会话徽章既要显示当前用户，也要跟随 Supabase 的 auth state 变化实时刷新。
       async function refreshSessionChip() {
         if (!chip) return;
         try {
@@ -77,14 +79,15 @@ const nav = [
         }
       }
 
+      // 订阅 auth state change，保证登录、登出和恢复密码后的 UI 不会停留在旧状态。
+      unsubscribeAuth = await subscribeAuthState(() => {
+        refreshSessionChip();
+      });
+
       refreshSessionChip();
+      window.addEventListener('beforeunload', () => {
+        unsubscribeAuth?.();
+      });
     </script>
   </body>
 </html>
-
-
-
-
-
-
-

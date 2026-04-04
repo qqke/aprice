@@ -33,12 +33,8 @@ async function startStaticServer() {
     try {
       const url = new URL(req.url || '/', 'http://127.0.0.1');
       let pathname = url.pathname;
-      if (pathname === '/' || pathname === '/aprice/') {
-        pathname = '/index.html';
-      }
-      if (pathname.endsWith('/')) {
-        pathname += 'index.html';
-      }
+      if (pathname === '/' || pathname === '/aprice/') pathname = '/index.html';
+      if (pathname.endsWith('/')) pathname += 'index.html';
 
       const filePath = toFilePath(pathname);
       if (!filePath) {
@@ -50,9 +46,7 @@ async function startStaticServer() {
       let finalPath = filePath;
       try {
         const fileStat = await stat(finalPath);
-        if (fileStat.isDirectory()) {
-          finalPath = resolve(finalPath, 'index.html');
-        }
+        if (fileStat.isDirectory()) finalPath = resolve(finalPath, 'index.html');
       } catch {
         if (pathname === '/login/index.html' || pathname === '/aprice/login/index.html') {
           throw new Error('dist not built');
@@ -77,20 +71,48 @@ async function startStaticServer() {
 }
 
 function makeEsmShimModuleBody() {
-  // The app's browser runtime lazily imports Supabase from esm.sh.
-  // For this regression, we only need `createClient()` with the auth methods used on /login.
   return `
+    let session = null;
+    const listeners = new Set();
+
+    function notify(event) {
+      for (const listener of listeners) {
+        listener(event, session);
+      }
+    }
+
     export function createClient() {
       return {
         auth: {
           async getSession() {
-            return { data: { session: null }, error: null };
+            return { data: { session }, error: null };
           },
-          async signInWithOtp() {
-            return { data: null, error: null };
+          async getUser() {
+            return { data: { user: session?.user || null }, error: null };
+          },
+          async signUp({ email }) {
+            return { data: { user: { id: 'new-user', email }, session: null }, error: null };
+          },
+          async signInWithPassword({ email }) {
+            session = { user: { id: 'signed-in-user', email }, access_token: 'test-access-token' };
+            notify('SIGNED_IN');
+            return { data: { session }, error: null };
+          },
+          async resetPasswordForEmail() {
+            return { data: {}, error: null };
+          },
+          async updateUser() {
+            return { data: { user: session?.user || null }, error: null };
           },
           async signOut() {
+            session = null;
+            notify('SIGNED_OUT');
             return { error: null };
+          },
+          onAuthStateChange(callback) {
+            listeners.add(callback);
+            queueMicrotask(() => callback('INITIAL_SESSION', session));
+            return { data: { subscription: { unsubscribe() { listeners.delete(callback); } } } };
           },
         },
       };
@@ -116,6 +138,8 @@ async function main() {
 
     const page = await browser.newPage();
     const pageErrors = [];
+    const authCalls = [];
+
     page.on('pageerror', (error) => pageErrors.push(error.message));
     page.on('console', (message) => {
       if (message.type() === 'error') pageErrors.push(message.text());
@@ -139,26 +163,46 @@ async function main() {
 
     await page.goto(`${baseUrl}/aprice/login/`, { waitUntil: 'domcontentloaded' });
 
-    await page.locator('#login-form').waitFor({ state: 'attached' });
-    await page.locator('#email').waitFor({ state: 'attached' });
-    await page.locator('#login-status').waitFor({ state: 'attached' });
+    await page.locator('#auth-form').waitFor({ state: 'attached' });
     await page.locator('#session-state').waitFor({ state: 'attached' });
+    await page.locator('#auth-status').waitFor({ state: 'attached' });
 
-    // On load, refreshSession() should render the guest view (no session).
-    await page.waitForFunction(() => {
-      const el = document.querySelector('#session-state');
-      return el && /未登录/.test(el.textContent || '');
-    });
+    await page.waitForFunction(() => /未登录/.test(document.querySelector('#session-state')?.textContent || ''));
 
     await page.locator('#email').fill('name@example.com');
-    await page.locator('#login-form button[type="submit"]').click();
+    await page.locator('#password').fill('password123');
+    await page.locator('#auth-submit').click();
 
-    // Should update the status label and not crash.
-    await page.waitForFunction(() => {
-      const el = document.querySelector('#login-status');
-      const text = el?.textContent || '';
-      return text.includes('正在发送登录链接') || text.includes('登录链接已发送') || text.includes('发送失败');
-    });
+    await page.waitForFunction(() => /登录成功/.test(document.querySelector('#auth-status')?.textContent || ''));
+    await page.waitForFunction(() => /name@example.com/.test(document.querySelector('#session-state')?.textContent || ''));
+
+    await page.locator('#logout-button').click();
+    await page.waitForURL('**/aprice/');
+
+    await page.goto(`${baseUrl}/aprice/login/`, { waitUntil: 'domcontentloaded' });
+    await page.locator('#mode-toggle').click();
+    await page.waitForFunction(() => /注册账号/.test(document.querySelector('#auth-panel-title')?.textContent || ''));
+    await page.locator('#email').fill('register@example.com');
+    await page.locator('#password').fill('register123');
+    await page.locator('#confirm-password').fill('register123');
+    await page.locator('#auth-submit').click();
+    await page.waitForFunction(() => /注册成功/.test(document.querySelector('#auth-status')?.textContent || ''));
+
+    await page.locator('#forgot-toggle').click();
+    await page.waitForFunction(() => /找回密码/.test(document.querySelector('#auth-panel-title')?.textContent || ''));
+    await page.locator('#email').fill('name@example.com');
+    await page.locator('#auth-submit').click();
+    await page.waitForFunction(() => /重置链接已发送/.test(document.querySelector('#auth-status')?.textContent || ''));
+
+    await page.goto(`${baseUrl}/aprice/login/?mode=reset&type=recovery`, { waitUntil: 'domcontentloaded' });
+    await page.locator('#auth-form').waitFor({ state: 'attached' });
+    await page.waitForFunction(() => /重置密码/.test(document.querySelector('#auth-panel-title')?.textContent || ''));
+    await page.locator('#password').fill('newpassword123');
+    await page.locator('#confirm-password').fill('newpassword123');
+    await page.locator('#auth-submit').click();
+    await page.waitForFunction(() => /密码已更新/.test(document.querySelector('#auth-status')?.textContent || ''));
+
+    authCalls.push('login/register/reset flow covered');
 
     assert.equal(pageErrors.length, 0, `page errors: ${pageErrors.join(' | ')}`);
 
@@ -173,3 +217,4 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+

@@ -106,7 +106,7 @@ async function main() {
             '    auth: {',
             '      async getSession(){ return { data: { session: null }, error: null }; },',
             '      async getUser(){ return { data: { user: null }, error: null }; },',
-            '      async signInWithOtp(){ return { data: {}, error: null }; },',
+            '      onAuthStateChange(){ return { data: { subscription: { unsubscribe(){} } } }; },',
             '      async signOut(){ return { error: null }; },',
             '    }',
             '  };',
@@ -153,3 +153,8 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
+
+
+
+

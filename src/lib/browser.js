@@ -73,17 +73,67 @@ export async function getCurrentUser() {
   return session?.user ?? null;
 }
 
-export async function sendMagicLink(email) {
+
+// 统一拼出站内 auth 回跳地址，避免不同页面各自手写 redirect URL。
+function buildAuthRedirectUrl(pathname = 'login/', params = {}) {
+  const url = new URL(resolveBase(pathname), window.location.origin);
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue;
+    url.searchParams.set(key, String(value));
+  }
+  return url.toString();
+}
+
+export async function signUpWithEmailPassword({ email, password }) {
   const client = await getSupabaseClient();
-  const redirectTo = `${window.location.origin}${resolveBase('login/')}`;
-  const { error } = await client.auth.signInWithOtp({
+  const { data, error } = await client.auth.signUp({
     email,
-    options: { emailRedirectTo: redirectTo },
+    password,
+    options: {
+      // 注册后回到登录页，兼容 Supabase 邮箱确认链路。
+      emailRedirectTo: buildAuthRedirectUrl('login/'),
+    },
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function signInWithEmailPassword({ email, password }) {
+  const client = await getSupabaseClient();
+  const { data, error } = await client.auth.signInWithPassword({
+    email,
+    password,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function sendPasswordResetEmail(email) {
+  const client = await getSupabaseClient();
+  const { error } = await client.auth.resetPasswordForEmail(email, {
+    // 找回密码后回到登录页的重置模式，便于直接更新新密码。
+    emailRedirectTo: buildAuthRedirectUrl('login/', { mode: 'reset' }),
   });
   if (error) throw error;
   return { ok: true };
 }
 
+export async function updatePassword(password) {
+  const client = await getSupabaseClient();
+  const { data, error } = await client.auth.updateUser({
+    password,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function subscribeAuthState(callback) {
+  const client = await getSupabaseClient();
+  const { data } = client.auth.onAuthStateChange((event, session) => {
+    callback?.(event, session);
+  });
+  return () => data.subscription.unsubscribe();
+}
 export async function fetchCurrentProfile() {
   const session = await getSession();
   if (!session?.user) return null;
@@ -413,6 +463,10 @@ export function recordRecentView(product) {
 export function clearRecentViews() {
   writeRecentViews([]);
 }
+
+
+
+
 
 
 

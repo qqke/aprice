@@ -222,7 +222,7 @@ async function main() {
             '        };',
             '      },',
             '      async getUser(){ return { data: { user: { id: "user-admin-1", email: "admin@example.com" } }, error: null }; },',
-            '      async signInWithOtp(){ return { data: {}, error: null }; },',
+            '      onAuthStateChange(){ return { data: { subscription: { unsubscribe(){} } } }; },',
             '      async signOut(){ return { error: null }; },',
             '    },',
             '  };',
@@ -287,6 +287,22 @@ async function main() {
       assert.ok(productOptions.some((text) => text.includes('Loxonin S')));
       assert.ok(storeOptions.some((text) => text.includes('Sugi Pharmacy Hiroo')));
 
+      await page.locator('[data-edit-product="eve-a"]').evaluate((button) => button.click());
+      assert.equal(await page.locator('#product-id').inputValue(), 'eve-a');
+      assert.equal(await page.locator('#product-name').inputValue(), 'EVE A');
+      assert.equal(await page.locator('#product-brand').inputValue(), 'SS Pharmaceuticals');
+
+      await page.locator('[data-edit-store="welcia-shibuya"]').evaluate((button) => button.click());
+      assert.equal(await page.locator('#store-id').inputValue(), 'welcia-shibuya');
+      assert.equal(await page.locator('#store-name').inputValue(), 'Welcia Shibuya');
+      assert.equal(await page.locator('#store-chain').inputValue(), 'Welcia');
+
+      await page.locator('[data-edit-price="price-admin-1"]').evaluate((button) => button.click());
+      assert.equal(await page.locator('#price-product').inputValue(), 'loxonin-s');
+      assert.equal(await page.locator('#price-store').inputValue(), 'sugi-hiroo');
+      assert.equal(await page.locator('#price-yen').inputValue(), '698');
+      assert.equal(await page.locator('#price-member').isChecked(), false);
+
       await page.locator('#product-id').fill('admin-fixture-product');
       await page.locator('#product-barcode').fill('4990000000001');
       await page.locator('#product-name').fill('Admin Fixture Product');
@@ -306,15 +322,67 @@ async function main() {
         rpcCalls.some((call) => call.url.includes('/rpc/admin_upsert_product')),
         `expected admin_upsert_product RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
       );
+      assert.ok(
+        rpcCalls.some((call) => call.url.includes('/rpc/admin_upsert_product') && call.bodyJson?.id === 'admin-fixture-product' && call.bodyJson?.name === 'Admin Fixture Product'),
+        `expected admin_upsert_product payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
+      );
 
       assert.ok(await page.locator('[data-edit-product="eve-a"]').count());
 
       page.once('dialog', (dialog) => dialog.accept());
       await page.locator('#product-delete').click();
-      await page.waitForFunction(() => document.querySelector('#product-id')?.value === '');
       assert.ok(rpcCalls.some((call) => call.url.includes('/rpc/admin_delete_product')),
         `expected admin_delete_product RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`);
-      assert.equal(await page.locator('#product-id').inputValue(), '');
+
+      await page.locator('#store-id').fill('admin-fixture-store');
+      await page.locator('#store-name').fill('Admin Fixture Store');
+      await page.locator('#store-chain').fill('Aprice');
+      await page.locator('#store-hours').fill('08:00-23:00');
+      await page.locator('#store-address').fill('Tokyo, Chiyoda 1-1-1');
+      await page.locator('#store-city').fill('Tokyo');
+      await page.locator('#store-pref').fill('Tokyo');
+      await page.locator('#store-lat').fill('35.6895');
+      await page.locator('#store-lng').fill('139.6917');
+      await page.locator('#store-form button[type="submit"]').click();
+      await page.waitForFunction(() => (document.querySelector('#admin-status')?.textContent || '').includes('可以开始维护数据'));
+      assert.ok(rpcCalls.some((call) => call.url.includes('/rpc/admin_upsert_store')),
+        `expected admin_upsert_store RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`);
+      assert.ok(
+        rpcCalls.some((call) => call.url.includes('/rpc/admin_upsert_store') && call.bodyJson?.id === 'admin-fixture-store' && call.bodyJson?.name === 'Admin Fixture Store' && call.bodyJson?.chain_name === 'Aprice'),
+        `expected admin_upsert_store payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
+      );
+
+      await page.locator('#price-product').selectOption('loxonin-s');
+      await page.locator('#price-store').selectOption('sugi-hiroo');
+      await page.locator('#price-yen').fill('688');
+      await page.locator('#price-source').fill('admin test');
+      await page.locator('#price-note').fill('browser regression');
+      await page.locator('#price-collected').fill('2026-04-04T10:00');
+      await page.locator('#price-member').setChecked(true);
+      await page.locator('#price-form button[type="submit"]').click();
+      await page.waitForFunction(() => (document.querySelector('#admin-status')?.textContent || '').includes('可以开始维护数据'));
+      assert.ok(rpcCalls.some((call) => call.url.includes('/rpc/admin_upsert_price')),
+        `expected admin_upsert_price RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`);
+      assert.ok(
+        rpcCalls.some((call) =>
+          call.url.includes('/rpc/admin_upsert_price') &&
+          call.bodyJson?.product_id === 'loxonin-s' &&
+          call.bodyJson?.store_id === 'sugi-hiroo' &&
+          String(call.bodyJson?.price_yen) === '688' &&
+          String(call.bodyJson?.is_member_price) === 'true'
+        ),
+        `expected admin_upsert_price payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
+      );
+
+      page.once('dialog', (dialog) => dialog.accept());
+      await page.locator('[data-delete-store="welcia-shibuya"]').click();
+      assert.ok(rpcCalls.some((call) => call.url.includes('/rpc/admin_delete_store')),
+        `expected admin_delete_store RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`);
+
+      page.once('dialog', (dialog) => dialog.accept());
+      await page.locator('[data-delete-price="price-admin-1"]').click();
+      assert.ok(rpcCalls.some((call) => call.url.includes('/rpc/admin_delete_price')),
+        `expected admin_delete_price RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`);
 
       assert.equal(pageErrors.length, 0, `page errors: ${pageErrors.join(' | ')}`);
 
@@ -331,6 +399,17 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
+
+
+
+
+
+
+
+
+
+
 
 
 

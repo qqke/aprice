@@ -2,17 +2,17 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { resolveBase } from '../lib/browser.js';
 ---
-<BaseLayout title="登录 - Aprice" description="Supabase 邮箱魔法链接登录，适合静态站点部署。">
+<BaseLayout title="登录 - Aprice" description="Supabase 邮箱密码登录、注册和重置密码。">
   <section class="section section--first-workspace">
     <div class="shell">
       <div class="section__header section__header--tight">
         <div>
           <div class="eyebrow">登录 · 账号入口</div>
-          <h1 class="product-title" style="font-size: clamp(1.8rem, 3.8vw, 3rem);">邮箱登录后，个人数据才会生效。</h1>
-          <p class="product-sub">这个页面只负责 Supabase 魔法链接登录和当前会话检查。</p>
+          <h1 class="product-title" style="font-size: clamp(1.8rem, 3.8vw, 3rem);">邮箱密码登录后，个人数据才会生效。</h1>
+          <p class="product-sub">这个页面负责邮箱密码注册、登录、找回密码，以及 Supabase 的会话检查。</p>
         </div>
         <div class="pillrow">
-          <span class="pill">Supabase 登录</span>
+          <span class="pill">Supabase Auth</span>
         </div>
       </div>
 
@@ -20,23 +20,33 @@ import { resolveBase } from '../lib/browser.js';
         <section class="tile tile--wide tile--flow">
           <div class="section__header section__header--tight">
             <div>
-              <h3>发送登录链接</h3>
-              <p>输入邮箱，我们会把登录邮件发到你的收件箱。</p>
+              <h3 id="auth-panel-title">登录账号</h3>
+              <p id="auth-panel-description">输入邮箱和密码即可登录，也可以切换到注册或找回密码。</p>
             </div>
-            <span class="pill">Secure</span>
+            <span class="pill" id="auth-panel-pill">登录</span>
           </div>
 
-          <form class="form" id="login-form">
-            <label class="field" for="email">
+          <form class="form" id="auth-form">
+            <label class="field" for="email" id="email-field">
               <input id="email" type="email" placeholder="name@example.com" autocomplete="email" required />
             </label>
-            <button class="button" type="submit">发送登录链接</button>
-            <div class="notice notice--compact" id="login-status">登录后可以保存个人价格记录、收藏商品和门店。</div>
+            <label class="field" for="password" id="password-field">
+              <input id="password" type="password" placeholder="至少 8 位密码" autocomplete="current-password" required />
+            </label>
+            <label class="field" for="confirm-password" id="confirm-field" hidden>
+              <input id="confirm-password" type="password" placeholder="再次输入密码" autocomplete="new-password" />
+            </label>
+            <div class="pillrow">
+              <button class="button" type="submit" id="auth-submit">登录</button>
+              <button class="button button--ghost" type="button" id="mode-toggle">切换到注册</button>
+              <button class="button button--ghost" type="button" id="forgot-toggle">忘记密码</button>
+            </div>
+            <div class="notice notice--compact" id="auth-status">登录后可以保存个人价格记录、收藏商品和门店。</div>
           </form>
 
           <div class="divider"></div>
           <div class="stack">
-            <div class="notice notice--compact">登录邮件通常会在几秒内送达。完成跳转后，返回本站即可继续使用个人功能。</div>
+            <div class="notice notice--compact" id="auth-hint">Supabase 会话会自动持久化，退出后可重新登录继续使用。</div>
             <a class="button button--ghost" href={resolveBase('')}>返回首页继续搜索</a>
           </div>
         </section>
@@ -61,14 +71,141 @@ import { resolveBase } from '../lib/browser.js';
   </section>
 
   <script type="module" is:inline>
-    import { fetchCurrentProfile, getSession, resolveBase, sendMagicLink, signOut } from '/aprice/browser.js';
+    import {
+      fetchCurrentProfile,
+      getSession,
+      resolveBase,
+      sendPasswordResetEmail,
+      signInWithEmailPassword,
+      signOut,
+      signUpWithEmailPassword,
+      subscribeAuthState,
+      updatePassword,
+    } from '/aprice/browser.js';
 
-    const form = document.querySelector('#login-form');
-    const input = document.querySelector('#email');
-    const status = document.querySelector('#login-status');
+    const form = document.querySelector('#auth-form');
+    const emailInput = document.querySelector('#email');
+    const passwordInput = document.querySelector('#password');
+    const confirmPasswordInput = document.querySelector('#confirm-password');
+    const status = document.querySelector('#auth-status');
+    const hint = document.querySelector('#auth-hint');
     const sessionState = document.querySelector('#session-state');
     const logoutButton = document.querySelector('#logout-button');
+    const modeToggle = document.querySelector('#mode-toggle');
+    const forgotToggle = document.querySelector('#forgot-toggle');
+    const submitButton = document.querySelector('#auth-submit');
+    const panelTitle = document.querySelector('#auth-panel-title');
+    const panelDescription = document.querySelector('#auth-panel-description');
+    const panelPill = document.querySelector('#auth-panel-pill');
+    const emailField = document.querySelector('#email-field');
+    const passwordField = document.querySelector('#password-field');
+    const confirmField = document.querySelector('#confirm-field');
 
+    const url = new URL(window.location.href);
+    const isRecoveryRedirect = url.searchParams.get('mode') === 'reset' || url.searchParams.get('type') === 'recovery';
+    let mode = isRecoveryRedirect ? 'reset-password' : 'login';
+    let unsubscribeAuth = null;
+
+    const modeConfig = {
+      login: {
+        title: '登录账号',
+        description: '输入邮箱和密码即可登录，或者切换到注册和找回密码。',
+        pill: '登录',
+        submit: '登录',
+        modeToggle: '切换到注册',
+        forgotToggle: '忘记密码',
+        hint: '登录后可以保存个人价格记录、收藏商品和门店。',
+        status: '登录后可以保存个人价格记录、收藏商品和门店。',
+      },
+      register: {
+        title: '注册账号',
+        description: '输入邮箱、密码和确认密码，完成 Supabase 邮箱注册。',
+        pill: '注册',
+        submit: '创建账号',
+        modeToggle: '切换到登录',
+        forgotToggle: '忘记密码',
+        hint: '注册后如果项目开启邮箱确认，Supabase 会发确认邮件。',
+        status: '注册后如果项目开启邮箱确认，Supabase 会发确认邮件。',
+      },
+      'request-reset': {
+        title: '找回密码',
+        description: '输入注册邮箱，我们会发送重置密码邮件。',
+        pill: '找回',
+        submit: '发送重置链接',
+        modeToggle: '返回登录',
+        forgotToggle: '返回登录',
+        hint: '重置邮件会把你带回这个页面的新密码流程。',
+        status: '输入邮箱后发送重置链接。',
+      },
+      'reset-password': {
+        title: '重置密码',
+        description: '点击邮件里的重置链接后，在这里设置新密码。',
+        pill: '重置',
+        submit: '更新密码',
+        modeToggle: '返回登录',
+        forgotToggle: '返回登录',
+        hint: '请使用邮件中的重置链接进入这个页面，然后设置新密码。',
+        status: '请设置一个新的登录密码。',
+      },
+    };
+
+    // 根据当前模式切换表单字段、按钮文案和提示，保持一个页面覆盖注册、登录和找回密码。
+    function setMode(nextMode) {
+      mode = nextMode;
+      const config = modeConfig[mode];
+      if (!config) return;
+
+      if (panelTitle) panelTitle.textContent = config.title;
+      if (panelDescription) panelDescription.textContent = config.description;
+      if (panelPill) panelPill.textContent = config.pill;
+      if (submitButton) submitButton.textContent = config.submit;
+      if (modeToggle) modeToggle.textContent = config.modeToggle;
+      if (forgotToggle) forgotToggle.textContent = config.forgotToggle;
+      if (hint) hint.textContent = config.hint;
+      if (status && !status.dataset.locked) status.textContent = config.status;
+
+      const showPassword = mode !== 'request-reset';
+      const showConfirm = mode === 'register' || mode === 'reset-password';
+
+      if (emailField) emailField.hidden = false;
+      if (emailInput) {
+        emailInput.required = mode !== 'reset-password';
+      }
+      if (passwordField) passwordField.hidden = !showPassword;
+      if (confirmField) confirmField.hidden = !showConfirm;
+
+      if (passwordInput) {
+        passwordInput.required = showPassword;
+        passwordInput.autocomplete = mode === 'register' ? 'new-password' : 'current-password';
+      }
+      if (confirmPasswordInput) {
+        confirmPasswordInput.required = showConfirm;
+        confirmPasswordInput.value = '';
+      }
+    }
+
+    // 统一校验邮箱、密码长度和确认密码，避免把无效请求发给 Supabase。
+    function validateInputs() {
+      const email = emailInput?.value.trim() || '';
+      const password = passwordInput?.value || '';
+      const confirmPassword = confirmPasswordInput?.value || '';
+
+      if (mode !== 'reset-password' && !email) {
+        return '请输入邮箱地址。';
+      }
+      if ((mode === 'login' || mode === 'register') && !password) {
+        return '请输入密码。';
+      }
+      if ((mode === 'register' || mode === 'reset-password') && password.length < 8) {
+        return '密码至少需要 8 位。';
+      }
+      if ((mode === 'register' || mode === 'reset-password') && password !== confirmPassword) {
+        return '两次输入的密码不一致。';
+      }
+      return '';
+    }
+
+    // 读取当前会话并渲染顶部状态卡，登录、登出和重置后都会自动刷新。
     async function refreshSession() {
       try {
         const session = await getSession();
@@ -77,11 +214,14 @@ import { resolveBase } from '../lib/browser.js';
             <div class="list__item">
               <div>
                 <strong>未登录</strong>
-                <small>你可以使用邮箱魔法链接继续。</small>
+                <small>${mode === 'request-reset' ? '先输入邮箱发送重置链接。' : '你可以使用邮箱密码继续登录。'}</small>
               </div>
               <span class="meta">guest</span>
             </div>
           `;
+          if (mode === 'reset-password') {
+            if (status) status.textContent = '请先从邮件中的重置链接进入，再设置新密码。';
+          }
           return;
         }
 
@@ -98,6 +238,9 @@ import { resolveBase } from '../lib/browser.js';
             <span class="meta">${role}</span>
           </div>
         `;
+        if (mode === 'reset-password' && status) {
+          status.textContent = '已获取重置会话，可以直接更新新密码。';
+        }
       } catch (error) {
         sessionState.innerHTML = `
           <div class="list__item">
@@ -111,35 +254,100 @@ import { resolveBase } from '../lib/browser.js';
       }
     }
 
-    form?.addEventListener('submit', async (event) => {
+    async function handleSubmit(event) {
       event.preventDefault();
-      const email = input.value.trim();
-      if (!email) return;
-
-      status.textContent = '正在发送登录链接...';
-      try {
-        await sendMagicLink(email);
-        status.textContent = '登录链接已发送。打开邮件完成登录，然后回到本站即可。';
-      } catch (error) {
-        status.textContent = `发送失败：${error.message}`;
+      const submitMode = mode;
+      if (status) {
+        status.dataset.locked = 'true';
+        status.textContent = '正在处理...';
       }
-      await refreshSession();
+
+      const validationMessage = validateInputs();
+      if (validationMessage) {
+        if (status) {
+          status.textContent = validationMessage;
+          delete status.dataset.locked;
+        }
+        return;
+      }
+
+      const email = emailInput?.value.trim() || '';
+      const password = passwordInput?.value || '';
+
+      try {
+        if (submitMode === 'login') {
+          await signInWithEmailPassword({ email, password });
+          if (status) status.textContent = '登录成功，已同步当前会话。';
+        } else if (submitMode === 'register') {
+          const result = await signUpWithEmailPassword({ email, password });
+          if (result?.session) {
+            if (status) status.textContent = '注册成功，已自动登录。';
+          } else {
+            if (status) status.textContent = '注册成功，请检查邮箱确认邮件。';
+          }
+        } else if (submitMode === 'request-reset') {
+          await sendPasswordResetEmail(email);
+          if (status) status.textContent = '重置链接已发送，请检查邮箱。';
+        } else if (submitMode === 'reset-password') {
+          await updatePassword(password);
+          setMode('login');
+          if (status) status.textContent = '密码已更新。';
+        }
+      } catch (error) {
+        if (status) status.textContent = `操作失败：${error.message}`;
+      } finally {
+        if (status) delete status.dataset.locked;
+        if (submitMode !== 'reset-password') {
+          await refreshSession();
+        }
+      }
+    }
+    modeToggle?.addEventListener('click', () => {
+      if (mode === 'request-reset' || mode === 'reset-password') {
+        setMode('login');
+        return;
+      }
+      setMode(mode === 'login' ? 'register' : 'login');
     });
+
+    forgotToggle?.addEventListener('click', () => {
+      if (mode === 'reset-password') {
+        setMode('login');
+        return;
+      }
+      if (mode === 'request-reset') {
+        setMode('login');
+        return;
+      }
+      setMode('request-reset');
+    });
+
+    form?.addEventListener('submit', handleSubmit);
 
     logoutButton?.addEventListener('click', async () => {
       await signOut();
-      status.textContent = '已退出登录。';
+      if (status) {
+        status.dataset.locked = 'true';
+        status.textContent = '已退出登录。';
+        delete status.dataset.locked;
+      }
       await refreshSession();
       window.location.assign(resolveBase(''));
     });
 
-    refreshSession();
+    // 监听 Supabase auth state change，保证登录 / 登出 / 恢复密码后当前页同步刷新。
+    unsubscribeAuth = await subscribeAuthState(() => {
+      refreshSession();
+    });
+
+    setMode(mode);
+    await refreshSession();
+
+    window.addEventListener('beforeunload', () => {
+      unsubscribeAuth?.();
+    });
   </script>
 </BaseLayout>
-
-
-
-
 
 
 
