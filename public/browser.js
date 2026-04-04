@@ -2,8 +2,6 @@ import {
   escapeIlike,
   fetchPublicProductByBarcode,
   fetchPublicProductById,
-  fetchPublicProducts,
-  fetchPublicStores,
   restDelete,
   restGet,
   restInsert,
@@ -166,11 +164,23 @@ export async function searchProducts(term = '') {
 }
 
 export async function fetchAllProducts() {
-  return fetchPublicProducts({ limit: 100, order: 'updated_at.desc' });
+  return restGet('products', {
+    query: {
+      select: '*',
+      order: 'updated_at.desc',
+      limit: 100,
+    },
+  });
 }
 
 export async function fetchAllStores() {
-  return fetchPublicStores({ limit: 200, order: 'updated_at.desc' });
+  return restGet('stores', {
+    query: {
+      select: '*',
+      order: 'updated_at.desc',
+      limit: 200,
+    },
+  });
 }
 
 export async function fetchRecentPrices(limit = 10) {
