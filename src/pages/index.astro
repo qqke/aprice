@@ -2,21 +2,20 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 <BaseLayout title="Aprice - 日本本地药店比价" description="扫码、搜索、比较附近药店价格，并保存个人价格记录。">
-  <section class="hero">
-    <div class="shell hero__grid">
-      <div class="hero__panel">
-        <div class="hero__copy">
+  <section class="hero hero--tight">
+    <div class="shell hero__grid hero__grid--tight">
+      <div class="hero__panel hero__panel--tight">
+        <div class="hero__copy hero__copy--tight">
           <div class="eyebrow">Japanese drugstore price compare</div>
           <h1 class="headline">扫条码，立刻比日本药店价格。</h1>
           <p class="lead">
-            这是一个为日本本地药店设计的轻量比价应用。扫码、模糊搜索、附近门店对比和个人价格记录都放在同一个静态站点里。
+            扫码、搜索、附近比价和个人记录都在同一个静态站点里。
           </p>
-          <div class="hero__actions">
+          <div class="hero__actions hero__actions--tight">
             <a class="button" href={`${import.meta.env.BASE_URL || '/'}scan/`}>开始扫码查价</a>
-            <a class="button button--ghost" href={`${import.meta.env.BASE_URL || '/'}login/`}>邮箱登录</a>
             <a class="button button--ghost" href={`${import.meta.env.BASE_URL || '/'}me/`}>个人价格记录</a>
           </div>
-          <div class="hero__stats">
+          <div class="hero__stats hero__stats--compact">
             <div class="stat">
               <strong>JAN 扫码</strong>
               <span>快速查到商品页面</span>
@@ -33,28 +32,26 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         </div>
       </div>
 
-      <aside class="hero__panel">
-        <div class="hero__scan">
-          <div class="section__header" style="margin:0;">
+      <aside class="hero__panel hero__panel--tight">
+        <div class="hero__scan hero__scan--tight">
+          <div class="section__header section__header--tight" style="margin:0;">
             <div>
               <h2>即时查价面板</h2>
-              <p>先搜商品，再看附近门店，最后存进个人记录。</p>
+              <p>先搜商品，再看附近门店。</p>
             </div>
             <span class="pill">Supabase live</span>
           </div>
 
-          <div class="scan-card">
+          <div class="scan-card scan-card--tight">
             <div class="scan-card__inner">
               <div class="pillrow">
                 <span class="pill">JAN 4987188161027</span>
                 <span class="pill">实时搜索</span>
-                <span class="pill">会员价可比</span>
               </div>
               <div class="scan-frame" aria-hidden="true"></div>
               <div class="pillrow">
                 <span class="pill" id="hero-product-label">加载中</span>
                 <span class="pill" id="hero-price-label">¥-- 起</span>
-                <span class="pill" id="hero-store-label">-- 家门店</span>
               </div>
             </div>
             <div class="scan-beam"></div>
@@ -64,7 +61,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     </div>
   </section>
 
-  <section class="section">
+  <section class="section section--first-workspace">
     <div class="shell">
       <div class="section__header">
         <div>
@@ -155,23 +152,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     </div>
   </section>
 
-  <section class="section">
-    <div class="shell hero-banner">
-      <div class="hero-banner__inner">
-        <div class="hero-banner__eyebrow">Personal price log</div>
-        <h2 class="product-title">把你看到的价，变成你自己的历史。</h2>
-        <p class="product-sub">
-          记录购买价、门店、时间和备注，之后就能回头比较你自己真正买到的价格。
-        </p>
-        <div class="pillrow">
-          <span class="pill">我的价格记录</span>
-          <span class="pill">收藏商品</span>
-          <span class="pill">最近查看</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
   <section class="section footer">
     <div class="shell">
       <p>
@@ -202,7 +182,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const nearbyResults = document.querySelector('#nearby-results');
     const heroProductLabel = document.querySelector('#hero-product-label');
     const heroPriceLabel = document.querySelector('#hero-price-label');
-    const heroStoreLabel = document.querySelector('#hero-store-label');
     const recentlyViewed = document.querySelector('#recently-viewed');
     const recentStatus = document.querySelector('#recent-status');
 
@@ -290,7 +269,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           </div>
         `;
         heroPriceLabel.textContent = '¥-- 起';
-        heroStoreLabel.textContent = '-- 家门店';
         return;
       }
 
@@ -308,7 +286,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       `).join('');
 
       heroPriceLabel.textContent = `¥${Math.min(...prices.map((row) => row.price_yen))} 起`;
-      heroStoreLabel.textContent = `${new Set(prices.map((row) => row.store_id)).size} 家门店`;
       if (nearbyStatus) nearbyStatus.textContent = `${product.name} 已加载 ${prices.length} 条门店价格。`;
     }
 
