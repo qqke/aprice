@@ -300,9 +300,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           return;
         }
 
-        nearbyResults.innerHTML = prices.slice(0, 4).map((row) => `
+        nearbyResults.innerHTML = prices.slice(0, 4).map((row) => {
+          const badge = productBadge(row.products || row);
+          return `
           <div class="list__item">
             <div>
+              <div class="timeline__icon ${badge.tone} search-result__badge">${badge.label}</div>
               <strong>${row.stores?.name || 'Unknown store'}</strong>
               <small>${row.stores?.address || ''} · ${row.stores?.hours || ''}</small>
             </div>
@@ -311,7 +314,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <small>${row.is_member_price ? '会员价' : '公开价'}</small>
             </div>
           </div>
-        `).join('');
+        `;
+        }).join('');
 
         heroPriceLabel.textContent = `¥${Math.min(...prices.map((row) => row.price_yen))} 起`;
         if (nearbyStatus) nearbyStatus.textContent = `${product.name} 已加载 ${prices.length} 条门店价格。`;
@@ -364,9 +368,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         if (activeProduct) {
           const rows = await fetchNearbyPrices({ productId: activeProduct.id, lat: location.lat, lng: location.lng, radiusKm: 20 });
           nearbyResults.innerHTML = rows.length
-            ? rows.slice(0, 4).map((row) => `
+            ? rows.slice(0, 4).map((row) => {
+              const badge = productBadge(row.products || row);
+              return `
               <div class="list__item">
                 <div>
+                  <div class="timeline__icon ${badge.tone} search-result__badge">${badge.label}</div>
                   <strong>${row.stores?.name || 'Unknown store'}</strong>
                   <small>${row.stores?.city || ''} · ${row.stores?.pref || ''} · ${row.distance_km !== null && row.distance_km !== undefined ? formatDistance(row.distance_km) : ''}</small>
                 </div>
@@ -375,7 +382,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
                   <small>${row.is_member_price ? '会员价' : '公开价'}</small>
                 </div>
               </div>
-            `).join('')
+            `;
+            }).join('')
             : nearbyResults.innerHTML;
           if (nearbyStatus) {
             nearbyStatus.textContent = rows.length
