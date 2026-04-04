@@ -50,9 +50,9 @@ const { product } = Astro.props as { product: Product };
             </div>
             <button class="button button--ghost" id="geo-sort" type="button">按当前位置重排</button>
           </div>
-          <div class="notice notice--compact" id="geo-status" style="margin-bottom:12px;">正在读取 Supabase 价格。</div>
+          <div class="notice notice--compact" id="geo-status" style="margin-bottom:12px;">正在同步 Supabase 价格。</div>
           <div class="feed" id="price-list">
-            <div class="notice notice--compact">正在读取价格，结果会在这里显示。</div>
+            <div class="notice notice--compact">正在同步价格，结果会在这里显示。</div>
           </div>
         </section>
 
@@ -63,9 +63,9 @@ const { product } = Astro.props as { product: Product };
               <p>价格流之外，也能快速扫到门店分布。</p>
             </div>
           </div>
-          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">门店列表会跟着价格一起出现。</div>
+          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">门店列表会在价格加载后同步显示。</div>
           <div class="feed" id="nearby-store-list">
-            <div class="notice notice--compact">正在读取门店，价格加载后会同步显示。</div>
+            <div class="notice notice--compact">正在同步门店，价格加载后会显示。</div>
           </div>
         </section>
       </div>
@@ -92,7 +92,7 @@ const { product } = Astro.props as { product: Product };
                 </label>
               </div>
               <button class="button" type="submit">保存到我的价格</button>
-              <div class="notice notice--compact" id="personal-status">登录后即可写入个人购买价。</div>
+              <div class="notice notice--compact" id="personal-status">登录后即可记录个人购买价。</div>
             </form>
           </section>
 
@@ -108,9 +108,9 @@ const { product } = Astro.props as { product: Product };
                   <div class="pillrow" id="insight-pills">
                     <span class="pill">同步中</span>
                   </div>
-                  <small>页面加载后会用真实 Supabase 价格刷新这里的摘要。</small>
+                  <small>页面加载后会用真实 Supabase 价格补全这里的摘要。</small>
                 </div>
-                <span class="price">live</span>
+                <span class="price">摘要</span>
               </div>
             </div>
           </section>
@@ -127,7 +127,7 @@ const { product } = Astro.props as { product: Product };
               </div>
             </div>
             <div class="feed" id="trend-list">
-              <div class="notice notice--compact">近期价格采样会在这里显示。</div>
+              <div class="notice notice--compact">近期价格采样会在这里按时间线显示。</div>
             </div>
           </section>
         </div>
@@ -548,6 +548,7 @@ const { product } = Astro.props as { product: Product };
     Promise.all([loadStores(), loadPrices()]);
   </script>
 </BaseLayout>
+
 
 
 

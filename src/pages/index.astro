@@ -55,10 +55,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
           <div class="notice notice--compact">
             <div>
-              <strong id="hero-product-label">尚未选中商品</strong>
+              <strong id="hero-product-label">尚未选择商品</strong>
               <small id="hero-price-label">¥-- 起</small>
             </div>
-            <span class="meta">live</span>
+            <span class="meta">当前</span>
           </div>
         </div>
       </aside>
@@ -90,9 +90,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="section__header section__header--tight">
             <div>
               <h3>搜索结果</h3>
-              <p id="search-status">输入关键词、JAN 码或品牌名开始查价。</p>
+              <p id="search-status">输入商品名、品牌名或 JAN 码即可查价。</p>
             </div>
-            <span class="pill">Search</span>
+            <span class="pill">检索</span>
           </div>
           <div class="list" id="search-results">
             <div class="notice notice--compact">命中结果会在这里展开。</div>
@@ -122,9 +122,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </div>
       <div class="grid">
         <section class="tile tile--wide tile--flow">
-          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">选中商品后，这里显示附近价格。</div>
+          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">选择商品后，这里显示附近价格。</div>
           <div class="list" id="nearby-results">
-            <div class="notice notice--compact">选中商品后，这里显示附近价格。</div>
+            <div class="notice notice--compact">选择商品后，这里显示附近价格。</div>
           </div>
         </section>
         <section class="tile tile--flow">
@@ -133,9 +133,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <h3>最近采样</h3>
               <p>最近录入或更新的价格，按最新时间排成一条线。</p>
             </div>
-            <span class="pill">Timeline</span>
+            <span class="pill">采样</span>
           </div>
-          <div class="notice notice--compact" id="recent-status" style="margin-bottom:12px;">正在同步最近采样。</div>
+          <div class="notice notice--compact" id="recent-status" style="margin-bottom:12px;">正在同步最近采样数据。</div>
           <div class="timeline" id="recently-viewed">
             <div class="notice notice--compact">最近采样会在这里按时间线更新。</div>
           </div>
@@ -496,6 +496,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     await Promise.all([loadRecentPrices(), runSearch('')]);
   </script>
 </BaseLayout>
+
 
 
 
