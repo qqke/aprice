@@ -179,7 +179,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       geolocate,
       resolveBase,
       searchProducts,
-    } from '../lib/browser.js';
+    } from '/aprice/browser.js';
 
     const input = document.querySelector('#home-search');
     const button = document.querySelector('#home-search-button');
@@ -435,6 +435,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     await Promise.all([loadRecentPrices(), runSearch('')]);
   </script>
 </BaseLayout>
+
 
 
 

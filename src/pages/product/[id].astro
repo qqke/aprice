@@ -45,11 +45,11 @@ const { product } = Astro.props as { product: Product };
           <div class="section__header section__header--tight">
             <div>
               <h2>价格流</h2>
-              <p>同一商品在不同门店和会员条件下的参考价，按当前位置会自动重排。</p>
+              <p>同一商品在不同门店和会员条件下的参考价，按当前位置可重排。</p>
             </div>
             <button class="button button--ghost" id="geo-sort" type="button">按当前位置重排</button>
           </div>
-          <div class="notice" id="geo-status" style="margin-bottom:12px;">正在载入 Supabase 价格数据。</div>
+          <div class="notice" id="geo-status" style="margin-bottom:12px;">正在读取 Supabase 价格。</div>
           <div class="feed" id="price-list">
             <div class="feed__item">
               <div>
@@ -66,7 +66,7 @@ const { product } = Astro.props as { product: Product };
             <h3>附近门店</h3>
             <p>价格流之外，也能快速扫到门店分布。</p>
           </div>
-          <div class="notice" id="nearby-status" style="margin-bottom:12px;">门店列表会随着价格数据同步出现。</div>
+          <div class="notice" id="nearby-status" style="margin-bottom:12px;">门店列表会跟着价格一起出现。</div>
           <div class="feed" id="nearby-store-list">
             <div class="feed__item">
               <div>
@@ -101,19 +101,19 @@ const { product } = Astro.props as { product: Product };
                 </label>
               </div>
               <button class="button" type="submit">保存到我的价格</button>
-              <div class="notice" id="personal-status">登录后即可保存。</div>
+              <div class="notice" id="personal-status">登录后即可写入个人购买价。</div>
             </form>
           </section>
 
           <section class="tile tile--wide">
             <div class="section__header section__header--tight">
-              <h3>价格洞察</h3>
-              <p>最低价、门店数量和当前参考。</p>
+              <h3>价格摘要</h3>
+              <p>最低价、门店数量和最新采样。</p>
             </div>
             <div class="feed">
               <div class="feed__item feed__item--featured" style="padding: 18px;">
                 <div class="feed__copy">
-                  <div class="feed__kicker">Price snapshot</div>
+                  <div class="feed__kicker">价格摘要</div>
                   <div class="pillrow" id="insight-pills">
                     <span class="pill">加载中</span>
                   </div>
@@ -204,7 +204,7 @@ const { product } = Astro.props as { product: Product };
           <div class="feed__item">
             <div>
               <strong>暂无价格</strong>
-              <small>这件商品还没有 Supabase 价格记录。</small>
+              <small>这件商品还没有价格记录。</small>
             </div>
             <span class="price">empty</span>
           </div>
@@ -239,7 +239,7 @@ const { product } = Astro.props as { product: Product };
           <div class="feed__item">
             <div>
               <strong>没有附近数据</strong>
-              <small>请先给门店补充坐标和价格。</small>
+              <small>请先给门店补坐标和价格。</small>
             </div>
             <span class="price">empty</span>
           </div>
@@ -344,6 +344,7 @@ const { product } = Astro.props as { product: Product };
     Promise.all([loadStores(), loadPrices()]);
   </script>
 </BaseLayout>
+
 
 
 
