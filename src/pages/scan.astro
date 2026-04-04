@@ -237,5 +237,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     window.addEventListener('beforeunload', stopCamera);
     status.textContent = '等待扫码。点击“启动相机”后会使用后摄像头。';
+    startCamera();
   </script>
 </BaseLayout>
+
