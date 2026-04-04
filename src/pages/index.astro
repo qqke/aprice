@@ -95,18 +95,18 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             </div>
           </div>
         </section>
-        <section class="tile">
+        <section class="tile tile--flow">
           <div class="section__header">
             <h3>热门商品</h3>
             <p>先从最近更新的几款开始。</p>
           </div>
-          <div class="list" id="popular-products">
-            <div class="list__item">
+          <div class="feed" id="popular-products">
+            <div class="feed__item">
               <div>
                 <strong>加载中</strong>
                 <small>Supabase 商品列表正在读取。</small>
               </div>
-              <span class="meta">loading</span>
+              <span class="price">--</span>
             </div>
           </div>
         </section>
@@ -136,18 +136,18 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             </div>
           </div>
         </section>
-        <section class="tile">
+        <section class="tile tile--flow">
           <div class="section__header">
             <h3>最近采样</h3>
           </div>
           <div class="notice" id="recent-status" style="margin-bottom:12px;">正在读取最近价格采样。</div>
-          <div class="list" id="recently-viewed">
-            <div class="list__item">
+          <div class="feed" id="recently-viewed">
+            <div class="feed__item">
               <div>
                 <strong>等待数据</strong>
                 <small>正在从 Supabase 读取最近价格。</small>
               </div>
-              <span class="meta">ready</span>
+              <span class="price">--</span>
             </div>
           </div>
         </section>
@@ -208,9 +208,25 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     let activeProduct = null;
 
-    function productCard(item) {
+    function productCard(item, featured = false) {
+      if (featured) {
+        return `
+          <a class="feed__item feed__item--featured" href="${resolveBase(`product/${item.id}/`)}">
+            <div class="feed__copy">
+              <div class="feed__kicker">热门商品</div>
+              <strong>${item.name}</strong>
+              <small>${item.brand} · ${item.pack}</small>
+            </div>
+            <div class="feed__meta">
+              <span class="pill">JAN ${item.barcode}</span>
+              <span class="price">查看</span>
+            </div>
+          </a>
+        `;
+      }
+
       return `
-        <a class="list__item" href="${resolveBase(`product/${item.id}/`)}">
+        <a class="feed__item" href="${resolveBase(`product/${item.id}/`)}">
           <div>
             <strong>${item.name}</strong>
             <small>${item.brand} · ${item.pack} · ${item.barcode}</small>
@@ -224,6 +240,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       if (!items.length) {
         status.textContent = '没有找到匹配商品，请试试更短的关键词、品牌名或 JAN 码。';
         popularProducts.innerHTML = `
+          <div class="feed__item">
+            <div>
+              <strong>暂无商品</strong>
+              <small>先在 Supabase 里插入商品数据。</small>
+            </div>
+            <span class="price">empty</span>
+          </div>
+        `;
+        results.innerHTML = `
           <div class="list__item">
             <div>
               <strong>暂无商品</strong>
@@ -232,12 +257,19 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             <span class="meta">empty</span>
           </div>
         `;
-        results.innerHTML = popularProducts.innerHTML;
         return;
       }
 
-      popularProducts.innerHTML = items.slice(0, 6).map(productCard).join('');
-      results.innerHTML = items.slice(0, 8).map(productCard).join('');
+      popularProducts.innerHTML = [productCard(items[0], true), ...items.slice(1, 4).map((item) => productCard(item))].join('');
+      results.innerHTML = items.slice(0, 8).map((item) => `
+        <a class="list__item" href="${resolveBase(`product/${item.id}/`)}">
+          <div>
+            <strong>${item.name}</strong>
+            <small>${item.brand} · ${item.pack} · ${item.barcode}</small>
+          </div>
+          <span class="price">查看</span>
+        </a>
+      `).join('');
       activeProduct = items[0];
       heroProductLabel.textContent = activeProduct.name;
     }
@@ -348,25 +380,34 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     function renderRecentPrices(rows) {
       if (!recentlyViewed) return;
       recentlyViewed.innerHTML = rows.length
-        ? rows.map((row) => `
-          <div class="list__item">
+        ? rows.map((row, index) => index === 0 ? `
+          <a class="feed__item feed__item--featured" href="${resolveBase(`product/${row.products?.id || ''}/`)}">
+            <div class="feed__copy">
+              <div class="feed__kicker">最新采样</div>
+              <strong>${row.products?.name || 'Unknown product'}</strong>
+              <small>${row.stores?.name || 'Unknown store'} · ${row.stores?.city || ''} · ${row.is_member_price ? '会员价' : '公开价'}</small>
+            </div>
+            <div class="feed__meta">
+              <div class="price">${formatYen(row.price_yen)}</div>
+              <small>${row.collected_at ? new Date(row.collected_at).toLocaleDateString('ja-JP') : ''}</small>
+            </div>
+          </a>
+        ` : `
+          <a class="feed__item" href="${resolveBase(`product/${row.products?.id || ''}/`)}">
             <div>
               <strong>${row.products?.name || 'Unknown product'}</strong>
               <small>${row.stores?.name || 'Unknown store'} · ${row.stores?.city || ''} · ${row.is_member_price ? '会员价' : '公开价'}</small>
             </div>
-            <div style="text-align:right;">
-              <div class="price">${formatYen(row.price_yen)}</div>
-              <small>${row.collected_at ? new Date(row.collected_at).toLocaleDateString('ja-JP') : ''}</small>
-            </div>
-          </div>
+            <span class="price">${formatYen(row.price_yen)}</span>
+          </a>
         `).join('')
         : `
-          <div class="list__item">
+          <div class="feed__item">
             <div>
               <strong>暂无采样</strong>
               <small>先在 Supabase 里插入价格记录，最近采样会自动出现在这里。</small>
             </div>
-            <span class="meta">empty</span>
+            <span class="price">empty</span>
           </div>
         `;
       if (recentStatus) {
