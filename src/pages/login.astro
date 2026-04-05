@@ -42,30 +42,30 @@ import { resolveBase } from '../lib/browser.js';
           </div>
 
           <div id="auth-form-shell">
-          <form class="form" id="auth-form">
-            <label class="field" for="email" id="email-field">
-              <input id="email" type="email" placeholder="name@example.com" autocomplete="email" required />
-            </label>
-            <label class="field" for="password" id="password-field">
-              <input id="password" type="password" placeholder="至少 8 位密码" autocomplete="current-password" required />
-            </label>
-            <label class="field" for="confirm-password" id="confirm-field" hidden>
-              <input id="confirm-password" type="password" placeholder="再次输入密码" autocomplete="new-password" />
-            </label>
-            <div class="pillrow">
-              <button class="button" type="submit" id="auth-submit">登录</button>
-              <button class="button button--ghost" type="button" id="mode-toggle">切换到注册</button>
-              <button class="button button--ghost" type="button" id="forgot-toggle">忘记密码</button>
-            </div>
-            <div class="notice notice--compact" id="auth-status">登录后保存价格与收藏。</div>
-          </form>
+            <form class="form" id="auth-form">
+              <label class="field" for="email" id="email-field">
+                <input id="email" type="email" placeholder="name@example.com" autocomplete="email" required />
+              </label>
+              <label class="field" for="password" id="password-field">
+                <input id="password" type="password" placeholder="至少 8 位密码" autocomplete="current-password" required />
+              </label>
+              <label class="field" for="confirm-password" id="confirm-field" hidden>
+                <input id="confirm-password" type="password" placeholder="再次输入密码" autocomplete="new-password" />
+              </label>
+              <div class="pillrow">
+                <button class="button" type="submit" id="auth-submit">登录</button>
+                <button class="button button--ghost" type="button" id="mode-toggle">切换到注册</button>
+                <button class="button button--ghost" type="button" id="forgot-toggle">忘记密码</button>
+              </div>
+              <div class="notice notice--compact" id="auth-status">登录后保存价格与收藏。</div>
+            </form>
 
-          <div class="divider"></div>
-          <div class="stack">
-            <div class="notice notice--compact" id="auth-hint">登录状态已保留。</div>
-            <a class="button button--ghost" href={resolveBase('')}>返回首页继续搜索</a>
+            <div class="divider"></div>
+            <div class="stack">
+              <div class="notice notice--compact" id="auth-hint">登录状态已保留。</div>
+              <a class="button button--ghost" href={resolveBase('')}>返回首页继续搜索</a>
+            </div>
           </div>
-        </div>
         </section>
 
         <section class="tile tile--flow">
@@ -77,7 +77,7 @@ import { resolveBase } from '../lib/browser.js';
           </div>
 
           <div class="list" id="session-state">
-            <div class="notice notice--compact">登录状态已同步。</div>
+            <div class="notice notice--compact">未登录，登录后会同步状态。</div>
           </div>
 
           <div class="divider"></div>
@@ -88,17 +88,22 @@ import { resolveBase } from '../lib/browser.js';
   </section>
 
   <script type="module" is:inline>
-    import {
-      fetchCurrentProfile,
-      getSession,
-      resolveBase,
-      sendPasswordResetEmail,
-      signInWithEmailPassword,
-      signOut,
-      signUpWithEmailPassword,
-      subscribeAuthState,
-      updatePassword,
-    } from '/aprice/browser.js';
+    const runtimeBase = window.__APriceConfig?.baseUrl || '/';
+    function resolveBase(pathname = '') {
+      const base = runtimeBase.endsWith('/') ? runtimeBase : runtimeBase + '/';
+      const cleanPath = String(pathname || '').replace(/^\/+/, '');
+      if (!cleanPath) return base;
+      return base + cleanPath;
+    }
+    let authModulePromise = null;
+    let unsubscribeAuth = null;
+    let currentSession = null;
+    let authRefreshStarted = false;
+
+    function loadAuthModule() {
+      authModulePromise ??= import('/aprice/browser-auth.js');
+      return authModulePromise;
+    }
 
     const form = document.querySelector('#auth-form');
     const emailInput = document.querySelector('#email');
@@ -128,8 +133,6 @@ import { resolveBase } from '../lib/browser.js';
     const url = new URL(window.location.href);
     const isRecoveryRedirect = url.searchParams.get('mode') === 'reset' || url.searchParams.get('type') === 'recovery';
     let mode = isRecoveryRedirect ? 'reset-password' : 'login';
-    let unsubscribeAuth = null;
-    let currentSession = null;
 
     const modeConfig = {
       login: {
@@ -260,8 +263,10 @@ import { resolveBase } from '../lib/browser.js';
     // 读取登录状态并渲染顶部状态卡，登录、登出和重置后都会自动刷新。
     async function refreshSession() {
       try {
+        const { getSession, fetchCurrentProfile } = await loadAuthModule();
         const session = await getSession();
         currentSession = session ?? null;
+
         if (!session?.user) {
           sessionState.innerHTML = `
             <div class="list__item">
@@ -277,8 +282,8 @@ import { resolveBase } from '../lib/browser.js';
             if (panelDescription) panelDescription.textContent = modeConfig.login.description;
             if (panelPill) panelPill.textContent = modeConfig.login.pill;
           }
-          if (mode === 'reset-password') {
-            if (status) status.textContent = '请通过重置链接进入，再设置新密码。';
+          if (mode === 'reset-password' && status) {
+            status.textContent = '请通过重置链接进入，再设置新密码。';
           }
           syncAuthPanels();
           return;
@@ -345,23 +350,25 @@ import { resolveBase } from '../lib/browser.js';
 
       try {
         if (submitMode === 'login') {
+          const { signInWithEmailPassword } = await loadAuthModule();
           await signInWithEmailPassword({ email, password });
           if (status) status.textContent = '登录成功。';
         } else if (submitMode === 'register') {
+          const { signUpWithEmailPassword } = await loadAuthModule();
           const result = await signUpWithEmailPassword({ email, password });
           if (emailInput) emailInput.value = email;
           if (passwordInput) passwordInput.value = '';
           if (confirmPasswordInput) confirmPasswordInput.value = '';
           setMode('login');
-          if (result?.session) {
-            if (status) status.textContent = '注册成功。';
-          } else {
-            if (status) status.textContent = '注册成功，请检查邮箱。';
+          if (status) {
+            status.textContent = result?.session ? '注册成功。' : '注册成功，请检查邮箱。';
           }
         } else if (submitMode === 'request-reset') {
+          const { sendPasswordResetEmail } = await loadAuthModule();
           await sendPasswordResetEmail(email);
           if (status) status.textContent = '重置链接已发送。';
         } else if (submitMode === 'reset-password') {
+          const { updatePassword } = await loadAuthModule();
           await updatePassword(password);
           setMode('login');
           if (passwordInput) passwordInput.value = '';
@@ -377,6 +384,7 @@ import { resolveBase } from '../lib/browser.js';
         }
       }
     }
+
     modeToggle?.addEventListener('click', () => {
       if (mode === 'request-reset' || mode === 'reset-password') {
         setMode('login');
@@ -386,11 +394,7 @@ import { resolveBase } from '../lib/browser.js';
     });
 
     forgotToggle?.addEventListener('click', () => {
-      if (mode === 'reset-password') {
-        setMode('login');
-        return;
-      }
-      if (mode === 'request-reset') {
+      if (mode === 'reset-password' || mode === 'request-reset') {
         setMode('login');
         return;
       }
@@ -401,6 +405,7 @@ import { resolveBase } from '../lib/browser.js';
 
     // 切换账号会先退出当前账号，然后重新展开登录表单。
     switchAccountButton?.addEventListener('click', async () => {
+      const { signOut } = await loadAuthModule();
       await signOut();
       setMode('login');
       if (status) {
@@ -412,6 +417,7 @@ import { resolveBase } from '../lib/browser.js';
     });
 
     logoutButton?.addEventListener('click', async () => {
+      const { signOut } = await loadAuthModule();
       await signOut();
       if (status) {
         status.dataset.locked = 'true';
@@ -424,26 +430,34 @@ import { resolveBase } from '../lib/browser.js';
     });
 
     // 监听 Supabase auth state change，保证登录 / 登出 / 恢复密码后当前页同步刷新。
-    unsubscribeAuth = await subscribeAuthState(() => {
+    function startAuthRefresh() {
+      if (authRefreshStarted) return;
+      authRefreshStarted = true;
       refreshSession();
-    });
+      loadAuthModule()
+        .then(({ subscribeAuthState }) => {
+          if (unsubscribeAuth) return;
+          return subscribeAuthState(() => {
+            refreshSession();
+          }).then((unsubscribe) => {
+            unsubscribeAuth = unsubscribe;
+          });
+        })
+        .catch(() => {});
+    }
+
+    function armAuthRefresh() {
+      if (authRefreshStarted) return;
+      window.addEventListener('pointerdown', startAuthRefresh, { once: true, passive: true });
+      window.addEventListener('keydown', startAuthRefresh, { once: true });
+    }
 
     setMode(mode);
-    await refreshSession();
+    armAuthRefresh();
 
     window.addEventListener('beforeunload', () => {
       unsubscribeAuth?.();
     });
   </script>
 </BaseLayout>
-
-
-
-
-
-
-
-
-
-
 

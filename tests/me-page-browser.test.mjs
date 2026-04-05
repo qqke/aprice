@@ -6,7 +6,7 @@ import { extname, normalize, resolve } from 'node:path';
 import { chromium } from 'playwright';
 
 const distRoot = resolve(process.cwd(), 'dist');
-const browserPath = `${process.env.LOCALAPPDATA}\\ms-playwright\\chromium-1217\\chrome-win64\\chrome.exe`;
+const browserPath = `${process.env.LOCALAPPDATA}\\ms-playwright\\chromium_headless_shell-1217\\chrome-headless-shell-win64\\chrome-headless-shell.exe`;
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -22,6 +22,7 @@ function toFilePath(urlPath) {
   const cleanPath = decodeURIComponent(String(urlPath || '/').split('?')[0].split('#')[0]).replace(/^\/+/, '');
   const strippedPath = cleanPath.startsWith('aprice/') ? cleanPath.slice('aprice/'.length) : cleanPath;
   if (strippedPath === 'lib/browser.js') return resolve(distRoot, 'browser.js');
+  if (strippedPath === 'lib/browser-auth.js') return resolve(distRoot, 'browser-auth.js');
   if (strippedPath === 'lib/supabase-rest.js') return resolve(distRoot, 'supabase-rest.js');
   const joined = normalize(resolve(distRoot, strippedPath || 'index.html'));
   if (!joined.startsWith(normalize(distRoot))) return null;
@@ -76,6 +77,14 @@ async function startStaticServer() {
   return { server, baseUrl: `http://127.0.0.1:${address.port}` };
 }
 
+async function waitForText(page, selector, expectedText) {
+  // 统一等待指定节点出现目标文案，减少重复的 waitForFunction 写法。
+  await page.waitForFunction(
+    ([targetSelector, text]) => String(document.querySelector(targetSelector)?.textContent || '').includes(text),
+    [selector, expectedText],
+  );
+}
+
 async function main() {
   const { server, baseUrl } = await startStaticServer();
   let browser;
@@ -123,12 +132,14 @@ async function main() {
         });
       });
 
-      await page.goto(`${baseUrl}/aprice/me/`, { waitUntil: 'networkidle' });
+      await page.goto(`${baseUrl}/aprice/me/`, { waitUntil: 'domcontentloaded' });
 
       await page.locator('#my-logs').waitFor({ state: 'attached' });
       await page.locator('#recent-views').waitFor({ state: 'attached' });
       await page.locator('#my-favorites').waitFor({ state: 'attached' });
       await page.locator('#log-status').waitFor({ state: 'attached' });
+      await waitForText(page, '#my-logs', '请登录');
+      await waitForText(page, '#my-favorites', '未登录');
 
       const logsText = await page.locator('#my-logs').textContent();
       const recentText = await page.locator('#recent-views').textContent();
@@ -153,6 +164,9 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
+
+
 
 
 

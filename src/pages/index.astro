@@ -133,9 +133,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <h3>最近采样</h3>
               <p>最近录入或更新的价格。</p>
             </div>
-            <span class="pill">采样</span>
+            <div class="pillrow">
+              <button class="button button--ghost" id="load-recent-prices" type="button">加载最近采样</button>
+              <span class="pill">采样</span>
+            </div>
           </div>
-          <div class="notice notice--compact" id="recent-status" style="margin-bottom:12px;">最近采样读取中...</div>
+          <div class="notice notice--compact" id="recent-status" style="margin-bottom:12px;">点击按钮后加载最近采样。</div>
           <div class="timeline" id="recently-viewed">
             <div class="notice notice--compact">最近采样按时间线显示。</div>
           </div>
@@ -168,6 +171,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const heroPriceLabel = document.querySelector('#hero-price-label');
     const recentlyViewed = document.querySelector('#recently-viewed');
     const recentStatus = document.querySelector('#recent-status');
+    const loadRecentButton = document.querySelector('#load-recent-prices');
 
     let activeProduct = null;
 
@@ -307,7 +311,18 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     async function runSearch(term) {
       const query = term.trim();
-      status.textContent = query ? `搜索“${query}”...` : '加载全部商品，可直接筛选。';
+      if (!query) {
+        status.textContent = '输入关键词后再搜索商品。';
+        popularProducts.innerHTML = `
+          <div class="notice notice--compact">输入关键词后显示热门商品。</div>
+        `;
+        results.innerHTML = `
+          <div class="notice notice--compact">输入关键词后再搜索。</div>
+        `;
+        if (nearbyStatus) nearbyStatus.textContent = '先输入关键词，再显示附近价格。';
+        return;
+      }
+      status.textContent = `搜索“${query}”...`;
       try {
         const items = await searchProducts(term);
         if (query) {
@@ -475,7 +490,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       }
     }
     async function loadRecentPrices() {
-      if (recentStatus) recentStatus.textContent = '最近价格采样读取中...';
+      if (recentStatus) recentStatus.textContent = '最近价格采样准备中...';
       try {
         const rows = await fetchRecentPrices(6);
         renderRecentPrices(rows);
@@ -493,9 +508,16 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       }
     }
 
-    await Promise.all([loadRecentPrices(), runSearch('')]);
+    loadRecentButton?.addEventListener('click', () => {
+      void loadRecentPrices();
+    });
   </script>
 </BaseLayout>
+
+
+
+
+
 
 
 

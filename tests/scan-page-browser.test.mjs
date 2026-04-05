@@ -6,7 +6,7 @@ import { extname, normalize, resolve } from 'node:path';
 import { chromium } from 'playwright';
 
 const distRoot = resolve(process.cwd(), 'dist');
-const browserPath = `${process.env.LOCALAPPDATA}\\ms-playwright\\chromium-1217\\chrome-win64\\chrome.exe`;
+const browserPath = `${process.env.LOCALAPPDATA}\\ms-playwright\\chromium_headless_shell-1217\\chrome-headless-shell-win64\\chrome-headless-shell.exe`;
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -172,7 +172,7 @@ async function main() {
         });
       });
 
-      await page.goto(`${baseUrl}/aprice/scan/`, { waitUntil: 'networkidle' });
+      await page.goto(`${baseUrl}/aprice/scan/`, { waitUntil: 'domcontentloaded' });
       await page.locator('#barcode-input').fill('4987188161027');
       await Promise.all([
         page.waitForURL(/\/aprice\/product\/loxonin-s\/$/),
@@ -180,6 +180,7 @@ async function main() {
       ]);
 
       await page.locator('#product-page').waitFor({ state: 'attached' });
+      await page.locator('.product-title').waitFor({ state: 'attached' });
       const heroTitle = await page.locator('.product-title').textContent();
       const priceListText = await page.locator('#price-list').textContent();
       const geoStatus = await page.locator('#geo-status').textContent();
@@ -204,3 +205,4 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+

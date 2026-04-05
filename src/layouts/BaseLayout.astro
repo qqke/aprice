@@ -62,17 +62,30 @@ const nav = [
     <main class="page">
       <slot />
     </main>
-    <script type="module" is:inline>
-      import { fetchCurrentProfile, getCurrentUser, resolveBase, signOut, subscribeAuthState } from '/aprice/browser.js';
-
+        <script type="module" is:inline>
+      const runtimeBase = window.__APriceConfig?.baseUrl || '/';
+      function resolveBase(pathname = '') {
+        const base = runtimeBase.endsWith('/') ? runtimeBase : runtimeBase + '/';
+        const cleanPath = String(pathname || '').replace(/^\/+/, '');
+        if (!cleanPath) return base;
+        return base + cleanPath;
+      }
       const chip = document.querySelector('#session-chip');
       const authNav = document.querySelector('[data-auth-nav]');
       let unsubscribeAuth = null;
+      let authModulePromise = null;
+      let sessionSyncStarted = false;
 
-      // 顶栏会话徽章既要显示当前用户，也要跟随 Supabase 的 auth state 变化实时刷新。
+      // 顶栏会话徽章既要显示当前用户，也要跟随 Supabase 的 auth state 变化刷新。
+      function loadAuthModule() {
+        authModulePromise ??= import('/aprice/browser-auth.js');
+        return authModulePromise;
+      }
+
       async function refreshSessionChip() {
         if (!chip) return;
         try {
+          const { fetchCurrentProfile, getCurrentUser } = await loadAuthModule();
           const user = await getCurrentUser();
           if (!user) {
             chip.textContent = '未登录';
@@ -120,27 +133,57 @@ const nav = [
         }
       }
 
+      async function signOutAndReset() {
+        const { signOut } = await loadAuthModule();
+        await signOut();
+        await refreshSessionChip();
+        window.location.assign(resolveBase('login/'));
+      }
+
       // 顶栏登录入口会根据登录状态在“登录”和“退出”之间切换，避免已登录时还看到登录按钮。
       authNav?.addEventListener('click', async (event) => {
         if (authNav.dataset.authState !== 'signed-in') return;
         event.preventDefault();
-        await signOut();
-        await refreshSessionChip();
-        window.location.assign(resolveBase('login/'));
+        await signOutAndReset();
       });
 
-      // 订阅 auth state change，保证登录、登出和恢复密码后的 UI 不会停留在旧状态。
-      unsubscribeAuth = await subscribeAuthState(() => {
+      function startSessionRefresh() {
+        if (sessionSyncStarted) return;
+        sessionSyncStarted = true;
         refreshSessionChip();
-      });
+        loadAuthModule()
+          .then(({ subscribeAuthState }) => {
+            if (unsubscribeAuth) return;
+            return subscribeAuthState(() => {
+              refreshSessionChip();
+            }).then((unsubscribe) => {
+              unsubscribeAuth = unsubscribe;
+            });
+          })
+          .catch(() => {});
+      }
 
-      refreshSessionChip();
+      function armSessionRefresh() {
+        if (sessionSyncStarted) return;
+        // 顶栏会话状态不是首屏必需内容，先等用户第一次交互再加载 auth 模块，减少首页关键路径请求。
+        window.addEventListener('pointerdown', startSessionRefresh, { once: true, passive: true });
+        window.addEventListener('keydown', startSessionRefresh, { once: true });
+      }
+
+      armSessionRefresh();
       window.addEventListener('beforeunload', () => {
         unsubscribeAuth?.();
       });
     </script>
   </body>
 </html>
+
+
+
+
+
+
+
 
 
 

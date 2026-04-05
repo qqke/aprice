@@ -23,7 +23,11 @@ function makeElement(initial = {}) {
     className: initial.className || '',
     href: initial.href || '',
     dataset: initial.dataset || {},
-    addEventListener() {},
+    listeners: {},
+    addEventListener(event, handler) {
+      this.listeners[event] ??= [];
+      this.listeners[event].push(handler);
+    },
     querySelector() { return null; },
   };
 }
@@ -92,10 +96,23 @@ globalThis.document = {
 
 await eval(`(async () => { ${script} })()`);
 
-assert.match(nodes['#search-status'].textContent, /已加载 1 个商品/);
+assert.equal(fetchLog.length, 0);
+
+nodes['#home-search'].value = 'ロキソ';
+for (const handler of nodes['#home-search-button'].listeners.click || []) {
+  await handler({ preventDefault() {} });
+}
+
+await new Promise((resolve) => setTimeout(resolve, 0));
+await new Promise((resolve) => setTimeout(resolve, 0));
+await new Promise((resolve) => setTimeout(resolve, 0));
+
+assert.match(nodes['#search-status'].textContent, /找到 1 条匹配结果/);
 assert.match(nodes['#search-results'].innerHTML, /Loxonin S/);
 assert.equal(nodes['#hero-product-label'].textContent, 'Loxonin S');
 assert.match(nodes['#popular-products'].innerHTML, /Loxonin S/);
 assert.match(fetchLog.join('\n'), /\/rest\/v1\/products/);
 
 console.log('built-home smoke test passed');
+
+

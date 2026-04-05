@@ -110,20 +110,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   </section>
 
   <script type="module" is:inline>
-    import {
-      clearRecentViews,
-      fetchAllProducts,
-      fetchAllStores,
-      fetchFavorites,
-      fetchPersonalLogs,
-      fetchRecentViews,
-      formatDateTime,
-      formatYen,
-      getCurrentUser,
-      resolveBase,
-      savePersonalLog,
-      toggleFavorite,
-    } from '/aprice/browser.js';
+    import { clearRecentViews, fetchAllProducts, fetchAllStores, fetchRecentViews, formatDateTime, formatYen, resolveBase } from '/aprice/browser.js';
+    import { fetchFavorites, fetchPersonalLogs, getCurrentUser, savePersonalLog, toggleFavorite } from '/aprice/browser-auth.js';
 
     const logsEl = document.querySelector('#my-logs');
     const recentViewsEl = document.querySelector('#recent-views');
@@ -430,6 +418,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     refresh();
   </script>
 </BaseLayout>
+
+
 
 
 

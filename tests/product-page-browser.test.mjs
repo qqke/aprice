@@ -6,7 +6,7 @@ import { extname, normalize, resolve } from 'node:path';
 import { chromium } from 'playwright';
 
 const distRoot = resolve(process.cwd(), 'dist');
-const browserPath = `${process.env.LOCALAPPDATA}\\ms-playwright\\chromium-1217\\chrome-win64\\chrome.exe`;
+const browserPath = `${process.env.LOCALAPPDATA}\\ms-playwright\\chromium_headless_shell-1217\\chrome-headless-shell-win64\\chrome-headless-shell.exe`;
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -22,6 +22,7 @@ function toFilePath(urlPath) {
   const cleanPath = decodeURIComponent(String(urlPath || '/').split('?')[0].split('#')[0]).replace(/^\/+/, '');
   const strippedPath = cleanPath.startsWith('aprice/') ? cleanPath.slice('aprice/'.length) : cleanPath;
   if (strippedPath === 'lib/browser.js') return resolve(distRoot, 'browser.js');
+  if (strippedPath === 'lib/browser-auth.js') return resolve(distRoot, 'browser-auth.js');
   if (strippedPath === 'lib/supabase-rest.js') return resolve(distRoot, 'supabase-rest.js');
   const joined = normalize(resolve(distRoot, strippedPath || 'index.html'));
   if (!joined.startsWith(normalize(distRoot))) return null;
@@ -179,6 +180,24 @@ async function main() {
       const page = await browser.newPage();
       const requests = [];
 
+      await page.route('https://esm.sh/**', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/javascript; charset=utf-8',
+          body: [
+            'export function createClient(){',
+            '  return {',
+            '    auth: {',
+            '      async getSession(){ return { data: { session: null }, error: null }; },',
+            '      async getUser(){ return { data: { user: null }, error: null }; },',
+            '      onAuthStateChange(){ return { data: { subscription: { unsubscribe(){} } } }; },',
+            '      async signOut(){ return { error: null }; },',
+            '    }',
+            '  };',
+            '}',
+          ].join('\n'),
+        });
+      });
       await page.route('**/rest/v1/**', async (route) => {
         const requestUrl = route.request().url();
         requests.push(requestUrl);
@@ -190,8 +209,6 @@ async function main() {
       });
 
       await page.goto(`${baseUrl}/aprice/product/loxonin-s/`, { waitUntil: 'networkidle' });
-      await page.locator('#product-page').waitFor({ state: 'attached' });
-
       const heroTitle = await page.locator('.product-title').textContent();
       const heroSub = await page.locator('.product-sub').textContent();
       const priceListText = await page.locator('#price-list').textContent();
@@ -223,6 +240,11 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
+
+
+
+
 
 
 

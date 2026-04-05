@@ -167,21 +167,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   </section>
 
   <script type="module" is:inline>
-    import {
-      adminDeletePrice,
-      adminDeleteProduct,
-      adminDeleteStore,
-      adminUpsertPrice,
-      adminUpsertProduct,
-      adminUpsertStore,
-      fetchAllProducts,
-      fetchAllStores,
-      fetchCurrentProfile,
-      fetchRecentPrices,
-      getCurrentUser,
-      resolveBase,
-      signOut,
-    } from '/aprice/browser.js';
+    import { fetchAllProducts, fetchAllStores, fetchRecentPrices, resolveBase } from '/aprice/browser.js';
+    import { adminDeletePrice, adminDeleteProduct, adminDeleteStore, adminUpsertPrice, adminUpsertProduct, adminUpsertStore, fetchCurrentProfile, getCurrentUser, signOut } from '/aprice/browser-auth.js';
 
     const status = document.querySelector('#admin-status');
     const accessState = document.querySelector('#admin-access');
@@ -597,6 +584,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     loadData();
   </script>
 </BaseLayout>
+
+
+
 
 
 

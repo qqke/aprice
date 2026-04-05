@@ -135,19 +135,8 @@ const { product } = Astro.props as { product: Product };
 
 
   <script type="module" is:inline>
-    import {
-      fetchAllStores,
-      fetchNearbyPrices,
-      fetchPricesForProduct,
-      formatDistance,
-      formatYen,
-      geolocate,
-      getCurrentUser,
-      recordRecentView,
-      resolveBase,
-      savePersonalLog,
-      toggleFavorite,
-    } from '/aprice/browser.js';
+    import { recordRecentView, resolveBase, fetchAllStores, fetchNearbyPrices, fetchPricesForProduct, formatDistance, formatYen, geolocate } from '/aprice/browser.js';
+    import { getCurrentUser, savePersonalLog, toggleFavorite } from '/aprice/browser-auth.js';
 
     const page = document.querySelector('#product-page');
     const productId = page?.dataset.productId || '';
@@ -548,6 +537,8 @@ const { product } = Astro.props as { product: Product };
     Promise.all([loadStores(), loadPrices()]);
   </script>
 </BaseLayout>
+
+
 
 
 

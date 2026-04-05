@@ -6,7 +6,7 @@ import { extname, normalize, resolve } from 'node:path';
 import { chromium } from 'playwright';
 
 const distRoot = resolve(process.cwd(), 'dist');
-const browserPath = `${process.env.LOCALAPPDATA}\\ms-playwright\\chromium-1217\\chrome-win64\\chrome.exe`;
+const browserPath = `${process.env.LOCALAPPDATA}\\ms-playwright\\chromium_headless_shell-1217\\chrome-headless-shell-win64\\chrome-headless-shell.exe`;
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -22,6 +22,7 @@ function toFilePath(urlPath) {
   const cleanPath = decodeURIComponent(String(urlPath || '/').split('?')[0].split('#')[0]).replace(/^\/+/, '');
   const strippedPath = cleanPath.startsWith('aprice/') ? cleanPath.slice('aprice/'.length) : cleanPath;
   if (strippedPath === 'lib/browser.js') return resolve(distRoot, 'browser.js');
+  if (strippedPath === 'lib/browser-auth.js') return resolve(distRoot, 'browser-auth.js');
   if (strippedPath === 'lib/supabase-rest.js') return resolve(distRoot, 'supabase-rest.js');
   const joined = normalize(resolve(distRoot, strippedPath || 'index.html'));
   if (!joined.startsWith(normalize(distRoot))) return null;
@@ -176,6 +177,14 @@ async function startStaticServer() {
   return { server, baseUrl: `http://127.0.0.1:${address.port}` };
 }
 
+async function waitForText(page, selector, expectedText) {
+  // 统一等待指定节点出现目标文案，减少重复的 waitForFunction 写法。
+  await page.waitForFunction(
+    ([targetSelector, text]) => String(document.querySelector(targetSelector)?.textContent || '').includes(text),
+    [selector, expectedText],
+  );
+}
+
 async function main() {
   const { server, baseUrl } = await startStaticServer();
   let browser;
@@ -196,6 +205,23 @@ async function main() {
       const page = await browser.newPage();
       const pageErrors = [];
       const rpcCalls = [];
+
+      async function waitForRpc(pathPart, timeoutMs = 5000) {
+        const startedAt = Date.now();
+        while (Date.now() - startedAt < timeoutMs) {
+          if (rpcCalls.some((call) => call.url.includes(pathPart))) {
+            return;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        throw new Error('Timed out waiting for ' + pathPart);
+      }
+
+      async function clickConfirmAndWait(selector, pathPart) {
+        page.once('dialog', (dialog) => dialog.accept());
+        await page.locator(selector).click();
+        await waitForRpc(pathPart);
+      }
 
       page.on('pageerror', (error) => pageErrors.push(error.message));
       page.on('console', (message) => {
@@ -257,7 +283,7 @@ async function main() {
         });
       });
 
-      await page.goto(`${baseUrl}/aprice/admin/`, { waitUntil: 'networkidle' });
+      await page.goto(`${baseUrl}/aprice/admin/`, { waitUntil: 'domcontentloaded' });
 
       await page.locator('#admin-status').waitFor({ state: 'attached' });
       await page.locator('#admin-access').waitFor({ state: 'attached' });
@@ -265,11 +291,8 @@ async function main() {
       await page.locator('#admin-stores').waitFor({ state: 'attached' });
       await page.locator('#admin-prices').waitFor({ state: 'attached' });
 
-      await page.waitForFunction(() => {
-        const status = document.querySelector('#admin-status');
-        const access = document.querySelector('#admin-access');
-        return /可以开始维护数据/.test(status?.textContent || '') && /管理员权限已开启/.test(access?.textContent || '');
-      });
+      await waitForText(page, '#admin-status', '可以开始维护数据');
+      await waitForText(page, '#admin-access', '管理员权限已开启');
 
       const statusText = await page.locator('#admin-status').textContent();
       const accessText = await page.locator('#admin-access').textContent();
@@ -287,17 +310,17 @@ async function main() {
       assert.ok(productOptions.some((text) => text.includes('Loxonin S')));
       assert.ok(storeOptions.some((text) => text.includes('Sugi Pharmacy Hiroo')));
 
-      await page.locator('[data-edit-product="eve-a"]').evaluate((button) => button.click());
+      await page.locator('[data-edit-product="eve-a"]').click();
       assert.equal(await page.locator('#product-id').inputValue(), 'eve-a');
       assert.equal(await page.locator('#product-name').inputValue(), 'EVE A');
       assert.equal(await page.locator('#product-brand').inputValue(), 'SS Pharmaceuticals');
 
-      await page.locator('[data-edit-store="welcia-shibuya"]').evaluate((button) => button.click());
+      await page.locator('[data-edit-store="welcia-shibuya"]').click();
       assert.equal(await page.locator('#store-id').inputValue(), 'welcia-shibuya');
       assert.equal(await page.locator('#store-name').inputValue(), 'Welcia Shibuya');
       assert.equal(await page.locator('#store-chain').inputValue(), 'Welcia');
 
-      await page.locator('[data-edit-price="price-admin-1"]').evaluate((button) => button.click());
+      await page.locator('[data-edit-price="price-admin-1"]').click();
       assert.equal(await page.locator('#price-product').inputValue(), 'loxonin-s');
       assert.equal(await page.locator('#price-store').inputValue(), 'sugi-hiroo');
       assert.equal(await page.locator('#price-yen').inputValue(), '698');
@@ -329,8 +352,7 @@ async function main() {
 
       assert.ok(await page.locator('[data-edit-product="eve-a"]').count());
 
-      page.once('dialog', (dialog) => dialog.accept());
-      await page.locator('#product-delete').click();
+      await clickConfirmAndWait('#product-delete', '/rpc/admin_delete_product');
       assert.ok(rpcCalls.some((call) => call.url.includes('/rpc/admin_delete_product')),
         `expected admin_delete_product RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`);
 
@@ -344,7 +366,7 @@ async function main() {
       await page.locator('#store-lat').fill('35.6895');
       await page.locator('#store-lng').fill('139.6917');
       await page.locator('#store-form button[type="submit"]').click();
-      await page.waitForFunction(() => (document.querySelector('#admin-status')?.textContent || '').includes('可以开始维护数据'));
+      await waitForText(page, '#admin-status', '可以开始维护数据');
       assert.ok(rpcCalls.some((call) => call.url.includes('/rpc/admin_upsert_store')),
         `expected admin_upsert_store RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`);
       assert.ok(
@@ -360,7 +382,7 @@ async function main() {
       await page.locator('#price-collected').fill('2026-04-04T10:00');
       await page.locator('#price-member').setChecked(true);
       await page.locator('#price-form button[type="submit"]').click();
-      await page.waitForFunction(() => (document.querySelector('#admin-status')?.textContent || '').includes('可以开始维护数据'));
+      await waitForText(page, '#admin-status', '可以开始维护数据');
       assert.ok(rpcCalls.some((call) => call.url.includes('/rpc/admin_upsert_price')),
         `expected admin_upsert_price RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`);
       assert.ok(
@@ -374,13 +396,11 @@ async function main() {
         `expected admin_upsert_price payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
       );
 
-      page.once('dialog', (dialog) => dialog.accept());
-      await page.locator('[data-delete-store="welcia-shibuya"]').click();
+      await clickConfirmAndWait('[data-delete-store="welcia-shibuya"]', '/rpc/admin_delete_store');
       assert.ok(rpcCalls.some((call) => call.url.includes('/rpc/admin_delete_store')),
         `expected admin_delete_store RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`);
 
-      page.once('dialog', (dialog) => dialog.accept());
-      await page.locator('[data-delete-price="price-admin-1"]').click();
+      await clickConfirmAndWait('[data-delete-price="price-admin-1"]', '/rpc/admin_delete_price');
       assert.ok(rpcCalls.some((call) => call.url.includes('/rpc/admin_delete_price')),
         `expected admin_delete_price RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`);
 
@@ -399,6 +419,12 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
+
+
+
+
+
 
 
 

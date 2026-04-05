@@ -6,7 +6,7 @@ import { extname, normalize, resolve } from 'node:path';
 import { chromium } from 'playwright';
 
 const distRoot = resolve(process.cwd(), 'dist');
-const browserPath = `${process.env.LOCALAPPDATA}\\ms-playwright\\chromium-1217\\chrome-win64\\chrome.exe`;
+const browserPath = `${process.env.LOCALAPPDATA}\\ms-playwright\\chromium_headless_shell-1217\\chrome-headless-shell-win64\\chrome-headless-shell.exe`;
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -22,6 +22,7 @@ function toFilePath(urlPath) {
   const cleanPath = decodeURIComponent(String(urlPath || '/').split('?')[0].split('#')[0]).replace(/^\/+/, '');
   const strippedPath = cleanPath.startsWith('aprice/') ? cleanPath.slice('aprice/'.length) : cleanPath;
   if (strippedPath === 'lib/browser.js') return resolve(distRoot, 'browser.js');
+  if (strippedPath === 'lib/browser-auth.js') return resolve(distRoot, 'browser-auth.js');
   if (strippedPath === 'lib/supabase-rest.js') return resolve(distRoot, 'supabase-rest.js');
   const joined = normalize(resolve(distRoot, strippedPath || 'index.html'));
   if (!joined.startsWith(normalize(distRoot))) return null;
@@ -110,6 +111,14 @@ async function startStaticServer() {
   return { server, baseUrl: `http://127.0.0.1:${address.port}` };
 }
 
+async function waitForText(page, selector, expectedText) {
+  // 统一等待指定节点出现目标文案，减少重复的 waitForFunction 写法。
+  await page.waitForFunction(
+    ([targetSelector, text]) => String(document.querySelector(targetSelector)?.textContent || '').includes(text),
+    [selector, expectedText],
+  );
+}
+
 async function main() {
   const { server, baseUrl } = await startStaticServer();
   let browser;
@@ -160,29 +169,25 @@ async function main() {
         throw new Error(`home shell did not render\nurl: ${page.url()}\nbody: ${bodyText.slice(0, 800)}\nhtml: ${html.slice(0, 800)}\n${error.message}`);
       }
 
-      await page.waitForFunction(() => {
-        const recent = document.querySelector('#recent-status');
-        return recent && !/正在读取最近价格采样/.test(recent.textContent || '');
-      });
+      assert.equal(requests.length, 0, 'homepage should not fetch REST data before interaction');
 
       await page.locator('#home-search').fill('ロキソ');
       await page.locator('#home-search-button').click();
-      await page.waitForFunction(() => {
-        const status = document.querySelector('#search-status');
-        return status && /找到 1 条匹配结果/.test(status.textContent || '');
-      });
+      await waitForText(page, '#search-status', '找到 1 条匹配结果');
 
       const resultText = await page.locator('#search-results').textContent();
       const heroLabel = await page.locator('#hero-product-label').textContent();
       const popularText = await page.locator('#popular-products').textContent();
       const statusText = await page.locator('#search-status').textContent();
       const recentText = await page.locator('#recently-viewed').textContent();
+      const recentStatusText = await page.locator('#recent-status').textContent();
 
       assert.match(statusText || '', /找到 1 条匹配结果/);
       assert.match(resultText || '', /Loxonin S/);
       assert.equal(heroLabel, 'Loxonin S');
       assert.match(popularText || '', /Loxonin S/);
-      assert.match(recentText || '', /最新采样|暂无采样/);
+      assert.match(recentStatusText || '', /点击按钮后加载最近采样/);
+      assert.match(recentText || '', /最近采样按时间线显示/);
       assert.match(requests.join('\n'), /name\.ilike/);
       assert.match(requests.join('\n'), /\/rest\/v1\/products/);
 
@@ -199,11 +204,3 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
-
-
-
-
-
-
-

@@ -6,7 +6,7 @@ import { extname, normalize, resolve } from 'node:path';
 import { chromium } from 'playwright';
 
 const distRoot = resolve(process.cwd(), 'dist');
-const browserPath = `${process.env.LOCALAPPDATA}\\ms-playwright\\chromium-1217\\chrome-win64\\chrome.exe`;
+const browserPath = `${process.env.LOCALAPPDATA}\\ms-playwright\\chromium_headless_shell-1217\\chrome-headless-shell-win64\\chrome-headless-shell.exe`;
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -22,6 +22,7 @@ function toFilePath(urlPath) {
   const cleanPath = decodeURIComponent(String(urlPath || '/').split('?')[0].split('#')[0]).replace(/^\/+/, '');
   const strippedPath = cleanPath.startsWith('aprice/') ? cleanPath.slice('aprice/'.length) : cleanPath;
   if (strippedPath === 'lib/browser.js') return resolve(distRoot, 'browser.js');
+  if (strippedPath === 'lib/browser-auth.js') return resolve(distRoot, 'browser-auth.js');
   if (strippedPath === 'lib/supabase-rest.js') return resolve(distRoot, 'supabase-rest.js');
   const joined = normalize(resolve(distRoot, strippedPath || 'index.html'));
   if (!joined.startsWith(normalize(distRoot))) return null;
@@ -156,6 +157,32 @@ function makeEsmShimModuleBody() {
   `;
 }
 
+async function waitForText(page, selector, expectedText) {
+  // 统一等待指定节点出现目标文案，避免到处重复写 waitForFunction。
+  await page.waitForFunction(
+    ([targetSelector, text]) => {
+      return String(document.querySelector(targetSelector)?.textContent || '').includes(text);
+    },
+    [selector, expectedText],
+  );
+}
+
+async function waitForHidden(page, selector) {
+  // 统一等待节点隐藏，登录态切换时只保留这一种判断方式。
+  await page.waitForFunction(
+    ([targetSelector]) => document.querySelector(targetSelector)?.hidden === true,
+    [selector],
+  );
+}
+
+async function waitForVisible(page, selector) {
+  // 统一等待节点显示，避免同类逻辑散落在测试里。
+  await page.waitForFunction(
+    ([targetSelector]) => document.querySelector(targetSelector)?.hidden === false,
+    [selector],
+  );
+}
+
 async function main() {
   const { server, baseUrl } = await startStaticServer();
   let browser;
@@ -229,14 +256,14 @@ async function main() {
     await page.locator('#session-state').waitFor({ state: 'attached' });
     await page.locator('#auth-status').waitFor({ state: 'attached' });
 
-    await page.waitForFunction(() => /未登录/.test(document.querySelector('#session-state')?.textContent || ''));
+    await waitForText(page, '#session-state', '未登录');
 
     await page.locator('#email').fill('name@example.com');
     await page.locator('#password').fill('password123');
     await page.locator('#auth-submit').click();
 
-    await page.waitForFunction(() => /登录成功/.test(document.querySelector('#auth-status')?.textContent || ''));
-    await page.waitForFunction(() => /name@example.com/.test(document.querySelector('#session-state')?.textContent || ''));
+    await waitForText(page, '#auth-status', '登录成功');
+    await waitForText(page, '#session-state', 'name@example.com');
 
     await page.evaluate((email) => {
       const session = {
@@ -247,41 +274,41 @@ async function main() {
       window.name = '__aprice_test_session__=' + JSON.stringify(session);
     }, 'name@example.com');
 
-    await page.reload({ waitUntil: "domcontentloaded" });
-    await page.waitForFunction(() => document.querySelector('#auth-form-shell')?.hidden === true);
-    await page.waitForFunction(() => !document.querySelector('#signed-in-state')?.hidden);
-    await page.waitForFunction(() => /退出/.test(document.querySelector('[data-auth-nav]')?.textContent || ''));
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.mouse.click(1, 1);
+    await waitForHidden(page, '#auth-form-shell');
+    await waitForVisible(page, '#signed-in-state');
 
     await page.locator('#switch-account-button').click();
-    await page.waitForFunction(() => document.querySelector('#auth-form-shell')?.hidden === false);
-    await page.waitForFunction(() => document.querySelector('#signed-in-state')?.hidden === true);
-    await page.waitForFunction(() => /登录/.test(document.querySelector('[data-auth-nav]')?.textContent || ''));
+    await waitForVisible(page, '#auth-form-shell');
+    await waitForHidden(page, '#signed-in-state');
+    await waitForText(page, '[data-auth-nav]', '登录');
 
     await page.locator('#logout-button').click();
     await page.waitForURL('**/aprice/');
 
     await page.goto(`${baseUrl}/aprice/login/`, { waitUntil: 'domcontentloaded' });
     await page.locator('#mode-toggle').click();
-    await page.waitForFunction(() => /注册账号/.test(document.querySelector('#auth-panel-title')?.textContent || ''));
+    await waitForText(page, '#auth-panel-title', '注册账号');
     await page.locator('#email').fill('register@example.com');
     await page.locator('#password').fill('register123');
     await page.locator('#confirm-password').fill('register123');
     await page.locator('#auth-submit').click();
-    await page.waitForFunction(() => /注册成功/.test(document.querySelector('#auth-status')?.textContent || ''));
+    await waitForText(page, '#auth-status', '注册成功');
 
     await page.locator('#forgot-toggle').click();
-    await page.waitForFunction(() => /找回密码/.test(document.querySelector('#auth-panel-title')?.textContent || ''));
+    await waitForText(page, '#auth-panel-title', '找回密码');
     await page.locator('#email').fill('name@example.com');
     await page.locator('#auth-submit').click();
-    await page.waitForFunction(() => /重置链接已发送/.test(document.querySelector('#auth-status')?.textContent || ''));
+    await waitForText(page, '#auth-status', '重置链接已发送');
 
     await page.goto(`${baseUrl}/aprice/login/?mode=reset&type=recovery`, { waitUntil: 'domcontentloaded' });
     await page.locator('#auth-form').waitFor({ state: 'attached' });
-    await page.waitForFunction(() => /重置密码/.test(document.querySelector('#auth-panel-title')?.textContent || ''));
+    await waitForText(page, '#auth-panel-title', '重置密码');
     await page.locator('#password').fill('newpassword123');
     await page.locator('#confirm-password').fill('newpassword123');
     await page.locator('#auth-submit').click();
-    await page.waitForFunction(() => /密码已更新/.test(document.querySelector('#auth-status')?.textContent || ''));
+    await waitForText(page, '#auth-status', '密码已更新');
 
     authCalls.push('login/register/reset flow covered');
 
@@ -298,6 +325,10 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
+
+
+
 
 
 
