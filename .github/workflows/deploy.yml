@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ASTRO_BASE_PATH: /aprice/
-      PUBLIC_SITE_URL: https://example.github.io/aprice
+      PUBLIC_SITE_URL: ${{ secrets.PUBLIC_SITE_URL }}
       PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
       PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
     steps:
