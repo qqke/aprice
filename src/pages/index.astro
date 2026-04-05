@@ -14,7 +14,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           </p>
           <div class="hero__actions hero__actions--tight">
             <a class="button" href={`${import.meta.env.BASE_URL || '/'}scan/`}>开始扫码查价</a>
-            <a class="button button--ghost" href={`${import.meta.env.BASE_URL || '/'}me/`}>打开个人工作台</a>
+            <a class="button button--ghost" href={`${import.meta.env.BASE_URL || '/'}me/`}>打开个人页</a>
           </div>
         </div>
       </div>
@@ -47,7 +47,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             <div class="list__item">
               <div>
                 <strong>附近排序</strong>
-                <small>按当前位置重排门店价格。</small>
+                <small>按当前位置排序门店价格。</small>
               </div>
               <span class="meta">附近</span>
             </div>
@@ -95,16 +95,16 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             <span class="pill">检索</span>
           </div>
           <div class="list" id="search-results">
-            <div class="notice notice--compact">搜索结果会显示在这里。</div>
+            <div class="notice notice--compact">搜索结果。</div>
           </div>
         </section>
         <section class="tile tile--flow">
           <div class="section__header section__header--tight">
             <h3>热门商品</h3>
-            <p>先从最近更新的几款开始。</p>
+            <p>从最近更新的几款开始。</p>
           </div>
           <div class="feed" id="popular-products">
-            <div class="notice notice--compact">最新更新的商品会显示在这里。</div>
+            <div class="notice notice--compact">近期更新商品。</div>
           </div>
         </section>
       </div>
@@ -116,15 +116,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <div class="section__header section__header--tight">
         <div>
           <h2>附近比价</h2>
-          <p>打开定位后，会按当前位置重排门店价格。</p>
+          <p>打开定位后，门店价格按当前位置排序。</p>
         </div>
         <button class="button button--ghost" id="geolocate-home" type="button">使用当前位置</button>
       </div>
       <div class="grid">
         <section class="tile tile--wide tile--flow">
-          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">选择商品后显示附近价格。</div>
+          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">选中商品后可看附近价格。</div>
           <div class="list" id="nearby-results">
-            <div class="notice notice--compact">选择商品后显示附近价格。</div>
+            <div class="notice notice--compact">选中商品后可看附近价格。</div>
           </div>
         </section>
         <section class="tile tile--flow">
@@ -135,9 +135,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             </div>
             <span class="pill">采样</span>
           </div>
-          <div class="notice notice--compact" id="recent-status" style="margin-bottom:12px;">正在同步最近采样数据。</div>
+          <div class="notice notice--compact" id="recent-status" style="margin-bottom:12px;">最近采样同步中。</div>
           <div class="timeline" id="recently-viewed">
-            <div class="notice notice--compact">最近采样会按时间线更新。</div>
+            <div class="notice notice--compact">最近采样按时间线更新。</div>
           </div>
         </section>
       </div>
@@ -171,7 +171,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     let activeProduct = null;
 
-        function productBadge(item) {
+    // 根据最近两次采样的差值，统一生成涨跌标签和颜色。
+    function trendMeta(delta) {
+      if (delta === null) return { label: '最新', tone: 'trend--flat', arrow: '→' };
+      if (delta === 0) return { label: '持平', tone: 'trend--flat', arrow: '→' };
+      if (delta > 0) return { label: `上涨 ${formatYen(delta)}`, tone: 'trend--up', arrow: '↑' };
+      return { label: `下跌 ${formatYen(Math.abs(delta))}`, tone: 'trend--down', arrow: '↓' };
+    }
+
+    function productBadge(item) {
       const seed = (item?.id || item?.barcode || item?.name || 'P').toString();
       const sum = Array.from(seed).reduce((acc, char) => acc + char.charCodeAt(0), 0);
       const palette = [
@@ -254,7 +262,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     async function renderNearbyForProduct(product) {
       if (!product) return;
-      if (nearbyStatus) nearbyStatus.textContent = `正在读取 ${product.name} 的门店价格。`;
+      if (nearbyStatus) nearbyStatus.textContent = `读取 ${product.name} 的门店价格...`;
       try {
         const prices = await fetchPricesForProduct(product.id);
         if (!prices.length) {
@@ -299,7 +307,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     async function runSearch(term) {
       const query = term.trim();
-      status.textContent = query ? `正在搜索“${query}”...` : '正在加载全部商品，输入关键词即可筛选。';
+      status.textContent = query ? `搜索“${query}”...` : '加载全部商品，输入关键词即可筛选。';
       try {
         const items = await searchProducts(term);
         if (query) {
@@ -308,14 +316,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             : `没有找到“${query}”，可以换成品牌名、假名片段或 JAN 码。`;
         } else {
           status.textContent = items.length
-            ? `已加载 ${items.length} 个商品，直接输入关键词继续筛选。`
-            : '当前还没有商品数据，先导入商品。';
+            ? `已加载 ${items.length} 个商品，继续输入关键词筛选。`
+            : '当前还没有商品数据，请先导入商品。';
         }
         renderProducts(items);
         if (items.length) {
           await renderNearbyForProduct(items[0]);
         } else if (nearbyStatus) {
-          nearbyStatus.textContent = '先找到一个商品，附近价格才会显示。';
+          nearbyStatus.textContent = '找到商品后，附近价格才显示。';
         }
       } catch (error) {
         status.textContent = `搜索失败：${error.message}`;
@@ -336,7 +344,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       try {
         const location = await geolocate();
         status.textContent = `当前位置：${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}。`;
-        if (nearbyStatus) nearbyStatus.textContent = activeProduct ? `正在按当前位置重排 ${activeProduct.name}。` : '先选一个商品，再按当前位置重排。';
+        if (nearbyStatus) nearbyStatus.textContent = activeProduct ? `正在按当前位置排序 ${activeProduct.name}。` : '先选一个商品，再按当前位置排序。';
         if (activeProduct) {
           const rows = await fetchNearbyPrices({ productId: activeProduct.id, lat: location.lat, lng: location.lng, radiusKm: 20 });
           nearbyResults.innerHTML = rows.length
@@ -359,7 +367,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             : nearbyResults.innerHTML;
           if (nearbyStatus) {
             nearbyStatus.textContent = rows.length
-              ? `已按当前位置重排 ${rows.length} 条价格。`
+              ? `已按当前位置排序 ${rows.length} 条价格。`
               : `${activeProduct.name} 在当前位置附近还没有可比价格。`;
           }
         }
@@ -378,7 +386,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="feed__item">
             <div>
               <strong>暂无采样</strong>
-              <small>先插入价格记录，最近采样会自动更新。</small>
+              <small>插入价格记录后，最近采样自动更新。</small>
             </div>
             <span class="price">暂无</span>
           </div>
@@ -467,7 +475,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       }
     }
     async function loadRecentPrices() {
-      if (recentStatus) recentStatus.textContent = '正在读取最近价格采样...';
+      if (recentStatus) recentStatus.textContent = '读取最近价格采样...';
       try {
         const rows = await fetchRecentPrices(6);
         renderRecentPrices(rows);
@@ -488,6 +496,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     await Promise.all([loadRecentPrices(), runSearch('')]);
   </script>
 </BaseLayout>
+
 
 
 
