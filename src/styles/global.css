@@ -502,6 +502,22 @@ img {
   color: var(--text);
 }
 
+.field select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: rgba(255, 255, 255, 0.02);
+  color-scheme: dark;
+}
+
+.field select option {
+  background-color: #121a30;
+  color: var(--text);
+}
+
+.field select option[value=""] {
+  color: rgba(244, 246, 251, 0.52);
+}
+
 .field input::placeholder,
 .field textarea::placeholder {
   color: rgba(244, 246, 251, 0.38);
