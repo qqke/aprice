@@ -183,12 +183,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       const seed = (item?.id || item?.barcode || item?.name || 'P').toString();
       const sum = Array.from(seed).reduce((acc, char) => acc + char.charCodeAt(0), 0);
       const palette = [
-        { label: 'AZ', tone: 'badge--mint' },
-        { label: 'RX', tone: 'badge--sky' },
-        { label: 'MN', tone: 'badge--sun' },
-        { label: 'JP', tone: 'badge--violet' },
-        { label: 'SK', tone: 'badge--leaf' },
-        { label: 'TR', tone: 'badge--sand' },
+        { label: '热门', tone: 'badge--mint' },
+        { label: '检索', tone: 'badge--sky' },
+        { label: '附近', tone: 'badge--sun' },
+        { label: '日本', tone: 'badge--violet' },
+        { label: '会员', tone: 'badge--leaf' },
+        { label: '最近', tone: 'badge--sand' },
       ];
       return palette[sum % palette.length];
     }
@@ -496,6 +496,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     await Promise.all([loadRecentPrices(), runSearch('')]);
   </script>
 </BaseLayout>
+
+
+
 
 
 
