@@ -28,6 +28,24 @@ const nav = [
     <link rel="shortcut icon" href={`${base}favicon.svg`} />
     <link rel="apple-touch-icon" href={`${base}favicon.svg`} />
     <title>{title}</title>
+    <script is:inline>
+      // 先在 documentElement 上打一个轻量标记，避免顶栏在已登录切页时闪回错误状态。
+      try {
+        if (window.localStorage.getItem('aprice:session-hint') === 'signed-in') {
+          document.documentElement.dataset.authPending = 'signed-in';
+        }
+      } catch {}
+    </script>
+    <style is:inline>
+      html[data-auth-pending='signed-in'] #session-chip,
+      html[data-auth-pending='signed-in'] [data-auth-nav='true'] {
+        visibility: hidden;
+      }
+      html[data-auth-pending='signed-in'] #auth-form-shell,
+      html[data-auth-pending='signed-in'] #session-state {
+        visibility: hidden;
+      }
+    </style>
   </head>
   <body>
     <header class="topbar">
@@ -59,6 +77,7 @@ const nav = [
     <script is:inline define:vars={{ baseUrl: base, supabaseUrl: import.meta.env.PUBLIC_SUPABASE_URL || '', supabaseAnonKey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '' }}>
       window.__APriceConfig = { baseUrl, supabaseUrl, supabaseAnonKey };
     </script>
+
     <main class="page">
       <slot />
     </main>
@@ -72,6 +91,7 @@ const nav = [
       }
       const chip = document.querySelector('#session-chip');
       const authNav = document.querySelector('[data-auth-nav]');
+      const sessionHintKey = 'aprice:session-hint';
       let unsubscribeAuth = null;
       let authModulePromise = null;
       let sessionSyncStarted = false;
@@ -80,6 +100,14 @@ const nav = [
       function loadAuthModule() {
         authModulePromise ??= import('/aprice/browser-auth.js');
         return authModulePromise;
+      }
+
+      function readSessionHint() {
+        try {
+          return window.localStorage.getItem(sessionHintKey);
+        } catch {
+          return null;
+        }
       }
 
       async function refreshSessionChip() {
@@ -147,24 +175,33 @@ const nav = [
         await signOutAndReset();
       });
 
-      function startSessionRefresh() {
+      async function startSessionRefresh() {
         if (sessionSyncStarted) return;
         sessionSyncStarted = true;
-        refreshSessionChip();
-        loadAuthModule()
-          .then(({ subscribeAuthState }) => {
-            if (unsubscribeAuth) return;
-            return subscribeAuthState(() => {
-              refreshSessionChip();
-            }).then((unsubscribe) => {
-              unsubscribeAuth = unsubscribe;
-            });
-          })
-          .catch(() => {});
+        try {
+          await refreshSessionChip();
+          loadAuthModule()
+            .then(({ subscribeAuthState }) => {
+              if (unsubscribeAuth) return;
+              return subscribeAuthState(() => {
+                refreshSessionChip();
+              }).then((unsubscribe) => {
+                unsubscribeAuth = unsubscribe;
+              });
+            })
+            .catch(() => {});
+        } finally {
+          document.documentElement.removeAttribute('data-auth-pending');
+        }
       }
 
       function armSessionRefresh() {
         if (sessionSyncStarted) return;
+        if (readSessionHint() === 'signed-in') {
+          // 已登录用户优先在页面加载后同步顶栏，避免跨页面时先看到“未登录”。
+          startSessionRefresh();
+          return;
+        }
         // 顶栏会话状态不是首屏必需内容，先等用户第一次交互再加载 auth 模块，减少首页关键路径请求。
         window.addEventListener('pointerdown', startSessionRefresh, { once: true, passive: true });
         window.addEventListener('keydown', startSessionRefresh, { once: true });

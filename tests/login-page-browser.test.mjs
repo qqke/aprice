@@ -262,22 +262,18 @@ async function main() {
     await page.locator('#password').fill('password123');
     await page.locator('#auth-submit').click();
 
-    await waitForText(page, '#auth-status', '登录成功');
+    await page.waitForURL('**/aprice/');
+    await page.goto(`${baseUrl}/aprice/login/`, { waitUntil: 'domcontentloaded' });
+
+    await page.locator('#auth-form').waitFor({ state: 'attached' });
+    await page.locator('#session-state').waitFor({ state: 'attached' });
+    await page.locator('#auth-status').waitFor({ state: 'attached' });
     await waitForText(page, '#session-state', 'name@example.com');
-
-    await page.evaluate((email) => {
-      const session = {
-        user: { id: 'signed-in-user', email },
-        access_token: 'test-access-token',
-      };
-      localStorage.setItem('__aprice_test_session__', JSON.stringify(session));
-      window.name = '__aprice_test_session__=' + JSON.stringify(session);
-    }, 'name@example.com');
-
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.mouse.click(1, 1);
     await waitForHidden(page, '#auth-form-shell');
     await waitForVisible(page, '#signed-in-state');
+    await waitForText(page, '#signed-in-action', '打开个人页');
+    await page.locator('#signed-in-action').waitFor({ state: 'attached' });
+    assert.equal(await page.locator('#signed-in-action').getAttribute('href'), '/aprice/me/');
 
     await page.locator('#switch-account-button').click();
     await waitForVisible(page, '#auth-form-shell');

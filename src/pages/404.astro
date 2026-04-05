@@ -1,0 +1,70 @@
+﻿---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { resolveBase } from '../lib/browser.js';
+
+Astro.response.status = 404;
+---
+<BaseLayout title="404 - Aprice" description="页面不存在。返回首页、扫码或打开个人页继续操作。">
+  <section class="hero hero--tight">
+    <div class="shell hero__grid hero__grid--tight">
+      <div class="hero__panel hero__panel--tight">
+        <div class="hero__copy hero__copy--tight">
+          <div class="eyebrow">Aprice · 404</div>
+          <h1 class="headline">这个页面不在当前路径里。</h1>
+          <p class="lead">
+            你可以回首页继续搜索，去扫码查价，或者直接打开个人页。
+          </p>
+          <div class="hero__actions hero__actions--tight">
+            <a class="button" href={resolveBase('')}>返回首页</a>
+            <a class="button button--ghost" href={resolveBase('scan/')}>去扫码</a>
+            <a class="button button--ghost" href={resolveBase('me/')}>打开个人页</a>
+          </div>
+        </div>
+      </div>
+
+      <aside class="hero__panel hero__panel--tight">
+        <div class="hero__copy hero__copy--tight hero__summary">
+          <div class="section__header section__header--tight" style="margin:0;">
+            <div>
+              <h2>可继续的入口</h2>
+              <p>站点主路径都在这里。</p>
+            </div>
+            <span class="pill">404</span>
+          </div>
+
+          <div class="list list--compact">
+            <a class="list__item" href={resolveBase('')}>
+              <div>
+                <strong>首页搜索</strong>
+                <small>查商品名、品牌名或 JAN 条码。</small>
+              </div>
+              <span class="meta">首页</span>
+            </a>
+            <a class="list__item" href={resolveBase('scan/')}>
+              <div>
+                <strong>扫码查价</strong>
+                <small>直接进入商品页看门店价格。</small>
+              </div>
+              <span class="meta">扫码</span>
+            </a>
+            <a class="list__item" href={resolveBase('login/')}>
+              <div>
+                <strong>账号入口</strong>
+                <small>登录后保存价格、收藏和记录。</small>
+              </div>
+              <span class="meta">登录</span>
+            </a>
+          </div>
+
+          <div class="notice notice--compact">
+            <div>
+              <strong>路径未命中</strong>
+              <small>如果这是收藏链接，可以从首页重新进入。</small>
+            </div>
+            <span class="meta">提示</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </section>
+</BaseLayout>

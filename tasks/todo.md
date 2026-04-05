@@ -1,4 +1,4 @@
-# 任务清单
+﻿# 任务清单
 
 - [x] 拆分公共浏览器模块和 auth 模块，移除首页首屏对 Supabase SDK 的静态依赖
 - [x] 更新 BaseLayout、登录页、个人页、管理页、商品页和扫码页的导入路径
@@ -22,7 +22,13 @@
 
 - [x] 继续统一浏览器测试等待写法，并把 me / admin / scan 改成更早挂载后再断言
 
+- [x] 登录后给顶栏写入会话提示，切页时自动同步真实登录态
+
+- [x] 登录页在已登录提示存在时先隐藏表单壳子，避免切回登录页先闪出登录框
+
 ## Review
+
+- 顶栏会话现在会在检测到已登录提示后自动刷新，登录成功后切页不再先闪成“未登录”；`npm run check`、`npm test`、`npm run build` 已通过。
 
 - 这轮把 home / me / admin / scan 的浏览器测试等待写法进一步收敛，并把部分页面从 networkidle 改成更早的 DOM 挂载等待，整体更贴合当前首屏策略。
 
@@ -51,3 +57,8 @@ pm test 通过；GitHub Actions 继续从 PUBLIC_SUPABASE_URL 和 PUBLIC_SUPABAS
 - 登录页也改成了按需加载 auth 模块，首屏初始 JS 请求从 2 个降到 1 个，`browser-auth.js` 不再进入 login 页的首屏关键路径。
 - 最新本地 headless 测速：登录页 `domContentLoaded` 约 30ms，`first-contentful-paint` 约 40ms；首页仍保持 1 个初始 JS 请求，性能波动主要在几毫秒级。
 
+- 这轮把登录页首屏的登录表单壳子也收住了：`session-hint` 存在时先隐藏表单和会话概览，回到登录页不再先闪出登录框；`npm run build`、`npm test`、`npm run check` 已通过。
+- [x] 新增站点 404 页面，提供明确返回路径并保持现有视觉风格
+
+- 404 页面已新增为 `src/pages/404.astro`，提供首页、扫码和个人页的回退路径；`npm run build`、`npm test`、`npm run check` 已通过。
+- 404 兜底已改成 middleware 重写到 `src/pages/404.astro`，开发环境和构建产物都会走自定义 404 页面。
