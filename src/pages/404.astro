@@ -1,8 +1,8 @@
 ﻿---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { resolveBase } from '../lib/browser.js';
 
 Astro.response.status = 404;
+const base = import.meta.env.BASE_URL || '/';
 ---
 <BaseLayout title="404 - Aprice" description="页面不存在。返回首页、扫码或打开个人页继续操作。">
   <section class="hero hero--tight">
@@ -15,9 +15,9 @@ Astro.response.status = 404;
             你可以回首页继续搜索，去扫码查价，或者直接打开个人页。
           </p>
           <div class="hero__actions hero__actions--tight">
-            <a class="button" href={resolveBase('')}>返回首页</a>
-            <a class="button button--ghost" href={resolveBase('scan/')}>去扫码</a>
-            <a class="button button--ghost" href={resolveBase('me/')}>打开个人页</a>
+            <a class="button" href={`${base}`}>返回首页</a>
+            <a class="button button--ghost" href={`${base}scan/`}>去扫码</a>
+            <a class="button button--ghost" href={`${base}me/`}>打开个人页</a>
           </div>
         </div>
       </div>
@@ -33,21 +33,21 @@ Astro.response.status = 404;
           </div>
 
           <div class="list list--compact">
-            <a class="list__item" href={resolveBase('')}>
+            <a class="list__item" href={`${base}`}>
               <div>
                 <strong>首页搜索</strong>
                 <small>查商品名、品牌名或 JAN 条码。</small>
               </div>
               <span class="meta">首页</span>
             </a>
-            <a class="list__item" href={resolveBase('scan/')}>
+            <a class="list__item" href={`${base}scan/`}>
               <div>
                 <strong>扫码查价</strong>
                 <small>直接进入商品页看门店价格。</small>
               </div>
               <span class="meta">扫码</span>
             </a>
-            <a class="list__item" href={resolveBase('login/')}>
+            <a class="list__item" href={`${base}login/`}>
               <div>
                 <strong>账号入口</strong>
                 <small>登录后保存价格、收藏和记录。</small>
