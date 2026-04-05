@@ -20,8 +20,8 @@ function makeBrowserBrowserJs(source) {
   output = replaceOrThrow(output, "\nimport { createClient } from '@supabase/supabase-js';\n", '\n', 'createClient import');
   output = replaceOrThrow(
     output,
-    "const runtimeConfig = globalThis.__APriceConfig || {};\n// 这些默认值只覆盖公共 anon 配置，优先级仍然是环境变量 > 运行时注入 > 仓库默认值。\nconst DEFAULT_SUPABASE_URL = 'https://tplkpguxlvrhxassyjfm.supabase.co';\nconst DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_LVrlFNcZCGnBoji9Hw9gcQ_ELbcv1BT';\nconst SUPABASE_URL = String(import.meta.env?.PUBLIC_SUPABASE_URL || runtimeConfig.supabaseUrl || DEFAULT_SUPABASE_URL).trim();\nconst SUPABASE_ANON_KEY = String(import.meta.env?.PUBLIC_SUPABASE_ANON_KEY || runtimeConfig.supabaseAnonKey || DEFAULT_SUPABASE_ANON_KEY).trim();\nconst BASE_URL = String(import.meta.env?.BASE_URL || runtimeConfig.baseUrl || '/').trim() || '/';\n",
-    "const CONFIG = globalThis.__APriceConfig || {};\nconst DEFAULT_SUPABASE_URL = 'https://tplkpguxlvrhxassyjfm.supabase.co';\nconst DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_LVrlFNcZCGnBoji9Hw9gcQ_ELbcv1BT';\nconst SUPABASE_URL = String(CONFIG.supabaseUrl || DEFAULT_SUPABASE_URL).trim();\nconst SUPABASE_ANON_KEY = String(CONFIG.supabaseAnonKey || DEFAULT_SUPABASE_ANON_KEY).trim();\nconst BASE_URL = String(CONFIG.baseUrl || '/').trim() || '/';\n",
+    "const runtimeConfig = globalThis.__APriceConfig || {};\nconst SUPABASE_URL = String(import.meta.env?.PUBLIC_SUPABASE_URL || runtimeConfig.supabaseUrl || '').trim();\nconst SUPABASE_ANON_KEY = String(import.meta.env?.PUBLIC_SUPABASE_ANON_KEY || runtimeConfig.supabaseAnonKey || '').trim();\nconst BASE_URL = String(import.meta.env?.BASE_URL || runtimeConfig.baseUrl || '/').trim() || '/';\n",
+    "const CONFIG = globalThis.__APriceConfig || {};\nconst SUPABASE_URL = String(CONFIG.supabaseUrl || '').trim();\nconst SUPABASE_ANON_KEY = String(CONFIG.supabaseAnonKey || '').trim();\nconst BASE_URL = String(CONFIG.baseUrl || '/').trim() || '/';\n",
     'browser env config block',
   );
   output = replaceOrThrow(
@@ -40,8 +40,8 @@ function makeBrowserRestJs(source) {
   let output = normalize(source);
   output = replaceOrThrow(
     output,
-    "const runtimeConfig = globalThis.__APriceConfig || {};\n// 这些默认值只覆盖公共 anon 配置，优先级仍然是环境变量 > 运行时注入 > 仓库默认值。\nconst DEFAULT_SUPABASE_URL = 'https://tplkpguxlvrhxassyjfm.supabase.co';\nconst DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_LVrlFNcZCGnBoji9Hw9gcQ_ELbcv1BT';\nconst SUPABASE_URL = String(import.meta.env?.PUBLIC_SUPABASE_URL || runtimeConfig.supabaseUrl || DEFAULT_SUPABASE_URL).trim();\nconst SUPABASE_ANON_KEY = String(import.meta.env?.PUBLIC_SUPABASE_ANON_KEY || runtimeConfig.supabaseAnonKey || DEFAULT_SUPABASE_ANON_KEY).trim();\n",
-    "const CONFIG = globalThis.__APriceConfig || {};\nconst DEFAULT_SUPABASE_URL = 'https://tplkpguxlvrhxassyjfm.supabase.co';\nconst DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_LVrlFNcZCGnBoji9Hw9gcQ_ELbcv1BT';\nconst SUPABASE_URL = String(CONFIG.supabaseUrl || DEFAULT_SUPABASE_URL).trim();\nconst SUPABASE_ANON_KEY = String(CONFIG.supabaseAnonKey || DEFAULT_SUPABASE_ANON_KEY).trim();\n",
+    "const runtimeConfig = globalThis.__APriceConfig || {};\nconst SUPABASE_URL = String(import.meta.env?.PUBLIC_SUPABASE_URL || runtimeConfig.supabaseUrl || '').trim();\nconst SUPABASE_ANON_KEY = String(import.meta.env?.PUBLIC_SUPABASE_ANON_KEY || runtimeConfig.supabaseAnonKey || '').trim();\n",
+    "const CONFIG = globalThis.__APriceConfig || {};\nconst SUPABASE_URL = String(CONFIG.supabaseUrl || '').trim();\nconst SUPABASE_ANON_KEY = String(CONFIG.supabaseAnonKey || '').trim();\n",
     'rest env config block',
   );
   if (output.includes('import.meta.env')) {

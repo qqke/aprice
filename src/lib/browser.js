@@ -10,11 +10,8 @@ import {
 import { createClient } from '@supabase/supabase-js';
 
 const runtimeConfig = globalThis.__APriceConfig || {};
-// 这些默认值只覆盖公共 anon 配置，优先级仍然是环境变量 > 运行时注入 > 仓库默认值。
-const DEFAULT_SUPABASE_URL = 'https://tplkpguxlvrhxassyjfm.supabase.co';
-const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_LVrlFNcZCGnBoji9Hw9gcQ_ELbcv1BT';
-const SUPABASE_URL = String(import.meta.env?.PUBLIC_SUPABASE_URL || runtimeConfig.supabaseUrl || DEFAULT_SUPABASE_URL).trim();
-const SUPABASE_ANON_KEY = String(import.meta.env?.PUBLIC_SUPABASE_ANON_KEY || runtimeConfig.supabaseAnonKey || DEFAULT_SUPABASE_ANON_KEY).trim();
+const SUPABASE_URL = String(import.meta.env?.PUBLIC_SUPABASE_URL || runtimeConfig.supabaseUrl || '').trim();
+const SUPABASE_ANON_KEY = String(import.meta.env?.PUBLIC_SUPABASE_ANON_KEY || runtimeConfig.supabaseAnonKey || '').trim();
 const BASE_URL = String(import.meta.env?.BASE_URL || runtimeConfig.baseUrl || '/').trim() || '/';
 
 const RECENT_VIEWS_KEY = 'aprice:recent-views';
@@ -486,6 +483,7 @@ export function recordRecentView(product) {
 export function clearRecentViews() {
   writeRecentViews([]);
 }
+
 
 
 
