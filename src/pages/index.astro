@@ -122,22 +122,22 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </div>
       <div class="grid">
         <section class="tile tile--wide tile--flow">
-          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">选中商品后可看附近价格。</div>
+          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">选中商品后才显示附近价格。</div>
           <div class="list" id="nearby-results">
-            <div class="notice notice--compact">选中商品后可看附近价格。</div>
+            <div class="notice notice--compact">选中商品后才显示附近价格。</div>
           </div>
         </section>
         <section class="tile tile--flow">
           <div class="section__header section__header--tight">
             <div>
               <h3>最近采样</h3>
-              <p>最近录入或更新的价格，按最新时间排成一条线。</p>
+              <p>最近录入或更新的价格。</p>
             </div>
             <span class="pill">采样</span>
           </div>
-          <div class="notice notice--compact" id="recent-status" style="margin-bottom:12px;">最近采样同步中。</div>
+          <div class="notice notice--compact" id="recent-status" style="margin-bottom:12px;">最近采样读取中...</div>
           <div class="timeline" id="recently-viewed">
-            <div class="notice notice--compact">最近采样按时间线更新。</div>
+            <div class="notice notice--compact">最近采样按时间线显示。</div>
           </div>
         </section>
       </div>
@@ -229,7 +229,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="feed__item">
             <div>
               <strong>暂无商品</strong>
-              <small>先录入商品数据。</small>
+              <small>请录入商品数据。</small>
             </div>
             <span class="price">暂无</span>
           </div>
@@ -238,7 +238,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="list__item">
             <div>
               <strong>暂无商品</strong>
-              <small>先录入商品数据。</small>
+              <small>请录入商品数据。</small>
             </div>
             <span class="meta">暂无</span>
           </div>
@@ -266,7 +266,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       try {
         const prices = await fetchPricesForProduct(product.id);
         if (!prices.length) {
-          if (nearbyStatus) nearbyStatus.textContent = `${product.name} 还没有价格记录，先去商品页补第一笔。`;
+          if (nearbyStatus) nearbyStatus.textContent = `${product.name} 还没有价格记录，请补第一笔。`;
           nearbyResults.innerHTML = `
             <div class="list__item">
               <div>
@@ -307,27 +307,27 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     async function runSearch(term) {
       const query = term.trim();
-      status.textContent = query ? `搜索“${query}”...` : '加载全部商品，输入关键词即可筛选。';
+      status.textContent = query ? `搜索“${query}”...` : '加载全部商品，可直接筛选。';
       try {
         const items = await searchProducts(term);
         if (query) {
           status.textContent = items.length
-            ? `找到 ${items.length} 条匹配结果，点击即可进入商品页。`
-            : `没有找到“${query}”，可以换成品牌名、假名片段或 JAN 码。`;
+            ? `找到 ${items.length} 条匹配结果。`
+            : `没有找到“${query}”，可以换个关键词。`;
         } else {
           status.textContent = items.length
             ? `已加载 ${items.length} 个商品，继续输入关键词筛选。`
-            : '当前还没有商品数据，请先导入商品。';
+            : '当前没有商品数据，请导入商品。';
         }
         renderProducts(items);
         if (items.length) {
           await renderNearbyForProduct(items[0]);
         } else if (nearbyStatus) {
-          nearbyStatus.textContent = '找到商品后，附近价格才显示。';
+          nearbyStatus.textContent = '找到商品后才显示附近价格。';
         }
       } catch (error) {
         status.textContent = `搜索失败：${error.message}`;
-        if (nearbyStatus) nearbyStatus.textContent = '搜索失败后仍可重试。';
+        if (nearbyStatus) nearbyStatus.textContent = '搜索失败后可重试。';
       }
     }
 
@@ -344,7 +344,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       try {
         const location = await geolocate();
         status.textContent = `当前位置：${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}。`;
-        if (nearbyStatus) nearbyStatus.textContent = activeProduct ? `正在按当前位置排序 ${activeProduct.name}。` : '先选一个商品，再按当前位置排序。';
+        if (nearbyStatus) nearbyStatus.textContent = activeProduct ? `按当前位置排序 ${activeProduct.name}。` : '选中商品后再按当前位置排序。';
         if (activeProduct) {
           const rows = await fetchNearbyPrices({ productId: activeProduct.id, lat: location.lat, lng: location.lng, radiusKm: 20 });
           nearbyResults.innerHTML = rows.length
@@ -386,13 +386,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="feed__item">
             <div>
               <strong>暂无采样</strong>
-              <small>插入价格记录后，最近采样自动更新。</small>
+              <small>插入价格记录后自动更新。</small>
             </div>
             <span class="price">暂无</span>
           </div>
         `;
         if (recentStatus) {
-          recentStatus.textContent = '当前没有最近价格采样。';
+          recentStatus.textContent = '暂无最近价格采样。';
         }
         return;
       }
@@ -475,7 +475,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       }
     }
     async function loadRecentPrices() {
-      if (recentStatus) recentStatus.textContent = '读取最近价格采样...';
+      if (recentStatus) recentStatus.textContent = '最近价格采样读取中...';
       try {
         const rows = await fetchRecentPrices(6);
         renderRecentPrices(rows);
@@ -496,6 +496,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     await Promise.all([loadRecentPrices(), runSearch('')]);
   </script>
 </BaseLayout>
+
+
 
 
 

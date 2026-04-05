@@ -8,7 +8,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <div>
           <div class="eyebrow">管理 · 维护工作台</div>
           <h1 class="product-title" style="font-size: clamp(1.8rem, 3.8vw, 3rem);">商品、门店、价格，一屏维护。</h1>
-          <p class="product-sub">仅管理员账号可用。这里通过后端调用写入基础数据和价格采样。</p>
+          <p class="product-sub">仅管理员账号可用。通过后端调用写入基础数据和价格采样。</p>
         </div>
         <div class="pillrow">
           <a class="button button--ghost" href={`${import.meta.env.BASE_URL || '/'}login/`}>切换账号</a>
@@ -16,7 +16,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         </div>
       </div>
 
-      <div class="notice notice--warning" id="admin-status" style="margin-bottom:16px;">正在检查登录状态与权限。</div>
+      <div class="notice notice--warning" id="admin-status" style="margin-bottom:16px;">检查登录状态与权限。</div>
 
       <div class="grid">
         <section class="tile tile--wide tile--flow">
@@ -61,13 +61,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="section__header section__header--tight">
             <div>
               <h3>当前权限</h3>
-              <p>登录后会检查账号权限并加载后台数据。</p>
+              <p>登录后检查权限并加载后台数据。</p>
             </div>
           </div>
           <div class="stack">
-            <div class="notice notice--compact">仅供维护账号使用。普通用户打开后会被权限检查拦住。</div>
+            <div class="notice notice--compact">仅供维护账号使用。普通用户会被权限检查拦截。</div>
             <div class="list" id="admin-access">
-              <div class="notice notice--compact">会先读取当前登录状态，再检查账号权限。</div>
+              <div class="notice notice--compact">读取登录状态，再检查权限。</div>
             </div>
           </div>
         </section>
@@ -329,7 +329,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             </div>
           </div>
         `).join('')
-        : '<div class="list__item"><div><strong>暂无商品</strong><small>先保存一条商品。</small></div><span class="meta">暂无</span></div>';
+        : '<div class="list__item"><div><strong>暂无商品</strong><small>请保存一条商品。</small></div><span class="meta">暂无</span></div>';
     }
 
     function renderStores() {
@@ -347,7 +347,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             </div>
           </div>
         `).join('')
-        : '<div class="list__item"><div><strong>暂无门店</strong><small>先保存一条门店。</small></div><span class="meta">暂无</span></div>';
+        : '<div class="list__item"><div><strong>暂无门店</strong><small>请保存一条门店。</small></div><span class="meta">暂无</span></div>';
     }
 
     function renderPrices() {
@@ -366,19 +366,19 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             </div>
           </div>
         `).join('')
-        : '<div class="list__item"><div><strong>暂无价格</strong><small>先保存一条价格。</small></div><span class="meta">暂无</span></div>';
+        : '<div class="list__item"><div><strong>暂无价格</strong><small>请保存一条价格。</small></div><span class="meta">暂无</span></div>';
     }
 
     async function loadData() {
       const [user, profile] = await Promise.all([getCurrentUser(), fetchCurrentProfile()]);
       if (!user) {
-        if (status) status.textContent = '请先登录，再使用管理员账号进入管理页。';
+        if (status) status.textContent = '请登录后再进入管理页。';
         if (accessState) {
           accessState.innerHTML = `
             <div class="list__item">
               <div>
                 <strong>未登录</strong>
-                <small>需要先登录才能继续。</small>
+                <small>需要登录才能继续。</small>
               </div>
               <span class="meta">guest</span>
             </div>
@@ -597,6 +597,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     loadData();
   </script>
 </BaseLayout>
+
+
+
+
+
+
 
 
 

@@ -135,7 +135,7 @@ async function main() {
       const favsText = await page.locator('#my-favorites').textContent();
       const statusText = await page.locator('#log-status').textContent();
 
-      assert.match(logsText || '', /先登录/);
+      assert.match(logsText || '', /请登录/);
       assert.match(favsText || '', /未登录/);
       assert.match(recentText || '', /暂无浏览记录/);
       assert.match(statusText || '', /登录后/);
@@ -153,6 +153,7 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
 
 
 

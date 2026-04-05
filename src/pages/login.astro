@@ -8,8 +8,8 @@ import { resolveBase } from '../lib/browser.js';
       <div class="section__header section__header--tight">
         <div>
           <div class="eyebrow">登录 · 账号入口</div>
-          <h1 class="product-title" style="font-size: clamp(1.8rem, 3.8vw, 3rem);">邮箱密码登录后，个人数据才会生效。</h1>
-          <p class="product-sub">这个页面负责邮箱密码注册、登录和找回密码。</p>
+          <h1 class="product-title" style="font-size: clamp(1.8rem, 3.8vw, 3rem);">邮箱密码登录后，个人数据可用。</h1>
+          <p class="product-sub">本页提供邮箱密码注册、登录和找回密码。</p>
         </div>
         <div class="pillrow">
           <span class="pill">邮箱密码</span>
@@ -21,7 +21,7 @@ import { resolveBase } from '../lib/browser.js';
           <div class="section__header section__header--tight">
             <div>
               <h3 id="auth-panel-title">登录账号</h3>
-              <p id="auth-panel-description">输入邮箱和密码即可登录，也可以切换到注册或找回密码。</p>
+              <p id="auth-panel-description">输入邮箱和密码即可登录，或切换到注册、找回密码。</p>
             </div>
             <span class="pill" id="auth-panel-pill">登录</span>
           </div>
@@ -31,12 +31,12 @@ import { resolveBase } from '../lib/browser.js';
             <div class="list__item">
               <div>
                 <strong id="signed-in-label">当前账号</strong>
-                <small id="signed-in-subtitle">可前往个人页继续操作。</small>
+                <small id="signed-in-subtitle">可打开个人页。</small>
               </div>
               <span class="meta" id="signed-in-role">member</span>
             </div>
             <div class="pillrow">
-              <a class="button" href={resolveBase('me/')}>前往个人页</a>
+              <a class="button" href={resolveBase('me/')}>打开个人页</a>
               <button class="button button--ghost" type="button" id="switch-account-button">切换账号</button>
             </div>
           </div>
@@ -57,12 +57,12 @@ import { resolveBase } from '../lib/browser.js';
               <button class="button button--ghost" type="button" id="mode-toggle">切换到注册</button>
               <button class="button button--ghost" type="button" id="forgot-toggle">忘记密码</button>
             </div>
-            <div class="notice notice--compact" id="auth-status">登录后可以保存个人价格记录、收藏商品和门店。</div>
+            <div class="notice notice--compact" id="auth-status">登录后保存价格与收藏。</div>
           </form>
 
           <div class="divider"></div>
           <div class="stack">
-            <div class="notice notice--compact" id="auth-hint">登录状态会自动保留，可随时退出并重新登录。</div>
+            <div class="notice notice--compact" id="auth-hint">登录状态已保留。</div>
             <a class="button button--ghost" href={resolveBase('')}>返回首页继续搜索</a>
           </div>
         </div>
@@ -139,8 +139,8 @@ import { resolveBase } from '../lib/browser.js';
         submit: '登录',
         modeToggle: '切换到注册',
         forgotToggle: '忘记密码',
-        hint: '登录后可以保存个人价格记录、收藏商品和门店。',
-        status: '登录后可以保存个人价格记录、收藏商品和门店。',
+        hint: '登录后保存价格与收藏。',
+        status: '登录后保存价格与收藏。',
       },
       register: {
         title: '注册账号',
@@ -149,8 +149,8 @@ import { resolveBase } from '../lib/browser.js';
         submit: '创建账号',
         modeToggle: '切换到登录',
         forgotToggle: '忘记密码',
-        hint: '注册后如果项目开启邮箱确认，会收到一封确认邮件。',
-        status: '注册后如果项目开启邮箱确认，会收到一封确认邮件。',
+        hint: '注册后会收到确认邮件。',
+        status: '注册后会收到确认邮件。',
       },
       'request-reset': {
         title: '找回密码',
@@ -169,8 +169,8 @@ import { resolveBase } from '../lib/browser.js';
         submit: '更新密码',
         modeToggle: '返回登录',
         forgotToggle: '返回登录',
-        hint: '请使用邮件中的重置链接进入这个页面，然后设置新密码。',
-        status: '请设置一个新的登录密码。',
+        hint: '请通过邮件中的重置链接进入，再设置新密码。',
+        status: '请设置新的登录密码。',
       },
     };
 
@@ -243,10 +243,10 @@ import { resolveBase } from '../lib/browser.js';
     function formatAuthError(error, submitMode) {
       const message = String(error?.message || '');
       if (message.includes('Invalid login credentials')) {
-        return '邮箱或密码不正确；如果这是刚注册的账号，请先确认邮箱。';
+        return '邮箱或密码不正确；请完成邮箱确认。';
       }
       if (message.includes('Email not confirmed')) {
-        return '邮箱还没有确认，请先去邮件里点击确认链接。';
+        return '邮箱未确认，请点击邮件里的确认链接。';
       }
       if (message.includes('Password should be at least')) {
         return '密码长度不够，请至少设置 8 位。';
@@ -267,7 +267,7 @@ import { resolveBase } from '../lib/browser.js';
             <div class="list__item">
               <div>
                 <strong>未登录</strong>
-                <small>${mode === 'request-reset' ? '先输入邮箱发送重置链接。' : '你可以使用邮箱密码继续登录。'}</small>
+                <small>${mode === 'request-reset' ? '输入邮箱发送重置链接。' : '使用邮箱密码继续登录。'}</small>
               </div>
               <span class="meta">guest</span>
             </div>
@@ -278,7 +278,7 @@ import { resolveBase } from '../lib/browser.js';
             if (panelPill) panelPill.textContent = modeConfig.login.pill;
           }
           if (mode === 'reset-password') {
-            if (status) status.textContent = '请先从邮件中的重置链接进入，再设置新密码。';
+            if (status) status.textContent = '请通过重置链接进入，再设置新密码。';
           }
           syncAuthPanels();
           return;
@@ -291,20 +291,20 @@ import { resolveBase } from '../lib/browser.js';
           <div class="list__item">
             <div>
               <strong>${label}</strong>
-              <small>可前往个人页继续操作。</small>
+              <small>可打开个人页。</small>
             </div>
             <span class="meta">${role}</span>
           </div>
         `;
         if (mode === 'reset-password' && status) {
-          status.textContent = '已获取重置会话，可以直接更新新密码。';
+          status.textContent = '已获取重置会话，可直接更新新密码。';
         } else {
           if (panelTitle) panelTitle.textContent = '账号状态';
-          if (panelDescription) panelDescription.textContent = '账号已登录，可前往个人页继续操作。';
+          if (panelDescription) panelDescription.textContent = '账号已登录，可打开个人页。';
           if (panelPill) panelPill.textContent = '已登录';
           if (signedInMessage) signedInMessage.textContent = '账号已登录。';
           if (signedInLabel) signedInLabel.textContent = label;
-          if (signedInSubtitle) signedInSubtitle.textContent = '可前往个人页继续操作。';
+          if (signedInSubtitle) signedInSubtitle.textContent = '可打开个人页。';
           if (signedInRole) signedInRole.textContent = role;
         }
         syncAuthPanels();
@@ -328,7 +328,7 @@ import { resolveBase } from '../lib/browser.js';
       const submitMode = mode;
       if (status) {
         status.dataset.locked = 'true';
-        status.textContent = '正在处理...';
+        status.textContent = '处理中...';
       }
 
       const validationMessage = validateInputs();
@@ -346,7 +346,7 @@ import { resolveBase } from '../lib/browser.js';
       try {
         if (submitMode === 'login') {
           await signInWithEmailPassword({ email, password });
-          if (status) status.textContent = '登录成功，已同步登录状态。';
+          if (status) status.textContent = '登录成功。';
         } else if (submitMode === 'register') {
           const result = await signUpWithEmailPassword({ email, password });
           if (emailInput) emailInput.value = email;
@@ -354,13 +354,13 @@ import { resolveBase } from '../lib/browser.js';
           if (confirmPasswordInput) confirmPasswordInput.value = '';
           setMode('login');
           if (result?.session) {
-            if (status) status.textContent = '注册成功，已自动登录。';
+            if (status) status.textContent = '注册成功。';
           } else {
-            if (status) status.textContent = '注册成功，请检查邮箱确认邮件。';
+            if (status) status.textContent = '注册成功，请检查邮箱。';
           }
         } else if (submitMode === 'request-reset') {
           await sendPasswordResetEmail(email);
-          if (status) status.textContent = '重置链接已发送，请检查邮箱。';
+          if (status) status.textContent = '重置链接已发送。';
         } else if (submitMode === 'reset-password') {
           await updatePassword(password);
           setMode('login');
@@ -436,6 +436,8 @@ import { resolveBase } from '../lib/browser.js';
     });
   </script>
 </BaseLayout>
+
+
 
 
 

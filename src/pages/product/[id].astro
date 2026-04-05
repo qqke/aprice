@@ -36,7 +36,7 @@ const { product } = Astro.props as { product: Product };
           <div class="pillrow">
             <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>
             <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button>
-            <span class="pill" id="favorite-status">登录后即可添加收藏。</span>
+            <span class="pill" id="favorite-status">登录后可添加收藏。</span>
           </div>
         </div>
       </div>
@@ -46,13 +46,13 @@ const { product } = Astro.props as { product: Product };
           <div class="section__header section__header--tight">
             <div>
               <h2>价格流</h2>
-              <p>同一商品在不同门店和会员条件下的参考价，按当前位置可重排。</p>
+              <p>同一商品在不同门店和会员条件下的参考价。</p>
             </div>
-            <button class="button button--ghost" id="geo-sort" type="button">按当前位置重排</button>
+            <button class="button button--ghost" id="geo-sort" type="button">按当前位置排序</button>
           </div>
-          <div class="notice notice--compact" id="geo-status" style="margin-bottom:12px;">正在同步价格数据。</div>
+          <div class="notice notice--compact" id="geo-status" style="margin-bottom:12px;">同步价格数据。</div>
           <div class="feed" id="price-list">
-            <div class="notice notice--compact">价格结果会显示在这里。</div>
+            <div class="notice notice--compact">价格结果。</div>
           </div>
         </section>
 
@@ -63,9 +63,9 @@ const { product } = Astro.props as { product: Product };
               <p>价格流之外，也能快速扫到门店分布。</p>
             </div>
           </div>
-          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">价格加载后，门店列表会显示。</div>
+          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">门店列表随价格更新。</div>
           <div class="feed" id="nearby-store-list">
-            <div class="notice notice--compact">价格加载后会显示。</div>
+            <div class="notice notice--compact">随价格更新。</div>
           </div>
         </section>
       </div>
@@ -80,7 +80,7 @@ const { product } = Astro.props as { product: Product };
             <form class="form" id="personal-log-form">
               <label class="field">
                 <select id="personal-store">
-                  <option value="">正在加载门店...</option>
+                  <option value="">加载门店...</option>
                 </select>
               </label>
               <div class="grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
@@ -92,7 +92,7 @@ const { product } = Astro.props as { product: Product };
                 </label>
               </div>
               <button class="button" type="submit">记录个人价格</button>
-              <div class="notice notice--compact" id="personal-status">登录后即可记录个人购买价。</div>
+              <div class="notice notice--compact" id="personal-status">登录后记录个人购买价。</div>
             </form>
           </section>
 
@@ -108,7 +108,7 @@ const { product } = Astro.props as { product: Product };
                   <div class="pillrow" id="insight-pills">
                     <span class="pill">同步中</span>
                   </div>
-                  <small>摘要会自动补全。</small>
+                  <small>摘要读取中...</small>
                 </div>
                 <span class="price">摘要</span>
               </div>
@@ -127,7 +127,7 @@ const { product } = Astro.props as { product: Product };
               </div>
             </div>
             <div class="feed" id="trend-list">
-              <div class="notice notice--compact">近期价格采样会按时间线显示。</div>
+              <div class="notice notice--compact">近期价格采样按时间线显示。</div>
             </div>
           </section>
         </div>
@@ -305,7 +305,7 @@ const { product } = Astro.props as { product: Product };
           <div class="feed__item">
             <div>
               <strong>没有附近数据</strong>
-              <small>请先给门店补坐标和价格。</small>
+              <small>请补充门店坐标和价格。</small>
             </div>
             <span class="price">暂无</span>
           </div>
@@ -321,7 +321,7 @@ const { product } = Astro.props as { product: Product };
             <div class="feed__item">
               <div>
                 <strong>暂无趋势</strong>
-                <small>先插入几条价格记录，趋势就会出现。</small>
+                <small>插入几条价格记录后就会出现。</small>
               </div>
               <span class="price">暂无</span>
             </div>
@@ -428,7 +428,7 @@ const { product } = Astro.props as { product: Product };
         store.innerHTML = stores.map((item) => `<option value="${item.id}">${item.name}</option>`).join('');
       }
       if (geoStatus) geoStatus.textContent = rows.length ? `已加载 ${rows.length} 条价格记录。` : `当前还没有 ${productName} 的价格记录。`;
-      if (nearbyStatus) nearbyStatus.textContent = rows.length ? `已显示 ${rows.length} 条门店价格。` : '先补第一条价格，再看门店流。';
+      if (nearbyStatus) nearbyStatus.textContent = rows.length ? `已显示 ${rows.length} 条门店价格。` : '补第一条价格后再看门店流。';
     }
 
     async function loadStores() {
@@ -443,7 +443,7 @@ const { product } = Astro.props as { product: Product };
     favoriteButton?.addEventListener('click', async () => {
       const user = await getCurrentUser();
       if (!user) {
-        if (favoriteStatus) favoriteStatus.textContent = '请先登录后再添加商品收藏。';
+        if (favoriteStatus) favoriteStatus.textContent = '请登录后再添加商品收藏。';
         window.location.assign(resolveBase('login/'));
         return;
       }
@@ -461,13 +461,13 @@ const { product } = Astro.props as { product: Product };
     favoriteStoreButton?.addEventListener('click', async () => {
       const user = await getCurrentUser();
       if (!user) {
-        if (favoriteStatus) favoriteStatus.textContent = '请先登录后再添加门店收藏。';
+        if (favoriteStatus) favoriteStatus.textContent = '请登录后再添加门店收藏。';
         window.location.assign(resolveBase('login/'));
         return;
       }
 
       if (!activeStoreId) {
-        if (favoriteStatus) favoriteStatus.textContent = '当前还没有可添加收藏的门店。';
+        if (favoriteStatus) favoriteStatus.textContent = '当前没有可添加收藏的门店。';
         return;
       }
 
@@ -489,7 +489,7 @@ const { product } = Astro.props as { product: Product };
 
       const user = await getCurrentUser();
       if (!user) {
-        if (favoriteStatus) favoriteStatus.textContent = '请先登录后再添加门店收藏。';
+        if (favoriteStatus) favoriteStatus.textContent = '请登录后再添加门店收藏。';
         window.location.assign(resolveBase('login/'));
         return;
       }
@@ -506,15 +506,15 @@ const { product } = Astro.props as { product: Product };
 
     geoButton?.addEventListener('click', async () => {
       if (!geoStatus) return;
-      geoStatus.textContent = '正在获取位置...';
+      geoStatus.textContent = '获取位置...';
       try {
         const location = await geolocate();
         const rows = await fetchNearbyPrices({ productId, lat: location.lat, lng: location.lng, radiusKm: 20 });
         renderPrices(rows);
         renderNearbyStores(rows);
         renderInsights(rows);
-        geoStatus.textContent = `已按当前位置重排，定位点：${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}。`;
-        if (nearbyStatus) nearbyStatus.textContent = rows.length ? `已按当前位置筛出 ${rows.length} 条门店价格。` : '当前位置附近还没有可比价格。';
+        geoStatus.textContent = `已按当前位置排序，定位点：${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}。`;
+        if (nearbyStatus) nearbyStatus.textContent = rows.length ? `已按当前位置筛出 ${rows.length} 条门店价格。` : '当前位置附近暂无可比价格。';
       } catch (error) {
         geoStatus.textContent = `定位失败：${error.message}`;
       }
@@ -524,7 +524,7 @@ const { product } = Astro.props as { product: Product };
       event.preventDefault();
       const user = await getCurrentUser();
       if (!user) {
-        status.textContent = '请先登录后再记录。';
+        status.textContent = '请登录后再记录。';
         window.location.assign(resolveBase('login/'));
         return;
       }
@@ -548,6 +548,7 @@ const { product } = Astro.props as { product: Product };
     Promise.all([loadStores(), loadPrices()]);
   </script>
 </BaseLayout>
+
 
 
 

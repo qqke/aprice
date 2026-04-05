@@ -14,3 +14,16 @@
 - 登录页、顶栏会话徽章、退出登录和恢复密码回调都已接通，旧的 `signInWithOtp` 调用和 magic link 文案已清理。
 - `npm run check` 仍保留了 `tests/admin-page-browser.test.mjs` 的 3 条 TypeScript hint，但没有阻断构建或测试。
 
+
+- 这轮把全站状态文案再做了一次收尾清理，并同步更新了 	ests/me-page-browser.test.mjs 的断言，已通过 
+pm run check、
+pm test、
+pm run build 验证。
+
+- [ ] 统一全站视觉收尾：焦点态、悬停态、轻量动效和可访问性细节
+- [ ] 校对登录 / 首页 / 个人页 / 商品页 / 管理页的交互反馈一致性
+- [ ] 跑一轮 check / test / build 并修复问题
+
+## Review
+
+
