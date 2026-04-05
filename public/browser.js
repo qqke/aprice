@@ -9,9 +9,11 @@ import {
 } from './supabase-rest.js';
 
 const CONFIG = globalThis.__APriceConfig || {};
-const SUPABASE_URL = String(CONFIG.supabaseUrl || '').trim();
-const SUPABASE_ANON_KEY = String(CONFIG.supabaseAnonKey || '').trim();
-const BASE_URL = String(CONFIG.baseUrl || '/');
+const DEFAULT_SUPABASE_URL = 'https://tplkpguxlvrhxassyjfm.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_LVrlFNcZCGnBoji9Hw9gcQ_ELbcv1BT';
+const SUPABASE_URL = String(CONFIG.supabaseUrl || DEFAULT_SUPABASE_URL).trim();
+const SUPABASE_ANON_KEY = String(CONFIG.supabaseAnonKey || DEFAULT_SUPABASE_ANON_KEY).trim();
+const BASE_URL = String(CONFIG.baseUrl || '/').trim() || '/';
 
 const RECENT_VIEWS_KEY = 'aprice:recent-views';
 
@@ -482,6 +484,7 @@ export function recordRecentView(product) {
 export function clearRecentViews() {
   writeRecentViews([]);
 }
+
 
 
 
