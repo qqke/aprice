@@ -1,0 +1,401 @@
+<!DOCTYPE html><html lang="zh-CN"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="查看个人价格记录、收藏和最近查看的药店商品。"><meta name="theme-color" content="#0b1020"><meta name="generator" content="Astro v5.18.1"><title>我的 - Aprice</title><link rel="stylesheet" href="/aprice/_astro/admin.CAHeLHH8.css"></head> <body> <header class="topbar"> <div class="topbar__inner"> <a class="brand" href="/aprice/"> <span class="brand__mark" aria-hidden="true"></span> <span>Aprice</span> </a> <nav class="nav" aria-label="Primary"> <a href="/aprice/"> 首页 </a><a href="/aprice/scan/"> 扫码 </a><a href="/aprice/me/" aria-current="page"> 我的 </a><a href="/aprice/login/" data-auth-nav="true"> 登录 </a> </nav> <a class="chip session-chip" id="session-chip" href="/aprice/login/">未登录</a> </div> </header> <script>(function(){const baseUrl = "/aprice/";
+const supabaseUrl = "https://tplkpguxlvrhxassyjfm.supabase.co";
+const supabaseAnonKey = "sb_publishable_LVrlFNcZCGnBoji9Hw9gcQ_ELbcv1BT";
+
+      window.__APriceConfig = { baseUrl, supabaseUrl, supabaseAnonKey };
+    })();</script> <main class="page">  <section class="section section--first-workspace"> <div class="shell"> <div class="eyebrow">个人 · 记录工作台</div> <div class="section__header section__header--tight"> <div> <h1 class="product-title" style="font-size: clamp(1.8rem, 3.6vw, 2.8rem);">你的价格历史和收藏，都在一处。</h1> <p class="product-sub">登录后可记录购买价与收藏。</p> </div> <div class="pillrow"> <span class="pill">最近浏览</span> <span class="pill">个人价格</span> <span class="pill">收藏</span> </div> </div> <div class="grid"> <section class="tile tile--wide"> <div class="section__header section__header--tight"> <div> <h2>个人价格记录</h2> <p>你真正买过的价格，按时间看。</p> </div> </div> <div class="list" id="my-logs"> <div class="list__item"> <div> <strong>请登录</strong> <small>登录后同步价格历史。</small> </div> <span class="meta">me</span> </div> </div> </section> <section class="tile tile--flow"> <div class="section__header section__header--tight"> <div> <h3>最近浏览</h3> <p>商品页带入最近查看的商品。</p> </div> <button class="button button--ghost" id="clear-recent-views" type="button">清空</button> </div> <div class="feed" id="recent-views"> <div class="notice notice--compact">最近浏览。</div> </div> </section> <section class="tile tile--flow"> <div class="section__header section__header--tight"> <div> <h3>收藏</h3> <p>商品和门店收藏集中展示。</p> <small class="muted" id="favorites-summary">读取收藏中...</small> </div> <div class="pillrow" aria-label="收藏筛选"> <button class="button button--ghost button--active" type="button" data-favorite-filter="all">全部</button> <button class="button button--ghost" type="button" data-favorite-filter="product">商品</button> <button class="button button--ghost" type="button" data-favorite-filter="store">门店</button> </div> <div class="pillrow" aria-label="收藏排序"> <button class="button button--ghost button--active" type="button" data-favorite-sort="recent">最新添加</button> <button class="button button--ghost" type="button" data-favorite-sort="oldest">最早添加</button> </div> </div> <div class="feed" id="my-favorites"> <div class="notice notice--compact">登录后可查看收藏。</div> </div> </section> <section class="tile tile--wide"> <div class="section__header section__header--tight"> <div> <h3>快速记录</h3> <p>把刚看到的价格直接记一笔。</p> </div> </div> <form class="form" id="log-form"> <label class="field"> <select id="log-product"> <option value="">加载商品...</option> </select> </label> <div class="grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;"> <label class="field"> <select id="log-store"> <option value="">加载门店...</option> </select> </label> <label class="field"> <input id="log-price" type="number" inputmode="numeric" placeholder="价格（円）"> </label> </div> <label class="field"> <input id="log-note" placeholder="备注，例如会员价 / 促销 / 税后"> </label> <div class="pillrow"> <button class="button" type="submit">保存价格记录</button> <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button> <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button> </div> <div class="notice notice--compact" id="log-status">确认登录状态。</div> </form> </section> </div> </div> </section> <script type="module">
+    import {
+      clearRecentViews,
+      fetchAllProducts,
+      fetchAllStores,
+      fetchFavorites,
+      fetchPersonalLogs,
+      fetchRecentViews,
+      formatDateTime,
+      formatYen,
+      getCurrentUser,
+      resolveBase,
+      savePersonalLog,
+      toggleFavorite,
+    } from '/aprice/browser.js';
+
+    const logsEl = document.querySelector('#my-logs');
+    const recentViewsEl = document.querySelector('#recent-views');
+    const clearRecentViewsButton = document.querySelector('#clear-recent-views');
+    const favsEl = document.querySelector('#my-favorites');
+    const favoritesSummary = document.querySelector('#favorites-summary');
+    const favoriteFilterButtons = document.querySelectorAll('[data-favorite-filter]');
+    const favoriteSortButtons = document.querySelectorAll('[data-favorite-sort]');
+    const form = document.querySelector('#log-form');
+    const status = document.querySelector('#log-status');
+    const productInput = document.querySelector('#log-product');
+    const storeInput = document.querySelector('#log-store');
+    const priceInput = document.querySelector('#log-price');
+    const noteInput = document.querySelector('#log-note');
+    const favoriteProductButton = document.querySelector('#favorite-product-button');
+    const favoriteStoreButton = document.querySelector('#favorite-store-button');
+
+    const formControls = [productInput, storeInput, priceInput, noteInput, favoriteProductButton, favoriteStoreButton];
+    let products = [];
+    let stores = [];
+    let favorites = [];
+    let favoriteFilter = 'all';
+    let favoriteSort = 'recent';
+
+    function setControlsDisabled(disabled) {
+      formControls.forEach((control) => {
+        if (!control) return;
+        control.disabled = disabled;
+      });
+    }
+
+    function productName(id) {
+      return products.find((item) => item.id === id)?.name || id;
+    }
+
+    function storeName(id) {
+      return stores.find((item) => item.id === id)?.name || id;
+    }
+
+    function compareFavoriteDates(a, b) {
+      const left = new Date(a.created_at || 0).getTime();
+      const right = new Date(b.created_at || 0).getTime();
+      return favoriteSort === 'oldest' ? left - right : right - left;
+    }
+
+    function renderRecentViews(rows) {
+      if (!recentViewsEl) return;
+      recentViewsEl.innerHTML = rows.length
+        ? rows.map((item) => `
+          <a class="feed__item" href="${resolveBase(`product/${item.id}/`)}">
+            <div>
+              <strong>${item.name || 'Unknown product'}</strong>
+              <small>${item.brand || '品牌未知'} · ${item.pack || ''} · ${item.barcode || ''}</small>
+            </div>
+            <div class="feed__meta">
+              <span class="price">查看</span>
+              <small>${item.viewed_at ? formatDateTime(item.viewed_at) : ''}</small>
+            </div>
+          </a>
+        `).join('')
+        : `
+          <div class="feed__item">
+            <div>
+              <strong>暂无浏览记录</strong>
+              <small>最近浏览。</small>
+            </div>
+            <span class="price">recent</span>
+          </div>
+        `;
+    }
+
+    function renderFavorites(favoritesList) {
+      if (!favsEl) return;
+      const filtered = favoritesList
+        .filter((fav) => favoriteFilter === 'all' || fav.entity_type === favoriteFilter)
+        .slice()
+        .sort(compareFavoriteDates);
+
+      if (favoritesSummary) {
+        favoritesSummary.textContent = favoritesList.length
+          ? `共 ${favoritesList.length} 项收藏，当前显示 ${filtered.length} 项，按${favoriteSort === 'recent' ? '最新添加' : '最早添加'}排序。`
+          : '登录后可查看收藏。';
+      }
+      favsEl.innerHTML = filtered.length
+        ? filtered.map((fav) => `
+          <div class="feed__item">
+            <div>
+              <strong>${fav.entity_type === 'product' ? productName(fav.entity_id) : storeName(fav.entity_id)}</strong>
+              <small>${fav.entity_type === 'product' ? '商品' : '门店'} · ${fav.entity_id}</small>
+            </div>
+            <div class="feed__meta">
+              <span class="price">收藏</span>
+              <small>${fav.created_at ? formatDateTime(fav.created_at) : ''}</small>
+              <button class="button button--ghost" type="button" data-remove-favorite="${fav.id}" data-remove-favorite-type="${fav.entity_type}" data-remove-favorite-entity="${fav.entity_id}">取消</button>
+            </div>
+          </div>
+        `).join('')
+        : `
+          <div class="feed__item">
+            <div>
+              <strong>${favoritesList.length ? '当前筛选下没有收藏' : '暂无收藏'}</strong>
+              <small>${favoritesList.length ? '换个筛选条件看看，或者添加收藏。' : '添加后可见。'}</small>
+            </div>
+            <span class="price">暂无</span>
+          </div>
+        `;
+    }
+
+    function applyFavoriteFilter(nextFilter) {
+      favoriteFilter = nextFilter;
+      favoriteFilterButtons.forEach((button) => {
+        const selected = button.dataset.favoriteFilter === favoriteFilter;
+        button.classList.toggle('button--active', selected);
+      });
+      renderFavorites(favorites);
+    }
+
+    function applyFavoriteSort(nextSort) {
+      favoriteSort = nextSort;
+      favoriteSortButtons.forEach((button) => {
+        const selected = button.dataset.favoriteSort === favoriteSort;
+        button.classList.toggle('button--active', selected);
+      });
+      renderFavorites(favorites);
+    }
+
+    function renderLogs(logs) {
+      if (!logsEl) return;
+      logsEl.innerHTML = logs.length
+        ? logs.map((log) => `
+          <div class="list__item">
+            <div>
+              <strong>${productName(log.product_id)}</strong>
+              <small>${formatDateTime(log.created_at || log.purchased_at || new Date())} · ${storeName(log.store_id)} · ${log.note || '无备注'}</small>
+            </div>
+            <span class="price">${formatYen(log.price_yen)}</span>
+          </div>
+        `).join('')
+        : `
+          <div class="list__item">
+            <div>
+              <strong>还没有记录</strong>
+              <small>现在就把第一笔价格记下来。</small>
+            </div>
+            <span class="meta">暂无</span>
+          </div>
+        `;
+    }
+
+    function renderLoggedOutState() {
+      logsEl.innerHTML = `
+        <div class="list__item">
+          <div>
+            <strong>请登录</strong>
+            <small>请完成邮箱密码登录。</small>
+          </div>
+          <span class="meta">offline</span>
+        </div>
+      `;
+      favsEl.innerHTML = `
+        <div class="feed__item">
+          <div>
+            <strong>未登录</strong>
+            <small>登录后可看收藏。</small>
+          </div>
+          <span class="price">offline</span>
+        </div>
+      `;
+      status.textContent = '登录后保存记录与收藏。';
+      setControlsDisabled(true);
+    }
+
+    async function refresh() {
+      renderRecentViews(fetchRecentViews());
+      const user = await getCurrentUser();
+      if (!user) {
+        renderLoggedOutState();
+        return;
+      }
+
+      status.textContent = '同步价格记录和收藏...';
+      setControlsDisabled(false);
+
+      const [loadedProducts, loadedStores, logs, loadedFavorites] = await Promise.all([
+        fetchAllProducts(),
+        fetchAllStores(),
+        fetchPersonalLogs(user.id),
+        fetchFavorites(user.id),
+      ]);
+      products = loadedProducts;
+      stores = loadedStores;
+      favorites = loadedFavorites;
+
+      if (productInput) {
+        productInput.innerHTML = products.length
+          ? products.map((item) => `<option value="${item.id}">${item.name}</option>`).join('')
+          : '<option value="">暂无商品</option>';
+      }
+      if (storeInput) {
+        storeInput.innerHTML = stores.length
+          ? stores.map((item) => `<option value="${item.id}">${item.name}</option>`).join('')
+          : '<option value="">暂无门店</option>';
+      }
+
+      renderLogs(logs);
+      renderFavorites(favorites);
+      status.textContent = logs.length || favorites.length
+        ? `已同步 ${logs.length} 条价格记录和 ${favorites.length} 条收藏。`
+        : '还没有个人价格记录，保存第一笔。';
+    }
+
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      status.textContent = '保存中...';
+      try {
+        if (!productInput?.value) {
+          status.textContent = '选中商品后再保存。';
+          return;
+        }
+        const priceValue = Number(priceInput.value);
+        if (!Number.isFinite(priceValue) || priceValue <= 0) {
+          status.textContent = '请输入有效的价格。';
+          return;
+        }
+        await savePersonalLog({
+          product_id: productInput.value,
+          store_id: storeInput.value || null,
+          price_yen: priceValue,
+          note: noteInput.value.trim(),
+          purchased_at: new Date().toISOString().slice(0, 10),
+        });
+        status.textContent = '已保存个人价格记录。';
+        priceInput.value = '';
+        noteInput.value = '';
+        await refresh();
+      } catch (error) {
+        status.textContent = `记录失败：${error.message}`;
+      }
+    });
+
+    favoriteProductButton?.addEventListener('click', async () => {
+      if (!productInput?.value) {
+        status.textContent = '选中商品后再添加收藏。';
+        return;
+      }
+      try {
+        await toggleFavorite('product', productInput.value);
+        status.textContent = '已更新商品收藏。';
+        await refresh();
+      } catch (error) {
+        status.textContent = `收藏失败：${error.message}`;
+      }
+    });
+
+    favoriteStoreButton?.addEventListener('click', async () => {
+      if (!storeInput?.value) {
+        status.textContent = '选中门店后再添加收藏。';
+        return;
+      }
+      try {
+        await toggleFavorite('store', storeInput.value);
+        status.textContent = '已更新门店收藏。';
+        await refresh();
+      } catch (error) {
+        status.textContent = `收藏失败：${error.message}`;
+      }
+    });
+
+    clearRecentViewsButton?.addEventListener('click', () => {
+      clearRecentViews();
+      renderRecentViews(fetchRecentViews());
+      status.textContent = '已清空最近浏览。';
+    });
+
+    favsEl?.addEventListener('click', async (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const favoriteId = target.dataset.removeFavorite;
+      const favoriteType = target.dataset.removeFavoriteType;
+      const favoriteEntity = target.dataset.removeFavoriteEntity;
+      if (!favoriteId || !favoriteType || !favoriteEntity) return;
+
+      try {
+        await toggleFavorite(favoriteType, favoriteEntity);
+        status.textContent = '已更新收藏。';
+        await refresh();
+      } catch (error) {
+        status.textContent = `收藏失败：${error.message}`;
+      }
+    });
+
+    favoriteFilterButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        applyFavoriteFilter(button.dataset.favoriteFilter || 'all');
+      });
+    });
+
+    favoriteSortButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        applyFavoriteSort(button.dataset.favoriteSort || 'recent');
+      });
+    });
+
+    refresh();
+  </script>  </main> <script type="module">
+      import { fetchCurrentProfile, getCurrentUser, resolveBase, signOut, subscribeAuthState } from '/aprice/browser.js';
+
+      const chip = document.querySelector('#session-chip');
+      const authNav = document.querySelector('[data-auth-nav]');
+      let unsubscribeAuth = null;
+
+      // 顶栏会话徽章既要显示当前用户，也要跟随 Supabase 的 auth state 变化实时刷新。
+      async function refreshSessionChip() {
+        if (!chip) return;
+        try {
+          const user = await getCurrentUser();
+          if (!user) {
+            chip.textContent = '未登录';
+            chip.href = resolveBase('login/');
+            chip.className = 'chip session-chip session-chip--guest';
+            if (authNav) {
+              authNav.textContent = '登录';
+              authNav.href = resolveBase('login/');
+              authNav.dataset.authState = 'guest';
+              if (window.location.pathname.endsWith('/login/')) {
+                authNav.setAttribute('aria-current', 'page');
+              } else {
+                authNav.removeAttribute('aria-current');
+              }
+            }
+            return;
+          }
+
+          const profile = await fetchCurrentProfile();
+          const isAdmin = profile?.role === 'admin';
+          const label = isAdmin ? '管理员' : (user.email || '已登录');
+          chip.textContent = label;
+          chip.href = isAdmin ? resolveBase('admin/') : resolveBase('me/');
+          chip.className = isAdmin ? 'chip session-chip session-chip--admin' : 'chip session-chip session-chip--member';
+          if (authNav) {
+            authNav.textContent = '退出登录';
+            authNav.href = '#';
+            authNav.dataset.authState = 'signed-in';
+            authNav.removeAttribute('aria-current');
+          }
+        } catch {
+          chip.textContent = '会话';
+          chip.href = resolveBase('login/');
+          chip.className = 'chip session-chip session-chip--guest';
+          if (authNav) {
+            authNav.textContent = '登录';
+            authNav.href = resolveBase('login/');
+            authNav.dataset.authState = 'guest';
+            if (window.location.pathname.endsWith('/login/')) {
+              authNav.setAttribute('aria-current', 'page');
+            } else {
+              authNav.removeAttribute('aria-current');
+            }
+          }
+        }
+      }
+
+      // 顶栏登录入口会根据登录状态在“登录”和“退出”之间切换，避免已登录时还看到登录按钮。
+      authNav?.addEventListener('click', async (event) => {
+        if (authNav.dataset.authState !== 'signed-in') return;
+        event.preventDefault();
+        await signOut();
+        await refreshSessionChip();
+        window.location.assign(resolveBase('login/'));
+      });
+
+      // 订阅 auth state change，保证登录、登出和恢复密码后的 UI 不会停留在旧状态。
+      unsubscribeAuth = await subscribeAuthState(() => {
+        refreshSessionChip();
+      });
+
+      refreshSessionChip();
+      window.addEventListener('beforeunload', () => {
+        unsubscribeAuth?.();
+      });
+    </script> </body> </html>

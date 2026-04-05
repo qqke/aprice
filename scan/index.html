@@ -1,0 +1,253 @@
+<!DOCTYPE html><html lang="zh-CN"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="使用相机扫描 JAN 条码，或者手动输入编号进行商品搜索。"><meta name="theme-color" content="#0b1020"><meta name="generator" content="Astro v5.18.1"><title>扫码查价 - Aprice</title><link rel="stylesheet" href="/aprice/_astro/admin.CAHeLHH8.css"></head> <body> <header class="topbar"> <div class="topbar__inner"> <a class="brand" href="/aprice/"> <span class="brand__mark" aria-hidden="true"></span> <span>Aprice</span> </a> <nav class="nav" aria-label="Primary"> <a href="/aprice/"> 首页 </a><a href="/aprice/scan/" aria-current="page"> 扫码 </a><a href="/aprice/me/"> 我的 </a><a href="/aprice/login/" data-auth-nav="true"> 登录 </a> </nav> <a class="chip session-chip" id="session-chip" href="/aprice/login/">未登录</a> </div> </header> <script>(function(){const baseUrl = "/aprice/";
+const supabaseUrl = "https://tplkpguxlvrhxassyjfm.supabase.co";
+const supabaseAnonKey = "sb_publishable_LVrlFNcZCGnBoji9Hw9gcQ_ELbcv1BT";
+
+      window.__APriceConfig = { baseUrl, supabaseUrl, supabaseAnonKey };
+    })();</script> <main class="page">  <section class="section"> <div class="shell"> <div class="hero-banner"> <div class="hero-banner__inner"> <div class="hero-banner__eyebrow">扫码入口</div> <h1 class="product-title">扫描 JAN 码，直接进入商品页。</h1> <p class="product-sub">
+相机、条码识别和手动输入统一在一个页面里。浏览器不支持时会自动回退到手动输入。
+</p> </div> </div> <div class="grid" style="margin-top:18px;"> <section class="tile tile--wide"> <div class="stack"> <div class="scan-frame"> <video id="camera" playsinline muted style="width:100%; height:100%; min-height:320px; object-fit:cover; display:block;"></video> <canvas id="capture" hidden></canvas> <div class="scan-beam"></div> </div> <div class="pillrow"> <button class="button" id="start-scan" type="button">启动相机</button> <button class="button button--ghost" id="stop-scan" type="button">停止</button> <button class="button button--ghost" id="snap-scan" type="button">尝试识别当前帧</button> </div> <div class="notice notice--compact">需要 HTTPS 才能打开相机。若自动识别失败，可以直接手动输入 JAN 码。</div> </div> </section> <section class="tile"> <div class="section__header"> <h3>手动输入</h3> <p>拍不到就直接输条码。</p> </div> <div class="form"> <label class="field" for="barcode-input"> <input id="barcode-input" autofocus inputmode="numeric" placeholder="例如 4987188161027"> </label> <button class="button" id="barcode-search" type="button">查找商品</button> <div class="notice" id="scan-status">扫描条码，或直接输入 JAN 码。</div> </div> </section> </div> <section class="section"> <div class="section__header"> <div> <h2>扫描结果</h2> <p>识别到条码后，会自动跳转到商品页。</p> </div> </div> <div class="tile" style="width:100%;"> <div class="list" id="scan-result-list"> <div class="list__item"> <div> <strong>尚未识别</strong> <small>启动相机或输入条码后，结果会显示在这里。</small> </div> <span class="meta">待识别</span> </div> </div> </div> </section> </div> </section> <script type="module">
+    import { fetchProductByBarcode, resolveBase } from '/aprice/browser.js';
+
+    const video = document.querySelector('#camera');
+    const capture = document.querySelector('#capture');
+    const startButton = document.querySelector('#start-scan');
+    const stopButton = document.querySelector('#stop-scan');
+    const snapButton = document.querySelector('#snap-scan');
+    const input = document.querySelector('#barcode-input');
+    const searchButton = document.querySelector('#barcode-search');
+    const status = document.querySelector('#scan-status');
+    const resultList = document.querySelector('#scan-result-list');
+
+    let stream = null;
+    let rafId = null;
+    let detector = null;
+
+    function renderProduct(product) {
+      if (!product) {
+        resultList.innerHTML = `
+          <div class="list__item">
+            <div>
+              <strong>没有找到对应商品</strong>
+              <small>请确认条码是否正确，或者去首页做模糊搜索。</small>
+            </div>
+            <span class="meta">暂无</span>
+          </div>
+        `;
+        return;
+      }
+
+      resultList.innerHTML = `
+        <a class="list__item" href="${resolveBase(`product/${product.id}/`)}">
+          <div>
+            <strong>${product.name}</strong>
+            <small>${product.brand} · ${product.pack} · ${product.barcode}</small>
+          </div>
+          <span class="price">打开</span>
+        </a>
+      `;
+    }
+
+    async function lookup(code) {
+      const product = await fetchProductByBarcode(code);
+      if (product) {
+        status.textContent = `识别成功：${product.name}`;
+        renderProduct(product);
+        window.location.assign(resolveBase(`product/${product.id}/`));
+        return;
+      }
+
+      status.textContent = `未找到条码 ${code}`;
+      renderProduct(null);
+    }
+
+    async function detectFromFrame(source) {
+      if (!detector) {
+        status.textContent = '当前浏览器没有 BarcodeDetector，请直接输入条码。';
+        return;
+      }
+      if (!source) {
+        status.textContent = '请先启动相机，再尝试识别。';
+        return;
+      }
+
+      try {
+        const barcodes = await detector.detect(source);
+        if (barcodes?.length) {
+          const code = barcodes[0].rawValue;
+          if (code) {
+            await lookup(code);
+            return;
+          }
+        }
+        status.textContent = '当前画面没有识别到条码，请再靠近一点。';
+      } catch (error) {
+        status.textContent = `识别失败：${error.message}`;
+      }
+    }
+
+    async function scanFrame() {
+      if (!detector || !video?.videoWidth) {
+        rafId = requestAnimationFrame(scanFrame);
+        return;
+      }
+
+      try {
+        const barcodes = await detector.detect(video);
+        if (barcodes?.length) {
+          const code = barcodes[0].rawValue;
+          if (code) {
+            await lookup(code);
+            return;
+          }
+        }
+      } catch {
+        // keep scanning
+      }
+
+      rafId = requestAnimationFrame(scanFrame);
+    }
+
+    async function startCamera() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        status.textContent = '当前浏览器不支持相机访问。请使用手动输入。';
+        return;
+      }
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+        video.srcObject = stream;
+        await video.play();
+        detector = 'BarcodeDetector' in window ? new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128'] }) : null;
+        status.textContent = detector ? '相机已启动，正在寻找条码...' : '相机已启动，但当前浏览器没有 BarcodeDetector。可以用“尝试识别当前帧”或手动输入。';
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(scanFrame);
+      } catch (error) {
+        status.textContent = `相机启动失败：${error.message}`;
+      }
+    }
+
+    function stopCamera() {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+      stream?.getTracks().forEach((track) => track.stop());
+      stream = null;
+      if (video) video.srcObject = null;
+      status.textContent = '已停止。';
+    }
+
+    startButton?.addEventListener('click', startCamera);
+    stopButton?.addEventListener('click', stopCamera);
+    snapButton?.addEventListener('click', async () => {
+      if (!video?.videoWidth || !capture) {
+        status.textContent = '请先启动相机后再尝试识别。';
+        return;
+      }
+
+      capture.width = video.videoWidth;
+      capture.height = video.videoHeight;
+      const context = capture.getContext('2d');
+      context?.drawImage(video, 0, 0, capture.width, capture.height);
+      await detectFromFrame(capture);
+    });
+
+    searchButton?.addEventListener('click', async () => {
+      const code = input?.value?.trim();
+      if (!code) {
+        status.textContent = '请输入条码。';
+        return;
+      }
+      await lookup(code);
+    });
+
+    input?.addEventListener('keydown', async (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        const code = input.value?.trim();
+        if (!code) {
+          status.textContent = '请输入条码。';
+          return;
+        }
+        await lookup(code);
+      }
+    });
+
+    window.addEventListener('beforeunload', stopCamera);
+    status.textContent = '等待扫描或手动输入条码。';
+    startCamera();
+  </script>  </main> <script type="module">
+      import { fetchCurrentProfile, getCurrentUser, resolveBase, signOut, subscribeAuthState } from '/aprice/browser.js';
+
+      const chip = document.querySelector('#session-chip');
+      const authNav = document.querySelector('[data-auth-nav]');
+      let unsubscribeAuth = null;
+
+      // 顶栏会话徽章既要显示当前用户，也要跟随 Supabase 的 auth state 变化实时刷新。
+      async function refreshSessionChip() {
+        if (!chip) return;
+        try {
+          const user = await getCurrentUser();
+          if (!user) {
+            chip.textContent = '未登录';
+            chip.href = resolveBase('login/');
+            chip.className = 'chip session-chip session-chip--guest';
+            if (authNav) {
+              authNav.textContent = '登录';
+              authNav.href = resolveBase('login/');
+              authNav.dataset.authState = 'guest';
+              if (window.location.pathname.endsWith('/login/')) {
+                authNav.setAttribute('aria-current', 'page');
+              } else {
+                authNav.removeAttribute('aria-current');
+              }
+            }
+            return;
+          }
+
+          const profile = await fetchCurrentProfile();
+          const isAdmin = profile?.role === 'admin';
+          const label = isAdmin ? '管理员' : (user.email || '已登录');
+          chip.textContent = label;
+          chip.href = isAdmin ? resolveBase('admin/') : resolveBase('me/');
+          chip.className = isAdmin ? 'chip session-chip session-chip--admin' : 'chip session-chip session-chip--member';
+          if (authNav) {
+            authNav.textContent = '退出登录';
+            authNav.href = '#';
+            authNav.dataset.authState = 'signed-in';
+            authNav.removeAttribute('aria-current');
+          }
+        } catch {
+          chip.textContent = '会话';
+          chip.href = resolveBase('login/');
+          chip.className = 'chip session-chip session-chip--guest';
+          if (authNav) {
+            authNav.textContent = '登录';
+            authNav.href = resolveBase('login/');
+            authNav.dataset.authState = 'guest';
+            if (window.location.pathname.endsWith('/login/')) {
+              authNav.setAttribute('aria-current', 'page');
+            } else {
+              authNav.removeAttribute('aria-current');
+            }
+          }
+        }
+      }
+
+      // 顶栏登录入口会根据登录状态在“登录”和“退出”之间切换，避免已登录时还看到登录按钮。
+      authNav?.addEventListener('click', async (event) => {
+        if (authNav.dataset.authState !== 'signed-in') return;
+        event.preventDefault();
+        await signOut();
+        await refreshSessionChip();
+        window.location.assign(resolveBase('login/'));
+      });
+
+      // 订阅 auth state change，保证登录、登出和恢复密码后的 UI 不会停留在旧状态。
+      unsubscribeAuth = await subscribeAuthState(() => {
+        refreshSessionChip();
+      });
+
+      refreshSessionChip();
+      window.addEventListener('beforeunload', () => {
+        unsubscribeAuth?.();
+      });
+    </script> </body> </html>

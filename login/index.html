@@ -1,0 +1,429 @@
+<!DOCTYPE html><html lang="zh-CN"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="邮箱密码登录、注册和重置密码。"><meta name="theme-color" content="#0b1020"><meta name="generator" content="Astro v5.18.1"><title>登录 - Aprice</title><link rel="stylesheet" href="/aprice/_astro/admin.CAHeLHH8.css"></head> <body> <header class="topbar"> <div class="topbar__inner"> <a class="brand" href="/aprice/"> <span class="brand__mark" aria-hidden="true"></span> <span>Aprice</span> </a> <nav class="nav" aria-label="Primary"> <a href="/aprice/"> 首页 </a><a href="/aprice/scan/"> 扫码 </a><a href="/aprice/me/"> 我的 </a><a href="/aprice/login/" data-auth-nav="true" aria-current="page"> 登录 </a> </nav> <a class="chip session-chip" id="session-chip" href="/aprice/login/">未登录</a> </div> </header> <script>(function(){const baseUrl = "/aprice/";
+const supabaseUrl = "https://tplkpguxlvrhxassyjfm.supabase.co";
+const supabaseAnonKey = "sb_publishable_LVrlFNcZCGnBoji9Hw9gcQ_ELbcv1BT";
+
+      window.__APriceConfig = { baseUrl, supabaseUrl, supabaseAnonKey };
+    })();</script> <main class="page">  <section class="section section--first-workspace"> <div class="shell"> <div class="section__header section__header--tight"> <div> <div class="eyebrow">登录 · 账号入口</div> <h1 class="product-title" style="font-size: clamp(1.8rem, 3.8vw, 3rem);">邮箱密码登录后，个人数据可用。</h1> <p class="product-sub">本页提供邮箱密码注册、登录和找回密码。</p> </div> <div class="pillrow"> <span class="pill">邮箱密码</span> </div> </div> <div class="grid"> <section class="tile tile--wide tile--flow"> <div class="section__header section__header--tight"> <div> <h3 id="auth-panel-title">登录账号</h3> <p id="auth-panel-description">输入邮箱和密码即可登录，或切换到注册、找回密码。</p> </div> <span class="pill" id="auth-panel-pill">登录</span> </div> <div class="stack" id="signed-in-state" hidden> <div class="notice notice--compact" id="signed-in-message">账号已登录。</div> <div class="list__item"> <div> <strong id="signed-in-label">当前账号</strong> <small id="signed-in-subtitle">可打开个人页。</small> </div> <span class="meta" id="signed-in-role">member</span> </div> <div class="pillrow"> <a class="button" href="/aprice/me/">打开个人页</a> <button class="button button--ghost" type="button" id="switch-account-button">切换账号</button> </div> </div> <div id="auth-form-shell"> <form class="form" id="auth-form"> <label class="field" for="email" id="email-field"> <input id="email" type="email" placeholder="name@example.com" autocomplete="email" required> </label> <label class="field" for="password" id="password-field"> <input id="password" type="password" placeholder="至少 8 位密码" autocomplete="current-password" required> </label> <label class="field" for="confirm-password" id="confirm-field" hidden> <input id="confirm-password" type="password" placeholder="再次输入密码" autocomplete="new-password"> </label> <div class="pillrow"> <button class="button" type="submit" id="auth-submit">登录</button> <button class="button button--ghost" type="button" id="mode-toggle">切换到注册</button> <button class="button button--ghost" type="button" id="forgot-toggle">忘记密码</button> </div> <div class="notice notice--compact" id="auth-status">登录后保存价格与收藏。</div> </form> <div class="divider"></div> <div class="stack"> <div class="notice notice--compact" id="auth-hint">登录状态已保留。</div> <a class="button button--ghost" href="/aprice/">返回首页继续搜索</a> </div> </div> </section> <section class="tile tile--flow"> <div class="section__header section__header--tight"> <div> <h3>账号状态</h3> <p>当前账号状态。</p> </div> </div> <div class="list" id="session-state"> <div class="notice notice--compact">登录状态已同步。</div> </div> <div class="divider"></div> <button class="button button--ghost" id="logout-button" type="button">退出登录</button> </section> </div> </div> </section> <script type="module">
+    import {
+      fetchCurrentProfile,
+      getSession,
+      resolveBase,
+      sendPasswordResetEmail,
+      signInWithEmailPassword,
+      signOut,
+      signUpWithEmailPassword,
+      subscribeAuthState,
+      updatePassword,
+    } from '/aprice/browser.js';
+
+    const form = document.querySelector('#auth-form');
+    const emailInput = document.querySelector('#email');
+    const passwordInput = document.querySelector('#password');
+    const confirmPasswordInput = document.querySelector('#confirm-password');
+    const status = document.querySelector('#auth-status');
+    const hint = document.querySelector('#auth-hint');
+    const sessionState = document.querySelector('#session-state');
+    const logoutButton = document.querySelector('#logout-button');
+    const modeToggle = document.querySelector('#mode-toggle');
+    const forgotToggle = document.querySelector('#forgot-toggle');
+    const submitButton = document.querySelector('#auth-submit');
+    const panelTitle = document.querySelector('#auth-panel-title');
+    const panelDescription = document.querySelector('#auth-panel-description');
+    const panelPill = document.querySelector('#auth-panel-pill');
+    const emailField = document.querySelector('#email-field');
+    const passwordField = document.querySelector('#password-field');
+    const confirmField = document.querySelector('#confirm-field');
+    const authFormShell = document.querySelector('#auth-form-shell');
+    const signedInState = document.querySelector('#signed-in-state');
+    const signedInMessage = document.querySelector('#signed-in-message');
+    const signedInLabel = document.querySelector('#signed-in-label');
+    const signedInSubtitle = document.querySelector('#signed-in-subtitle');
+    const signedInRole = document.querySelector('#signed-in-role');
+    const switchAccountButton = document.querySelector('#switch-account-button');
+
+    const url = new URL(window.location.href);
+    const isRecoveryRedirect = url.searchParams.get('mode') === 'reset' || url.searchParams.get('type') === 'recovery';
+    let mode = isRecoveryRedirect ? 'reset-password' : 'login';
+    let unsubscribeAuth = null;
+    let currentSession = null;
+
+    const modeConfig = {
+      login: {
+        title: '登录账号',
+        description: '输入邮箱和密码即可登录，或者切换到注册和找回密码。',
+        pill: '登录',
+        submit: '登录',
+        modeToggle: '切换到注册',
+        forgotToggle: '忘记密码',
+        hint: '登录后保存价格与收藏。',
+        status: '登录后保存价格与收藏。',
+      },
+      register: {
+        title: '注册账号',
+        description: '输入邮箱、密码和确认密码，完成注册。',
+        pill: '注册',
+        submit: '创建账号',
+        modeToggle: '切换到登录',
+        forgotToggle: '忘记密码',
+        hint: '注册后会收到确认邮件。',
+        status: '注册后会收到确认邮件。',
+      },
+      'request-reset': {
+        title: '找回密码',
+        description: '输入注册邮箱，我们会发送重置密码邮件。',
+        pill: '找回',
+        submit: '发送重置链接',
+        modeToggle: '返回登录',
+        forgotToggle: '返回登录',
+        hint: '重置邮件会把你带回这个页面的新密码流程。',
+        status: '输入邮箱后发送重置链接。',
+      },
+      'reset-password': {
+        title: '重置密码',
+        description: '点击邮件里的重置链接后，在这里设置新密码。',
+        pill: '重置',
+        submit: '更新密码',
+        modeToggle: '返回登录',
+        forgotToggle: '返回登录',
+        hint: '请通过邮件中的重置链接进入，再设置新密码。',
+        status: '请设置新的登录密码。',
+      },
+    };
+
+    // 根据当前模式切换表单字段、按钮文案和提示，保持一个页面覆盖注册、登录和找回密码。
+    function setMode(nextMode) {
+      mode = nextMode;
+      const config = modeConfig[mode];
+      if (!config) return;
+
+      if (panelTitle) panelTitle.textContent = config.title;
+      if (panelDescription) panelDescription.textContent = config.description;
+      if (panelPill) panelPill.textContent = config.pill;
+      if (submitButton) submitButton.textContent = config.submit;
+      if (modeToggle) modeToggle.textContent = config.modeToggle;
+      if (forgotToggle) forgotToggle.textContent = config.forgotToggle;
+      if (hint) hint.textContent = config.hint;
+      if (status && !status.dataset.locked) status.textContent = config.status;
+
+      const showPassword = mode !== 'request-reset';
+      const showConfirm = mode === 'register' || mode === 'reset-password';
+
+      if (emailField) emailField.hidden = false;
+      if (emailInput) {
+        emailInput.required = mode !== 'reset-password';
+      }
+      if (passwordField) passwordField.hidden = !showPassword;
+      if (confirmField) confirmField.hidden = !showConfirm;
+
+      if (passwordInput) {
+        passwordInput.required = showPassword;
+        passwordInput.autocomplete = mode === 'login' ? 'current-password' : 'new-password';
+      }
+      if (confirmPasswordInput) {
+        confirmPasswordInput.required = showConfirm;
+        confirmPasswordInput.value = '';
+      }
+
+      syncAuthPanels();
+    }
+
+    // 根据当前登录状态和当前模式，决定是展示邮箱密码表单还是已登录摘要。
+    function syncAuthPanels() {
+      const showForm = !currentSession || mode === 'reset-password';
+      if (authFormShell) authFormShell.hidden = !showForm;
+      if (signedInState) signedInState.hidden = showForm || !currentSession;
+    }
+
+    // 统一校验邮箱、密码长度和确认密码，避免把无效请求发给 Supabase。
+    function validateInputs() {
+      const email = emailInput?.value.trim() || '';
+      const password = passwordInput?.value || '';
+      const confirmPassword = confirmPasswordInput?.value || '';
+
+      if (mode !== 'reset-password' && !email) {
+        return '请输入邮箱地址。';
+      }
+      if ((mode === 'login' || mode === 'register') && !password) {
+        return '请输入密码。';
+      }
+      if ((mode === 'register' || mode === 'reset-password') && password.length < 8) {
+        return '密码至少需要 8 位。';
+      }
+      if ((mode === 'register' || mode === 'reset-password') && password !== confirmPassword) {
+        return '两次输入的密码不一致。';
+      }
+      return '';
+    }
+
+    // 把 Supabase 的常见英文错误翻成更容易理解的中文，减少用户误会。
+    function formatAuthError(error, submitMode) {
+      const message = String(error?.message || '');
+      if (message.includes('Invalid login credentials')) {
+        return '邮箱或密码不正确；请完成邮箱确认。';
+      }
+      if (message.includes('Email not confirmed')) {
+        return '邮箱未确认，请点击邮件里的确认链接。';
+      }
+      if (message.includes('Password should be at least')) {
+        return '密码长度不够，请至少设置 8 位。';
+      }
+      if (submitMode === 'request-reset' && message.includes('For security purposes')) {
+        return '如果这个邮箱存在，我们会发送重置链接。请检查收件箱和垃圾箱。';
+      }
+      return message || '未知错误，请稍后再试。';
+    }
+
+    // 读取登录状态并渲染顶部状态卡，登录、登出和重置后都会自动刷新。
+    async function refreshSession() {
+      try {
+        const session = await getSession();
+        currentSession = session ?? null;
+        if (!session?.user) {
+          sessionState.innerHTML = `
+            <div class="list__item">
+              <div>
+                <strong>未登录</strong>
+                <small>${mode === 'request-reset' ? '输入邮箱发送重置链接。' : '使用邮箱密码继续登录。'}</small>
+              </div>
+              <span class="meta">guest</span>
+            </div>
+          `;
+          if (mode === 'login') {
+            if (panelTitle) panelTitle.textContent = modeConfig.login.title;
+            if (panelDescription) panelDescription.textContent = modeConfig.login.description;
+            if (panelPill) panelPill.textContent = modeConfig.login.pill;
+          }
+          if (mode === 'reset-password') {
+            if (status) status.textContent = '请通过重置链接进入，再设置新密码。';
+          }
+          syncAuthPanels();
+          return;
+        }
+
+        const profile = await fetchCurrentProfile();
+        const role = profile?.role || 'member';
+        const label = profile?.full_name || session.user.email || '已登录用户';
+        sessionState.innerHTML = `
+          <div class="list__item">
+            <div>
+              <strong>${label}</strong>
+              <small>可打开个人页。</small>
+            </div>
+            <span class="meta">${role}</span>
+          </div>
+        `;
+        if (mode === 'reset-password' && status) {
+          status.textContent = '已获取重置会话，可直接更新新密码。';
+        } else {
+          if (panelTitle) panelTitle.textContent = '账号状态';
+          if (panelDescription) panelDescription.textContent = '账号已登录，可打开个人页。';
+          if (panelPill) panelPill.textContent = '已登录';
+          if (signedInMessage) signedInMessage.textContent = '账号已登录。';
+          if (signedInLabel) signedInLabel.textContent = label;
+          if (signedInSubtitle) signedInSubtitle.textContent = '可打开个人页。';
+          if (signedInRole) signedInRole.textContent = role;
+        }
+        syncAuthPanels();
+      } catch (error) {
+        sessionState.innerHTML = `
+          <div class="list__item">
+            <div>
+              <strong>无法读取会话</strong>
+              <small>${error.message}</small>
+            </div>
+            <span class="meta">error</span>
+          </div>
+        `;
+        currentSession = null;
+        syncAuthPanels();
+      }
+    }
+
+    async function handleSubmit(event) {
+      event.preventDefault();
+      const submitMode = mode;
+      if (status) {
+        status.dataset.locked = 'true';
+        status.textContent = '处理中...';
+      }
+
+      const validationMessage = validateInputs();
+      if (validationMessage) {
+        if (status) {
+          status.textContent = validationMessage;
+          delete status.dataset.locked;
+        }
+        return;
+      }
+
+      const email = emailInput?.value.trim() || '';
+      const password = passwordInput?.value || '';
+
+      try {
+        if (submitMode === 'login') {
+          await signInWithEmailPassword({ email, password });
+          if (status) status.textContent = '登录成功。';
+        } else if (submitMode === 'register') {
+          const result = await signUpWithEmailPassword({ email, password });
+          if (emailInput) emailInput.value = email;
+          if (passwordInput) passwordInput.value = '';
+          if (confirmPasswordInput) confirmPasswordInput.value = '';
+          setMode('login');
+          if (result?.session) {
+            if (status) status.textContent = '注册成功。';
+          } else {
+            if (status) status.textContent = '注册成功，请检查邮箱。';
+          }
+        } else if (submitMode === 'request-reset') {
+          await sendPasswordResetEmail(email);
+          if (status) status.textContent = '重置链接已发送。';
+        } else if (submitMode === 'reset-password') {
+          await updatePassword(password);
+          setMode('login');
+          if (passwordInput) passwordInput.value = '';
+          if (confirmPasswordInput) confirmPasswordInput.value = '';
+          if (status) status.textContent = '密码已更新。';
+        }
+      } catch (error) {
+        if (status) status.textContent = `操作失败：${formatAuthError(error, submitMode)}`;
+      } finally {
+        if (status) delete status.dataset.locked;
+        if (submitMode !== 'reset-password') {
+          await refreshSession();
+        }
+      }
+    }
+    modeToggle?.addEventListener('click', () => {
+      if (mode === 'request-reset' || mode === 'reset-password') {
+        setMode('login');
+        return;
+      }
+      setMode(mode === 'login' ? 'register' : 'login');
+    });
+
+    forgotToggle?.addEventListener('click', () => {
+      if (mode === 'reset-password') {
+        setMode('login');
+        return;
+      }
+      if (mode === 'request-reset') {
+        setMode('login');
+        return;
+      }
+      setMode('request-reset');
+    });
+
+    form?.addEventListener('submit', handleSubmit);
+
+    // 切换账号会先退出当前账号，然后重新展开登录表单。
+    switchAccountButton?.addEventListener('click', async () => {
+      await signOut();
+      setMode('login');
+      if (status) {
+        status.dataset.locked = 'true';
+        status.textContent = '已切换账号，请重新登录。';
+        delete status.dataset.locked;
+      }
+      await refreshSession();
+    });
+
+    logoutButton?.addEventListener('click', async () => {
+      await signOut();
+      if (status) {
+        status.dataset.locked = 'true';
+        status.textContent = '已退出登录。';
+        delete status.dataset.locked;
+      }
+      setMode('login');
+      await refreshSession();
+      window.location.assign(resolveBase(''));
+    });
+
+    // 监听 Supabase auth state change，保证登录 / 登出 / 恢复密码后当前页同步刷新。
+    unsubscribeAuth = await subscribeAuthState(() => {
+      refreshSession();
+    });
+
+    setMode(mode);
+    await refreshSession();
+
+    window.addEventListener('beforeunload', () => {
+      unsubscribeAuth?.();
+    });
+  </script>  </main> <script type="module">
+      import { fetchCurrentProfile, getCurrentUser, resolveBase, signOut, subscribeAuthState } from '/aprice/browser.js';
+
+      const chip = document.querySelector('#session-chip');
+      const authNav = document.querySelector('[data-auth-nav]');
+      let unsubscribeAuth = null;
+
+      // 顶栏会话徽章既要显示当前用户，也要跟随 Supabase 的 auth state 变化实时刷新。
+      async function refreshSessionChip() {
+        if (!chip) return;
+        try {
+          const user = await getCurrentUser();
+          if (!user) {
+            chip.textContent = '未登录';
+            chip.href = resolveBase('login/');
+            chip.className = 'chip session-chip session-chip--guest';
+            if (authNav) {
+              authNav.textContent = '登录';
+              authNav.href = resolveBase('login/');
+              authNav.dataset.authState = 'guest';
+              if (window.location.pathname.endsWith('/login/')) {
+                authNav.setAttribute('aria-current', 'page');
+              } else {
+                authNav.removeAttribute('aria-current');
+              }
+            }
+            return;
+          }
+
+          const profile = await fetchCurrentProfile();
+          const isAdmin = profile?.role === 'admin';
+          const label = isAdmin ? '管理员' : (user.email || '已登录');
+          chip.textContent = label;
+          chip.href = isAdmin ? resolveBase('admin/') : resolveBase('me/');
+          chip.className = isAdmin ? 'chip session-chip session-chip--admin' : 'chip session-chip session-chip--member';
+          if (authNav) {
+            authNav.textContent = '退出登录';
+            authNav.href = '#';
+            authNav.dataset.authState = 'signed-in';
+            authNav.removeAttribute('aria-current');
+          }
+        } catch {
+          chip.textContent = '会话';
+          chip.href = resolveBase('login/');
+          chip.className = 'chip session-chip session-chip--guest';
+          if (authNav) {
+            authNav.textContent = '登录';
+            authNav.href = resolveBase('login/');
+            authNav.dataset.authState = 'guest';
+            if (window.location.pathname.endsWith('/login/')) {
+              authNav.setAttribute('aria-current', 'page');
+            } else {
+              authNav.removeAttribute('aria-current');
+            }
+          }
+        }
+      }
+
+      // 顶栏登录入口会根据登录状态在“登录”和“退出”之间切换，避免已登录时还看到登录按钮。
+      authNav?.addEventListener('click', async (event) => {
+        if (authNav.dataset.authState !== 'signed-in') return;
+        event.preventDefault();
+        await signOut();
+        await refreshSessionChip();
+        window.location.assign(resolveBase('login/'));
+      });
+
+      // 订阅 auth state change，保证登录、登出和恢复密码后的 UI 不会停留在旧状态。
+      unsubscribeAuth = await subscribeAuthState(() => {
+        refreshSessionChip();
+      });
+
+      refreshSessionChip();
+      window.addEventListener('beforeunload', () => {
+        unsubscribeAuth?.();
+      });
+    </script> </body> </html>

@@ -1,0 +1,434 @@
+<!DOCTYPE html><html lang="zh-CN"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="扫码、搜索、比较附近药店价格，并保存个人价格记录。"><meta name="theme-color" content="#0b1020"><meta name="generator" content="Astro v5.18.1"><title>Aprice - 日本本地药店比价</title><link rel="stylesheet" href="/aprice/_astro/admin.CAHeLHH8.css"></head> <body> <header class="topbar"> <div class="topbar__inner"> <a class="brand" href="/aprice/"> <span class="brand__mark" aria-hidden="true"></span> <span>Aprice</span> </a> <nav class="nav" aria-label="Primary"> <a href="/aprice/" aria-current="page"> 首页 </a><a href="/aprice/scan/"> 扫码 </a><a href="/aprice/me/"> 我的 </a><a href="/aprice/login/" data-auth-nav="true"> 登录 </a> </nav> <a class="chip session-chip" id="session-chip" href="/aprice/login/">未登录</a> </div> </header> <script>(function(){const baseUrl = "/aprice/";
+const supabaseUrl = "https://tplkpguxlvrhxassyjfm.supabase.co";
+const supabaseAnonKey = "sb_publishable_LVrlFNcZCGnBoji9Hw9gcQ_ELbcv1BT";
+
+      window.__APriceConfig = { baseUrl, supabaseUrl, supabaseAnonKey };
+    })();</script> <main class="page">  <section class="hero hero--tight"> <div class="shell hero__grid hero__grid--tight"> <div class="hero__panel hero__panel--tight"> <div class="hero__copy hero__copy--tight"> <div class="eyebrow">Aprice · 日本药店比价</div> <h1 class="headline">查价格、比门店、记下买价。</h1> <p class="lead">
+扫码、搜索和定位共用同一份价格数据，适合在手机上快速查价和回填记录。
+</p> <div class="hero__actions hero__actions--tight"> <a class="button" href="/aprice/scan/">开始扫码查价</a> <a class="button button--ghost" href="/aprice/me/">打开个人页</a> </div> </div> </div> <aside class="hero__panel hero__panel--tight"> <div class="hero__copy hero__copy--tight hero__summary"> <div class="section__header section__header--tight" style="margin:0;"> <div> <h2>常用入口</h2> <p>扫码、搜索和定位共用同一套价格数据。</p> </div> <span class="pill">在线</span> </div> <div class="list list--compact"> <div class="list__item"> <div> <strong>扫码查价</strong> <small>JAN 条码直接进入商品页。</small> </div> <span class="meta">扫码</span> </div> <div class="list__item"> <div> <strong>模糊搜索</strong> <small>商品名、品牌和假名片段都能命中。</small> </div> <span class="meta">搜索</span> </div> <div class="list__item"> <div> <strong>附近排序</strong> <small>按当前位置排序门店价格。</small> </div> <span class="meta">附近</span> </div> </div> <div class="notice notice--compact"> <div> <strong id="hero-product-label">尚未选择商品</strong> <small id="hero-price-label">¥-- 起</small> </div> <span class="meta">当前</span> </div> </div> </aside> </div> </section> <section class="section section--first-workspace"> <div class="shell"> <div class="section__header section__header--tight"> <div> <h2>搜索</h2> <p>支持商品名、品牌名、假名片段和 JAN 条码。</p> </div> <div class="pillrow"> <span class="pill">名称</span> <span class="pill">品牌</span> <span class="pill">条码</span> </div> </div> <div class="searchbar"> <label class="field" for="home-search"> <input id="home-search" type="search" placeholder="输入商品名或条码，例如 ロキソニン / 4987188161027"> </label> <button class="button" id="home-search-button" type="button">搜索</button> </div> <div class="divider"></div> <div class="grid"> <section class="tile tile--wide tile--flow"> <div class="section__header section__header--tight"> <div> <h3>搜索结果</h3> <p id="search-status">输入商品名、品牌名或 JAN 码即可查价。</p> </div> <span class="pill">检索</span> </div> <div class="list" id="search-results"> <div class="notice notice--compact">搜索结果。</div> </div> </section> <section class="tile tile--flow"> <div class="section__header section__header--tight"> <h3>热门商品</h3> <p>从最近更新的几款开始。</p> </div> <div class="feed" id="popular-products"> <div class="notice notice--compact">近期更新商品。</div> </div> </section> </div> </div> </section> <section class="section"> <div class="shell"> <div class="section__header section__header--tight"> <div> <h2>附近比价</h2> <p>打开定位后，门店价格按当前位置排序。</p> </div> <button class="button button--ghost" id="geolocate-home" type="button">使用当前位置</button> </div> <div class="grid"> <section class="tile tile--wide tile--flow"> <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">选中商品后才显示附近价格。</div> <div class="list" id="nearby-results"> <div class="notice notice--compact">选中商品后才显示附近价格。</div> </div> </section> <section class="tile tile--flow"> <div class="section__header section__header--tight"> <div> <h3>最近采样</h3> <p>最近录入或更新的价格。</p> </div> <span class="pill">采样</span> </div> <div class="notice notice--compact" id="recent-status" style="margin-bottom:12px;">最近采样读取中...</div> <div class="timeline" id="recently-viewed"> <div class="notice notice--compact">最近采样按时间线显示。</div> </div> </section> </div> </div> </section> <script type="module">
+    import {
+      fetchNearbyPrices,
+      fetchPricesForProduct,
+      fetchRecentPrices,
+      formatDistance,
+      formatYen,
+      geolocate,
+      resolveBase,
+      searchProducts,
+    } from '/aprice/browser.js';
+
+    const input = document.querySelector('#home-search');
+    const button = document.querySelector('#home-search-button');
+    const results = document.querySelector('#search-results');
+    const status = document.querySelector('#search-status');
+    const geolocateButton = document.querySelector('#geolocate-home');
+    const popularProducts = document.querySelector('#popular-products');
+    const nearbyStatus = document.querySelector('#nearby-status');
+    const nearbyResults = document.querySelector('#nearby-results');
+    const heroProductLabel = document.querySelector('#hero-product-label');
+    const heroPriceLabel = document.querySelector('#hero-price-label');
+    const recentlyViewed = document.querySelector('#recently-viewed');
+    const recentStatus = document.querySelector('#recent-status');
+
+    let activeProduct = null;
+
+    // 根据最近两次采样的差值，统一生成涨跌标签和颜色。
+    function trendMeta(delta) {
+      if (delta === null) return { label: '最新', tone: 'trend--flat', arrow: '→' };
+      if (delta === 0) return { label: '持平', tone: 'trend--flat', arrow: '→' };
+      if (delta > 0) return { label: `上涨 ${formatYen(delta)}`, tone: 'trend--up', arrow: '↑' };
+      return { label: `下跌 ${formatYen(Math.abs(delta))}`, tone: 'trend--down', arrow: '↓' };
+    }
+
+    function productBadge(item) {
+      const seed = (item?.id || item?.barcode || item?.name || 'P').toString();
+      const sum = Array.from(seed).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const palette = [
+        { label: 'AZ', tone: 'badge--mint' },
+        { label: 'RX', tone: 'badge--sky' },
+        { label: 'MN', tone: 'badge--sun' },
+        { label: 'JP', tone: 'badge--violet' },
+        { label: 'SK', tone: 'badge--leaf' },
+        { label: 'TR', tone: 'badge--sand' },
+      ];
+      return palette[sum % palette.length];
+    }
+
+    function productCard(item, featured = false) {
+      if (featured) {
+        const badge = productBadge(item);
+        return `
+          <a class="feed__item feed__item--featured" href="${resolveBase(`product/${item.id}/`)}">
+            <div class="feed__copy">
+              <div class="timeline__icon ${badge.tone}">${badge.label}</div>
+              <div class="feed__kicker">热门商品</div>
+              <strong>${item.name}</strong>
+              <small>${item.brand} · ${item.pack}</small>
+            </div>
+            <div class="feed__meta">
+              <span class="pill">JAN ${item.barcode}</span>
+              <span class="price">查看</span>
+            </div>
+          </a>
+        `;
+      }
+      return `
+        <a class="feed__item" href="${resolveBase(`product/${item.id}/`)}">
+          <div>
+            <strong>${item.name}</strong>
+            <small>${item.brand} · ${item.pack} · ${item.barcode}</small>
+          </div>
+          <span class="price">查看</span>
+        </a>
+      `;
+    }
+
+    function renderProducts(items) {
+      if (!items.length) {
+        status.textContent = '没有找到匹配商品，请试试更短的关键词、品牌名或 JAN 码。';
+        popularProducts.innerHTML = `
+          <div class="feed__item">
+            <div>
+              <strong>暂无商品</strong>
+              <small>请录入商品数据。</small>
+            </div>
+            <span class="price">暂无</span>
+          </div>
+        `;
+        results.innerHTML = `
+          <div class="list__item">
+            <div>
+              <strong>暂无商品</strong>
+              <small>请录入商品数据。</small>
+            </div>
+            <span class="meta">暂无</span>
+          </div>
+        `;
+        return;
+      }
+
+      popularProducts.innerHTML = [productCard(items[0], true), ...items.slice(1, 4).map((item) => productCard(item))].join('');
+      results.innerHTML = items.slice(0, 8).map((item) => `
+        <a class="list__item" href="${resolveBase(`product/${item.id}/`)}">
+          <div>
+            <strong>${item.name}</strong>
+            <small>${item.brand} · ${item.pack} · ${item.barcode}</small>
+          </div>
+          <span class="price">查看</span>
+        </a>
+      `).join('');
+      activeProduct = items[0];
+      heroProductLabel.textContent = activeProduct.name;
+    }
+
+    async function renderNearbyForProduct(product) {
+      if (!product) return;
+      if (nearbyStatus) nearbyStatus.textContent = `读取 ${product.name} 的门店价格...`;
+      try {
+        const prices = await fetchPricesForProduct(product.id);
+        if (!prices.length) {
+          if (nearbyStatus) nearbyStatus.textContent = `${product.name} 还没有价格记录，请补第一笔。`;
+          nearbyResults.innerHTML = `
+            <div class="list__item">
+              <div>
+                <strong>${product.name}</strong>
+                <small>当前还没有价格记录。</small>
+              </div>
+              <span class="meta">暂无</span>
+            </div>
+          `;
+          heroPriceLabel.textContent = '¥-- 起';
+          return;
+        }
+
+        nearbyResults.innerHTML = prices.slice(0, 4).map((row) => {
+          const badge = productBadge(row.products || row);
+          return `
+          <div class="list__item">
+            <div>
+              <div class="timeline__icon ${badge.tone} search-result__badge">${badge.label}</div>
+              <strong>${row.stores?.name || 'Unknown store'}</strong>
+              <small>${row.stores?.address || ''} · ${row.stores?.hours || ''}</small>
+            </div>
+            <div style="text-align:right;">
+              <div class="price">¥${row.price_yen}</div>
+              <small>${row.is_member_price ? '会员价' : '公开价'}</small>
+            </div>
+          </div>
+        `;
+        }).join('');
+
+        heroPriceLabel.textContent = `¥${Math.min(...prices.map((row) => row.price_yen))} 起`;
+        if (nearbyStatus) nearbyStatus.textContent = `${product.name} 已加载 ${prices.length} 条门店价格。`;
+      } catch (error) {
+        heroPriceLabel.textContent = '¥-- 起';
+        if (nearbyStatus) nearbyStatus.textContent = `读取 ${product.name} 的价格失败：${error.message}`;
+      }
+    }
+
+    async function runSearch(term) {
+      const query = term.trim();
+      status.textContent = query ? `搜索“${query}”...` : '加载全部商品，可直接筛选。';
+      try {
+        const items = await searchProducts(term);
+        if (query) {
+          status.textContent = items.length
+            ? `找到 ${items.length} 条匹配结果。`
+            : `没有找到“${query}”，可以换个关键词。`;
+        } else {
+          status.textContent = items.length
+            ? `已加载 ${items.length} 个商品，继续输入关键词筛选。`
+            : '当前没有商品数据，请导入商品。';
+        }
+        renderProducts(items);
+        if (items.length) {
+          await renderNearbyForProduct(items[0]);
+        } else if (nearbyStatus) {
+          nearbyStatus.textContent = '找到商品后才显示附近价格。';
+        }
+      } catch (error) {
+        status.textContent = `搜索失败：${error.message}`;
+        if (nearbyStatus) nearbyStatus.textContent = '搜索失败后可重试。';
+      }
+    }
+
+    button?.addEventListener('click', () => runSearch(input?.value || ''));
+    input?.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        runSearch(input.value);
+      }
+    });
+
+    geolocateButton?.addEventListener('click', async () => {
+      geolocateButton.textContent = '定位中...';
+      try {
+        const location = await geolocate();
+        status.textContent = `当前位置：${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}。`;
+        if (nearbyStatus) nearbyStatus.textContent = activeProduct ? `按当前位置排序 ${activeProduct.name}。` : '选中商品后再按当前位置排序。';
+        if (activeProduct) {
+          const rows = await fetchNearbyPrices({ productId: activeProduct.id, lat: location.lat, lng: location.lng, radiusKm: 20 });
+          nearbyResults.innerHTML = rows.length
+            ? rows.slice(0, 4).map((row) => {
+              const badge = productBadge(row.products || row);
+              return `
+              <div class="list__item">
+                <div>
+                  <div class="timeline__icon ${badge.tone} search-result__badge">${badge.label}</div>
+                  <strong>${row.stores?.name || 'Unknown store'}</strong>
+                  <small>${row.stores?.city || ''} · ${row.stores?.pref || ''} · ${row.distance_km !== null && row.distance_km !== undefined ? formatDistance(row.distance_km) : ''}</small>
+                </div>
+                <div style="text-align:right;">
+                  <div class="price">¥${row.price_yen}</div>
+                  <small>${row.is_member_price ? '会员价' : '公开价'}</small>
+                </div>
+              </div>
+            `;
+            }).join('')
+            : nearbyResults.innerHTML;
+          if (nearbyStatus) {
+            nearbyStatus.textContent = rows.length
+              ? `已按当前位置排序 ${rows.length} 条价格。`
+              : `${activeProduct.name} 在当前位置附近还没有可比价格。`;
+          }
+        }
+      } catch (error) {
+        status.textContent = `定位失败：${error.message}`;
+        if (nearbyStatus) nearbyStatus.textContent = '定位失败后仍可继续按商品名搜索。';
+      } finally {
+        geolocateButton.textContent = '使用当前位置';
+      }
+    });
+
+    function renderRecentPrices(rows) {
+      if (!recentlyViewed) return;
+      if (!rows.length) {
+        recentlyViewed.innerHTML = `
+          <div class="feed__item">
+            <div>
+              <strong>暂无采样</strong>
+              <small>插入价格记录后自动更新。</small>
+            </div>
+            <span class="price">暂无</span>
+          </div>
+        `;
+        if (recentStatus) {
+          recentStatus.textContent = '暂无最近价格采样。';
+        }
+        return;
+      }
+
+      const groups = new Map();
+      for (const row of rows) {
+        const productId = row.products?.id || row.product_id || 'unknown';
+        if (!groups.has(productId)) {
+          groups.set(productId, []);
+        }
+        groups.get(productId).push(row);
+      }
+
+      recentlyViewed.innerHTML = Array.from(groups.values())
+        .slice(0, 3)
+        .map((groupRows) => {
+          const [latest, second] = groupRows;
+          const delta = second ? latest.price_yen - second.price_yen : null;
+          const trend = trendMeta(delta);
+          const rowDate = latest.collected_at ? new Date(latest.collected_at).toLocaleDateString('ja-JP') : '';
+          const groupHeading = `${latest.products?.name || 'Unknown product'} · ${groupRows.length} 条`;
+          const groupMeta = `${latest.stores?.name || 'Unknown store'} · ${latest.stores?.city || ''}`;
+          const productHref = resolveBase(`product/${latest.products?.id || ''}/`);
+          const badge = productBadge(latest.products || latest);
+
+          return `
+            <div class="timeline__group">
+              <div class="timeline__group-header">
+                <div>
+                  <strong>${groupHeading}</strong>
+                  <small>${groupMeta}</small>
+                </div>
+                <span class="pill ${trend.tone}">${trend.arrow} ${trend.label}</span>
+              </div>
+              <a class="timeline__item timeline__item--featured" href="${productHref}">
+                <div class="timeline__rail">
+                  <span class="timeline__dot"></span>
+                  <span class="timeline__line"></span>
+                </div>
+                <div class="feed__copy">
+                  <div class="timeline__icon ${badge.tone}">${badge.label}</div>
+                  <div class="feed__kicker ${trend.tone}">${trend.arrow} 最近采样</div>
+                  <strong>${latest.products?.name || 'Unknown product'}</strong>
+                  <small>${latest.stores?.name || 'Unknown store'} · ${latest.stores?.city || ''} · ${latest.is_member_price ? '会员价' : '公开价'}</small>
+                </div>
+                <div class="feed__meta">
+                  <div class="price">${formatYen(latest.price_yen)}</div>
+                  <small>${rowDate}</small>
+                  <span class="pill ${trend.tone}">${trend.arrow} ${trend.label}</span>
+                </div>
+              </a>
+              ${groupRows.slice(1, 2).map((row, index) => {
+                const nextRow = groupRows[index + 2];
+                const rowTrend = trendMeta(nextRow ? row.price_yen - nextRow.price_yen : null);
+                const secondaryHref = resolveBase(`product/${row.products?.id || ''}/`);
+                return `
+                  <a class="timeline__item" href="${secondaryHref}">
+                    <div class="timeline__rail">
+                      <span class="timeline__dot"></span>
+                      <span class="timeline__line"></span>
+                    </div>
+                    <div>
+                      <strong>${row.products?.name || 'Unknown product'}</strong>
+                      <small>${row.stores?.name || 'Unknown store'} · ${row.stores?.city || ''} · ${row.is_member_price ? '会员价' : '公开价'}</small>
+                    </div>
+                    <div class="feed__meta">
+                      <span class="price">${formatYen(row.price_yen)}</span>
+                      <small class="trend__delta ${rowTrend.tone}">${rowTrend.arrow} ${rowTrend.label}</small>
+                    </div>
+                  </a>
+                `;
+              }).join('')}
+            </div>
+          `;
+        })
+        .join('');
+
+      if (recentStatus) {
+        recentStatus.textContent = `已读取 ${rows.length} 条最近价格采样，按 ${groups.size} 个商品分组显示。`;
+      }
+    }
+    async function loadRecentPrices() {
+      if (recentStatus) recentStatus.textContent = '最近价格采样读取中...';
+      try {
+        const rows = await fetchRecentPrices(6);
+        renderRecentPrices(rows);
+      } catch (error) {
+        if (recentStatus) recentStatus.textContent = `最近价格读取失败：${error.message}`;
+        recentlyViewed.innerHTML = `
+          <div class="feed__item">
+            <div>
+              <strong>价格读取失败</strong>
+              <small>请检查后端连接和表权限。</small>
+            </div>
+            <span class="price">error</span>
+          </div>
+        `;
+      }
+    }
+
+    await Promise.all([loadRecentPrices(), runSearch('')]);
+  </script>  </main> <script type="module">
+      import { fetchCurrentProfile, getCurrentUser, resolveBase, signOut, subscribeAuthState } from '/aprice/browser.js';
+
+      const chip = document.querySelector('#session-chip');
+      const authNav = document.querySelector('[data-auth-nav]');
+      let unsubscribeAuth = null;
+
+      // 顶栏会话徽章既要显示当前用户，也要跟随 Supabase 的 auth state 变化实时刷新。
+      async function refreshSessionChip() {
+        if (!chip) return;
+        try {
+          const user = await getCurrentUser();
+          if (!user) {
+            chip.textContent = '未登录';
+            chip.href = resolveBase('login/');
+            chip.className = 'chip session-chip session-chip--guest';
+            if (authNav) {
+              authNav.textContent = '登录';
+              authNav.href = resolveBase('login/');
+              authNav.dataset.authState = 'guest';
+              if (window.location.pathname.endsWith('/login/')) {
+                authNav.setAttribute('aria-current', 'page');
+              } else {
+                authNav.removeAttribute('aria-current');
+              }
+            }
+            return;
+          }
+
+          const profile = await fetchCurrentProfile();
+          const isAdmin = profile?.role === 'admin';
+          const label = isAdmin ? '管理员' : (user.email || '已登录');
+          chip.textContent = label;
+          chip.href = isAdmin ? resolveBase('admin/') : resolveBase('me/');
+          chip.className = isAdmin ? 'chip session-chip session-chip--admin' : 'chip session-chip session-chip--member';
+          if (authNav) {
+            authNav.textContent = '退出登录';
+            authNav.href = '#';
+            authNav.dataset.authState = 'signed-in';
+            authNav.removeAttribute('aria-current');
+          }
+        } catch {
+          chip.textContent = '会话';
+          chip.href = resolveBase('login/');
+          chip.className = 'chip session-chip session-chip--guest';
+          if (authNav) {
+            authNav.textContent = '登录';
+            authNav.href = resolveBase('login/');
+            authNav.dataset.authState = 'guest';
+            if (window.location.pathname.endsWith('/login/')) {
+              authNav.setAttribute('aria-current', 'page');
+            } else {
+              authNav.removeAttribute('aria-current');
+            }
+          }
+        }
+      }
+
+      // 顶栏登录入口会根据登录状态在“登录”和“退出”之间切换，避免已登录时还看到登录按钮。
+      authNav?.addEventListener('click', async (event) => {
+        if (authNav.dataset.authState !== 'signed-in') return;
+        event.preventDefault();
+        await signOut();
+        await refreshSessionChip();
+        window.location.assign(resolveBase('login/'));
+      });
+
+      // 订阅 auth state change，保证登录、登出和恢复密码后的 UI 不会停留在旧状态。
+      unsubscribeAuth = await subscribeAuthState(() => {
+        refreshSessionChip();
+      });
+
+      refreshSessionChip();
+      window.addEventListener('beforeunload', () => {
+        unsubscribeAuth?.();
+      });
+    </script> </body> </html>
