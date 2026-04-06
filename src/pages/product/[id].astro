@@ -173,6 +173,33 @@ const { product } = Astro.props as { product: Product };
 
     let stores = [];
     let activeStoreId = '';
+    const loginPath = resolveBase('login/');
+    const basePath = new URL(resolveBase(''), window.location.origin).pathname;
+    const loginRoutePath = new URL(loginPath, window.location.origin).pathname;
+
+    function normalizeInternalRedirectTarget(value) {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+
+      try {
+        const parsed = new URL(raw, window.location.origin);
+        if (parsed.origin !== window.location.origin) return '';
+        if (!parsed.pathname.startsWith(basePath)) return '';
+        if (parsed.pathname === loginRoutePath) return '';
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      } catch {
+        return '';
+      }
+    }
+
+    function buildLoginUrl() {
+      const loginUrl = new URL(loginPath, window.location.origin);
+      const currentTarget = normalizeInternalRedirectTarget(`${window.location.pathname}${window.location.search}${window.location.hash}`);
+      if (currentTarget) {
+        loginUrl.searchParams.set('redirect', currentTarget);
+      }
+      return `${loginUrl.pathname}${loginUrl.search}${loginUrl.hash}`;
+    }
 
     function toTime(value) {
       const time = new Date(value || 0).getTime();
@@ -433,7 +460,7 @@ const { product } = Astro.props as { product: Product };
       const user = await getCurrentUser();
       if (!user) {
         if (favoriteStatus) favoriteStatus.textContent = '请登录后再添加商品收藏。';
-        window.location.assign(resolveBase('login/'));
+        window.location.assign(buildLoginUrl());
         return;
       }
 
@@ -451,7 +478,7 @@ const { product } = Astro.props as { product: Product };
       const user = await getCurrentUser();
       if (!user) {
         if (favoriteStatus) favoriteStatus.textContent = '请登录后再添加门店收藏。';
-        window.location.assign(resolveBase('login/'));
+        window.location.assign(buildLoginUrl());
         return;
       }
 
@@ -479,7 +506,7 @@ const { product } = Astro.props as { product: Product };
       const user = await getCurrentUser();
       if (!user) {
         if (favoriteStatus) favoriteStatus.textContent = '请登录后再添加门店收藏。';
-        window.location.assign(resolveBase('login/'));
+        window.location.assign(buildLoginUrl());
         return;
       }
 
@@ -514,7 +541,7 @@ const { product } = Astro.props as { product: Product };
       const user = await getCurrentUser();
       if (!user) {
         status.textContent = '请登录后再记录。';
-        window.location.assign(resolveBase('login/'));
+        window.location.assign(buildLoginUrl());
         return;
       }
 
@@ -537,6 +564,8 @@ const { product } = Astro.props as { product: Product };
     Promise.all([loadStores(), loadPrices()]);
   </script>
 </BaseLayout>
+
+
 
 
 

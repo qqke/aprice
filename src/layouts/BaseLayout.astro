@@ -8,12 +8,46 @@ const {
 
 const base = import.meta.env.BASE_URL || '/';
 const current = Astro.url.pathname;
+const loginPath = new URL(`${base}login/`, Astro.url.origin).pathname;
+const basePath = new URL(base, Astro.url.origin).pathname;
+const currentPath = Astro.url.pathname.startsWith(base) ? Astro.url.pathname : `${base}${Astro.url.pathname.replace(/^\/+/, '')}`;
+const currentTarget = `${currentPath}${Astro.url.search}${Astro.url.hash}`;
+
+function normalizeInternalRedirectTarget(value: string): string {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  try {
+    const parsed = new URL(raw, Astro.url.origin);
+    if (parsed.origin !== Astro.url.origin) return '';
+    if (!parsed.pathname.startsWith(basePath)) return '';
+    if (parsed.pathname === loginPath) return '';
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return '';
+  }
+}
+
+function buildLoginUrl(): string {
+  const loginUrl = new URL(`${base}login/`, Astro.url.origin);
+  const redirect = normalizeInternalRedirectTarget(currentTarget);
+  if (redirect) {
+    loginUrl.searchParams.set('redirect', redirect);
+  }
+  return `${loginUrl.pathname}${loginUrl.search}${loginUrl.hash}`;
+}
+
+const loginHref = buildLoginUrl();
 const nav = [
   { href: `${base}`, label: '首页' },
   { href: `${base}scan/`, label: '扫码' },
   { href: `${base}me/`, label: '我的' },
-  { href: `${base}login/`, label: '登录', auth: true },
+  { href: loginHref, label: '登录', auth: true, activePath: loginPath },
 ];
+
+function isCurrentNavItem(item: { href: string; activePath?: string }) {
+  return item.activePath ? current === item.activePath : current === item.href;
+}
 ---
 <!doctype html>
 <html lang="zh-CN">
@@ -66,12 +100,12 @@ const nav = [
         </a>
         <nav class="nav" aria-label="Primary">
           {nav.map((item) => (
-            <a href={item.href} data-auth-nav={item.auth ? 'true' : undefined} aria-current={current === item.href ? 'page' : undefined}>
+            <a href={item.href} data-auth-nav={item.auth ? 'true' : undefined} aria-current={isCurrentNavItem(item) ? 'page' : undefined}>
               {item.label}
             </a>
           ))}
         </nav>
-        <a class="chip session-chip" id="session-chip" href={`${base}login/`}>未登录</a>
+        <a class="chip session-chip" id="session-chip" href={loginHref}>未登录</a>
       </div>
     </header>
     <script is:inline define:vars={{ baseUrl: base, supabaseUrl: import.meta.env.PUBLIC_SUPABASE_URL || '', supabaseAnonKey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '' }}>
@@ -95,6 +129,33 @@ const nav = [
       let unsubscribeAuth = null;
       let authModulePromise = null;
       let sessionSyncStarted = false;
+      const loginPath = resolveBase('login/');
+      const basePath = new URL(resolveBase(''), window.location.origin).pathname;
+      const loginRoutePath = new URL(loginPath, window.location.origin).pathname;
+
+      function normalizeInternalRedirectTarget(value) {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+
+        try {
+          const parsed = new URL(raw, window.location.origin);
+          if (parsed.origin !== window.location.origin) return '';
+          if (!parsed.pathname.startsWith(basePath)) return '';
+          if (parsed.pathname === loginRoutePath) return '';
+          return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+        } catch {
+          return '';
+        }
+      }
+
+      function buildLoginUrl() {
+        const loginUrl = new URL(loginPath, window.location.origin);
+        const currentTarget = normalizeInternalRedirectTarget(`${window.location.pathname}${window.location.search}${window.location.hash}`);
+        if (currentTarget) {
+          loginUrl.searchParams.set('redirect', currentTarget);
+        }
+        return `${loginUrl.pathname}${loginUrl.search}${loginUrl.hash}`;
+      }
 
       // 顶栏会话徽章既要显示当前用户，也要跟随 Supabase 的 auth state 变化刷新。
       function loadAuthModule() {
@@ -117,11 +178,11 @@ const nav = [
           const user = await getCurrentUser();
           if (!user) {
             chip.textContent = '未登录';
-            chip.href = resolveBase('login/');
+            chip.href = buildLoginUrl();
             chip.className = 'chip session-chip session-chip--guest';
             if (authNav) {
               authNav.textContent = '登录';
-              authNav.href = resolveBase('login/');
+              authNav.href = buildLoginUrl();
               authNav.dataset.authState = 'guest';
               if (window.location.pathname.endsWith('/login/')) {
                 authNav.setAttribute('aria-current', 'page');
@@ -146,11 +207,11 @@ const nav = [
           }
         } catch {
           chip.textContent = '会话';
-          chip.href = resolveBase('login/');
+          chip.href = buildLoginUrl();
           chip.className = 'chip session-chip session-chip--guest';
           if (authNav) {
             authNav.textContent = '登录';
-            authNav.href = resolveBase('login/');
+            authNav.href = buildLoginUrl();
             authNav.dataset.authState = 'guest';
             if (window.location.pathname.endsWith('/login/')) {
               authNav.setAttribute('aria-current', 'page');
@@ -165,7 +226,7 @@ const nav = [
         const { signOut } = await loadAuthModule();
         await signOut();
         await refreshSessionChip();
-        window.location.assign(resolveBase('login/'));
+        window.location.assign(buildLoginUrl());
       }
 
       // 顶栏登录入口会根据登录状态在“登录”和“退出”之间切换，避免已登录时还看到登录按钮。
@@ -214,6 +275,12 @@ const nav = [
     </script>
   </body>
 </html>
+
+
+
+
+
+
 
 
 

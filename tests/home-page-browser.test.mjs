@@ -191,6 +191,24 @@ async function main() {
       assert.match(requests.join('\n'), /name\.ilike/);
       assert.match(requests.join('\n'), /\/rest\/v1\/products/);
 
+      const ssrContext = await browser.newContext({ javaScriptEnabled: false });
+      try {
+        const ssrPage = await ssrContext.newPage();
+        await ssrPage.goto(`${baseUrl}/aprice/`, { waitUntil: 'domcontentloaded' });
+        await ssrPage.locator('#session-chip').waitFor({ state: 'attached' });
+        await ssrPage.locator('a[data-auth-nav="true"]').waitFor({ state: 'attached' });
+
+        const ssrChipUrl = new URL(await ssrPage.locator('#session-chip').getAttribute('href'), baseUrl);
+        const ssrNavUrl = new URL(await ssrPage.locator('a[data-auth-nav="true"]').getAttribute('href'), baseUrl);
+
+        assert.equal(ssrChipUrl.pathname, '/aprice/login/');
+        assert.equal(ssrChipUrl.searchParams.get('redirect'), '/aprice/');
+        assert.equal(ssrNavUrl.pathname, '/aprice/login/');
+        assert.equal(ssrNavUrl.searchParams.get('redirect'), '/aprice/');
+      } finally {
+        await ssrContext.close();
+      }
+
       console.log('home-page browser test passed');
     } finally {
       await browser.close();

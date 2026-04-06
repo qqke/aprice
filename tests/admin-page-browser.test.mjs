@@ -406,6 +406,33 @@ async function main() {
 
       assert.equal(pageErrors.length, 0, `page errors: ${pageErrors.join(' | ')}`);
 
+      const ssrContext = await browser.newContext({ javaScriptEnabled: false });
+      try {
+        const ssrPage = await ssrContext.newPage();
+        await ssrPage.goto(`${baseUrl}/aprice/admin/`, { waitUntil: 'domcontentloaded' });
+        await ssrPage.locator('#session-chip').waitFor({ state: 'attached' });
+        await ssrPage.locator('a[data-auth-nav="true"]').waitFor({ state: 'attached' });
+        await ssrPage.locator('#admin-switch-account').waitFor({ state: 'attached' });
+
+        const ssrChipUrl = new URL(await ssrPage.locator('#session-chip').getAttribute('href'), baseUrl);
+        const ssrNavUrl = new URL(await ssrPage.locator('a[data-auth-nav="true"]').getAttribute('href'), baseUrl);
+        const ssrSwitchUrl = new URL(await ssrPage.locator('#admin-switch-account').getAttribute('href'), baseUrl);
+
+        assert.equal(ssrChipUrl.pathname, '/aprice/login/');
+        assert.equal(ssrChipUrl.searchParams.get('redirect'), '/aprice/admin/');
+        assert.equal(ssrNavUrl.pathname, '/aprice/login/');
+        assert.equal(ssrNavUrl.searchParams.get('redirect'), '/aprice/admin/');
+        assert.equal(ssrSwitchUrl.pathname, '/aprice/login/');
+        assert.equal(ssrSwitchUrl.searchParams.get('redirect'), '/aprice/admin/');
+      } finally {
+        await ssrContext.close();
+      }
+
+      await page.locator('#admin-logout').click();
+      await page.waitForURL('**/aprice/login/**');
+      const loginUrl = new URL(page.url());
+      assert.equal(loginUrl.searchParams.get('redirect'), '/aprice/admin/');
+
       console.log('admin-page browser test passed');
     } finally {
       await browser.close();
@@ -419,6 +446,7 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
 
 
 

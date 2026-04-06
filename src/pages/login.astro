@@ -99,6 +99,30 @@ import { resolveBase } from '../lib/browser.js';
     let unsubscribeAuth = null;
     let currentSession = null;
     let authRefreshStarted = false;
+    const url = new URL(window.location.href);
+    const basePath = new URL(resolveBase(''), window.location.origin).pathname;
+    const loginPath = new URL(resolveBase('login/'), window.location.origin).pathname;
+
+    function normalizeInternalRedirectTarget(value) {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+
+      try {
+        const parsed = new URL(raw, window.location.origin);
+        if (parsed.origin !== window.location.origin) return '';
+        if (!parsed.pathname.startsWith(basePath)) return '';
+        if (parsed.pathname === loginPath) return '';
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      } catch {
+        return '';
+      }
+    }
+
+    const redirectTarget = normalizeInternalRedirectTarget(url.searchParams.get('redirect'));
+
+    function getPostLoginTarget() {
+      return redirectTarget || resolveBase('');
+    }
 
     function loadAuthModule() {
       authModulePromise ??= import('/aprice/browser-auth.js');
@@ -131,7 +155,6 @@ import { resolveBase } from '../lib/browser.js';
     const signedInAction = document.querySelector('#signed-in-action');
     const switchAccountButton = document.querySelector('#switch-account-button');
 
-    const url = new URL(window.location.href);
     const isRecoveryRedirect = url.searchParams.get('mode') === 'reset' || url.searchParams.get('type') === 'recovery';
     let mode = isRecoveryRedirect ? 'reset-password' : 'login';
     const hasSessionHint = (() => {
@@ -198,7 +221,9 @@ import { resolveBase } from '../lib/browser.js';
       if (modeToggle) modeToggle.textContent = config.modeToggle;
       if (forgotToggle) forgotToggle.textContent = config.forgotToggle;
       if (hint) hint.textContent = config.hint;
-      if (status && !status.dataset.locked) status.textContent = config.status;
+      if (status && !status.dataset.locked) {
+        status.textContent = redirectTarget && mode === 'login' ? '登录后返回原页面。' : config.status;
+      }
 
       const showPassword = mode !== 'request-reset';
       const showConfirm = mode === 'register' || mode === 'reset-password';
@@ -249,11 +274,11 @@ import { resolveBase } from '../lib/browser.js';
       if (panelPill) panelPill.textContent = '已登录';
       if (signedInMessage) signedInMessage.textContent = '账号已登录。';
       if (signedInLabel) signedInLabel.textContent = '当前账号';
-      if (signedInSubtitle) signedInSubtitle.textContent = '可打开个人页。';
+      if (signedInSubtitle) signedInSubtitle.textContent = redirectTarget ? '可返回原页面。' : '可打开个人页。';
       if (signedInRole) signedInRole.textContent = 'member';
       if (signedInAction) {
-        signedInAction.textContent = '打开个人页';
-        signedInAction.href = resolveBase('me/');
+        signedInAction.textContent = redirectTarget ? '继续访问' : '打开个人页';
+        signedInAction.href = redirectTarget || resolveBase('me/');
       }
     }
 
@@ -353,8 +378,8 @@ import { resolveBase } from '../lib/browser.js';
         const role = profile?.role || 'member';
         const isAdmin = role === 'admin';
         const label = profile?.full_name || session.user.email || '已登录用户';
-        const actionLabel = isAdmin ? '打开管理页' : '打开个人页';
-        const actionHref = resolveBase(isAdmin ? 'admin/' : 'me/');
+        const actionLabel = redirectTarget ? '继续访问' : isAdmin ? '打开管理页' : '打开个人页';
+        const actionHref = redirectTarget || resolveBase(isAdmin ? 'admin/' : 'me/');
         sessionState.innerHTML = `
           <div class="list__item">
             <div>
@@ -368,11 +393,11 @@ import { resolveBase } from '../lib/browser.js';
           status.textContent = '已获取重置会话，可直接更新新密码。';
         } else {
           if (panelTitle) panelTitle.textContent = '账号状态';
-          if (panelDescription) panelDescription.textContent = `账号已登录，可打开${isAdmin ? '管理页' : '个人页'}。`;
+          if (panelDescription) panelDescription.textContent = redirectTarget ? '账号已登录，可返回原页面。' : `账号已登录，可打开${isAdmin ? '管理页' : '个人页'}。`;
           if (panelPill) panelPill.textContent = '已登录';
           if (signedInMessage) signedInMessage.textContent = '账号已登录。';
           if (signedInLabel) signedInLabel.textContent = label;
-          if (signedInSubtitle) signedInSubtitle.textContent = `可打开${isAdmin ? '管理页' : '个人页'}。`;
+          if (signedInSubtitle) signedInSubtitle.textContent = redirectTarget ? '可返回原页面。' : `可打开${isAdmin ? '管理页' : '个人页'}。`;
           if (signedInRole) signedInRole.textContent = role;
           if (signedInAction) {
             signedInAction.textContent = actionLabel;
@@ -421,29 +446,37 @@ import { resolveBase } from '../lib/browser.js';
           await signInWithEmailPassword({ email, password });
           setSessionHint('signed-in');
           if (status) status.textContent = '登录成功。';
-          window.location.assign(resolveBase(''));
+          window.location.assign(getPostLoginTarget());
           return;
         } else if (submitMode === 'register') {
           const { signUpWithEmailPassword } = await loadAuthModule();
-          const result = await signUpWithEmailPassword({ email, password });
+          const result = await signUpWithEmailPassword({ email, password, redirect: redirectTarget });
           if (emailInput) emailInput.value = email;
           if (passwordInput) passwordInput.value = '';
           if (confirmPasswordInput) confirmPasswordInput.value = '';
           setMode('login');
+          if (result?.session) {
+            setSessionHint('signed-in');
+            window.location.assign(getPostLoginTarget());
+            return;
+          }
           if (status) {
-            status.textContent = result?.session ? '注册成功。' : '注册成功，请检查邮箱。';
+            status.textContent = '注册成功，请检查邮箱。';
           }
         } else if (submitMode === 'request-reset') {
           const { sendPasswordResetEmail } = await loadAuthModule();
-          await sendPasswordResetEmail(email);
+          await sendPasswordResetEmail({ email, redirect: redirectTarget });
           if (status) status.textContent = '重置链接已发送。';
         } else if (submitMode === 'reset-password') {
           const { updatePassword } = await loadAuthModule();
           await updatePassword(password);
+          setSessionHint('signed-in');
           setMode('login');
           if (passwordInput) passwordInput.value = '';
           if (confirmPasswordInput) confirmPasswordInput.value = '';
           if (status) status.textContent = '密码已更新。';
+          window.location.assign(getPostLoginTarget());
+          return;
         }
       } catch (error) {
         if (status) status.textContent = `操作失败：${formatAuthError(error, submitMode)}`;
@@ -539,4 +572,10 @@ import { resolveBase } from '../lib/browser.js';
     });
   </script>
 </BaseLayout>
+
+
+
+
+
+
 

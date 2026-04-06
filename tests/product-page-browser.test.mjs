@@ -227,6 +227,11 @@ async function main() {
       assert.match(requests.join('\n'), /\/rest\/v1\/prices/);
       assert.match(requests.join('\n'), /\/rest\/v1\/stores/);
 
+      await page.locator('#favorite-product-button').click();
+      await page.waitForURL('**/aprice/login/**');
+      const loginUrl = new URL(page.url());
+      assert.equal(loginUrl.searchParams.get('redirect'), '/aprice/product/loxonin-s/');
+
       console.log('product-page browser test passed');
     } finally {
       await browser.close();
@@ -240,6 +245,7 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
 
 
 

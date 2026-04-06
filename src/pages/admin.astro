@@ -1,5 +1,37 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+const base = import.meta.env.BASE_URL || '/';
+const loginHrefBase = `${base}login/`;
+const loginPath = new URL(loginHrefBase, Astro.url.origin).pathname;
+const basePath = new URL(base, Astro.url.origin).pathname;
+const currentPath = Astro.url.pathname.startsWith(base) ? Astro.url.pathname : `${base}${Astro.url.pathname.replace(/^\/+/, '')}`;
+const currentTarget = `${currentPath}${Astro.url.search}${Astro.url.hash}`;
+
+function normalizeInternalRedirectTarget(value: string): string {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  try {
+    const parsed = new URL(raw, Astro.url.origin);
+    if (parsed.origin !== Astro.url.origin) return '';
+    if (!parsed.pathname.startsWith(basePath)) return '';
+    if (parsed.pathname === loginPath) return '';
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return '';
+  }
+}
+
+function buildLoginUrl(): string {
+  const loginUrl = new URL(loginHrefBase, Astro.url.origin);
+  const redirect = normalizeInternalRedirectTarget(currentTarget);
+  if (redirect) {
+    loginUrl.searchParams.set('redirect', redirect);
+  }
+  return `${loginUrl.pathname}${loginUrl.search}${loginUrl.hash}`;
+}
+
+const switchAccountHref = buildLoginUrl();
 ---
 <BaseLayout title="管理 - Aprice" description="维护商品、门店和价格记录的后台页面。">
   <section class="section section--first-workspace">
@@ -11,7 +43,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <p class="product-sub">仅管理员账号可用。通过后端调用写入基础数据和价格采样。</p>
         </div>
         <div class="pillrow">
-          <a class="button button--ghost" href={`${import.meta.env.BASE_URL || '/'}login/`}>切换账号</a>
+          <a class="button button--ghost" id="admin-switch-account" href={switchAccountHref}>切换账号</a>
           <button class="button button--ghost" id="admin-logout" type="button">退出登录</button>
         </div>
       </div>
@@ -173,6 +205,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const status = document.querySelector('#admin-status');
     const accessState = document.querySelector('#admin-access');
     const logoutButton = document.querySelector('#admin-logout');
+    const switchAccountLink = document.querySelector('#admin-switch-account');
     const productForm = document.querySelector('#product-form');
     const storeForm = document.querySelector('#store-form');
     const priceForm = document.querySelector('#price-form');
@@ -187,6 +220,35 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const productDelete = document.querySelector('#product-delete');
     const storeDelete = document.querySelector('#store-delete');
     const priceDelete = document.querySelector('#price-delete');
+    const base = resolveBase('');
+    const loginHrefBase = resolveBase('login/');
+    const loginPath = new URL(loginHrefBase, window.location.origin).pathname;
+    const basePath = new URL(base, window.location.origin).pathname;
+    const currentTarget = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+    function normalizeInternalRedirectTarget(value) {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+
+      try {
+        const parsed = new URL(raw, window.location.origin);
+        if (parsed.origin !== window.location.origin) return '';
+        if (!parsed.pathname.startsWith(basePath)) return '';
+        if (parsed.pathname === loginPath) return '';
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      } catch {
+        return '';
+      }
+    }
+
+    function buildLoginUrl() {
+      const loginUrl = new URL(loginHrefBase, window.location.origin);
+      const redirect = normalizeInternalRedirectTarget(currentTarget);
+      if (redirect) {
+        loginUrl.searchParams.set('redirect', redirect);
+      }
+      return `${loginUrl.pathname}${loginUrl.search}${loginUrl.hash}`;
+    }
 
     const productFields = {
       id: document.querySelector('#product-id'),
@@ -355,6 +417,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         `).join('')
         : '<div class="list__item"><div><strong>暂无价格</strong><small>请保存一条价格。</small></div><span class="meta">暂无</span></div>';
     }
+
+    switchAccountLink?.setAttribute('href', buildLoginUrl());
 
     async function loadData() {
       const [user, profile] = await Promise.all([getCurrentUser(), fetchCurrentProfile()]);
@@ -578,12 +642,17 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     logoutButton?.addEventListener('click', async () => {
       await signOut();
-      window.location.assign(resolveBase('login/'));
+      window.location.assign(buildLoginUrl());
     });
 
     loadData();
   </script>
 </BaseLayout>
+
+
+
+
+
 
 
 

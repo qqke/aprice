@@ -76,6 +76,7 @@ function makeEsmShimModuleBody() {
     let session = null;
     const listeners = new Set();
     const storageKey = '__aprice_test_session__';
+    globalThis.__authCalls = globalThis.__authCalls || [];
 
     function readSession() {
       try {
@@ -127,7 +128,8 @@ function makeEsmShimModuleBody() {
             session = readSession();
             return { data: { user: session?.user || null }, error: null };
           },
-          async signUp({ email }) {
+          async signUp({ email, options }) {
+            globalThis.__authCalls.push({ type: 'signUp', email, options });
             return { data: { user: { id: 'new-user', email }, session: null }, error: null };
           },
           async signInWithPassword({ email }) {
@@ -135,7 +137,8 @@ function makeEsmShimModuleBody() {
             notify('SIGNED_IN');
             return { data: { session }, error: null };
           },
-          async resetPasswordForEmail() {
+          async resetPasswordForEmail(email, options) {
+            globalThis.__authCalls.push({ type: 'resetPasswordForEmail', email, options });
             return { data: {}, error: null };
           },
           async updateUser() {
@@ -202,6 +205,7 @@ async function main() {
     const page = await browser.newPage();
     const pageErrors = [];
     const authCalls = [];
+    const redirectTarget = '/aprice/product/loxonin-s/';
 
     page.on('pageerror', (error) => pageErrors.push(error.message));
     page.on('console', (message) => {
@@ -250,7 +254,7 @@ async function main() {
       });
     });
 
-    await page.goto(`${baseUrl}/aprice/login/`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${baseUrl}/aprice/login/?redirect=${encodeURIComponent(redirectTarget)}`, { waitUntil: 'domcontentloaded' });
 
     await page.locator('#auth-form').waitFor({ state: 'attached' });
     await page.locator('#session-state').waitFor({ state: 'attached' });
@@ -262,8 +266,8 @@ async function main() {
     await page.locator('#password').fill('password123');
     await page.locator('#auth-submit').click();
 
-    await page.waitForURL('**/aprice/');
-    await page.goto(`${baseUrl}/aprice/login/`, { waitUntil: 'domcontentloaded' });
+    await page.waitForURL(`**${redirectTarget}`);
+    await page.goto(`${baseUrl}/aprice/login/?redirect=${encodeURIComponent(redirectTarget)}`, { waitUntil: 'domcontentloaded' });
 
     await page.locator('#auth-form').waitFor({ state: 'attached' });
     await page.locator('#session-state').waitFor({ state: 'attached' });
@@ -271,9 +275,9 @@ async function main() {
     await waitForText(page, '#session-state', 'name@example.com');
     await waitForHidden(page, '#auth-form-shell');
     await waitForVisible(page, '#signed-in-state');
-    await waitForText(page, '#signed-in-action', '打开个人页');
+    await waitForText(page, '#signed-in-action', '继续访问');
     await page.locator('#signed-in-action').waitFor({ state: 'attached' });
-    assert.equal(await page.locator('#signed-in-action').getAttribute('href'), '/aprice/me/');
+    assert.equal(await page.locator('#signed-in-action').getAttribute('href'), redirectTarget);
 
     await page.locator('#switch-account-button').click();
     await waitForVisible(page, '#auth-form-shell');
@@ -283,7 +287,19 @@ async function main() {
     await page.locator('#logout-button').click();
     await page.waitForURL('**/aprice/');
 
-    await page.goto(`${baseUrl}/aprice/login/`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${baseUrl}/aprice/login/?redirect=${encodeURIComponent('https://evil.example/phish')}`, { waitUntil: 'domcontentloaded' });
+    await page.locator('#auth-form').waitFor({ state: 'attached' });
+    await page.locator('#session-state').waitFor({ state: 'attached' });
+    await page.locator('#email').fill('name@example.com');
+    await page.locator('#password').fill('password123');
+    await page.locator('#auth-submit').click();
+    await page.waitForURL('**/aprice/');
+
+    await page.goto(`${baseUrl}/aprice/login/?redirect=${encodeURIComponent(redirectTarget)}`, { waitUntil: 'domcontentloaded' });
+    await waitForVisible(page, '#signed-in-state');
+    await page.locator('#switch-account-button').click();
+    await waitForVisible(page, '#auth-form-shell');
+    await page.goto(`${baseUrl}/aprice/login/?redirect=${encodeURIComponent(redirectTarget)}`, { waitUntil: 'domcontentloaded' });
     await page.locator('#mode-toggle').click();
     await waitForText(page, '#auth-panel-title', '注册账号');
     await page.locator('#email').fill('register@example.com');
@@ -291,20 +307,35 @@ async function main() {
     await page.locator('#confirm-password').fill('register123');
     await page.locator('#auth-submit').click();
     await waitForText(page, '#auth-status', '注册成功');
+    {
+      const calls = await page.evaluate(() => globalThis.__authCalls || []);
+      const signUpCall = calls.find((call) => call.type === 'signUp');
+      assert.ok(signUpCall, 'expected signUp call to be recorded');
+      const signUpRedirect = new URL(signUpCall.options.emailRedirectTo);
+      assert.equal(signUpRedirect.searchParams.get('redirect'), redirectTarget);
+    }
 
     await page.locator('#forgot-toggle').click();
     await waitForText(page, '#auth-panel-title', '找回密码');
     await page.locator('#email').fill('name@example.com');
     await page.locator('#auth-submit').click();
     await waitForText(page, '#auth-status', '重置链接已发送');
+    {
+      const calls = await page.evaluate(() => globalThis.__authCalls || []);
+      const resetCall = calls.find((call) => call.type === 'resetPasswordForEmail');
+      assert.ok(resetCall, 'expected resetPasswordForEmail call to be recorded');
+      const resetRedirect = new URL(resetCall.options.emailRedirectTo);
+      assert.equal(resetRedirect.searchParams.get('mode'), 'reset');
+      assert.equal(resetRedirect.searchParams.get('redirect'), redirectTarget);
+    }
 
-    await page.goto(`${baseUrl}/aprice/login/?mode=reset&type=recovery`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${baseUrl}/aprice/login/?mode=reset&type=recovery&redirect=${encodeURIComponent(redirectTarget)}`, { waitUntil: 'domcontentloaded' });
     await page.locator('#auth-form').waitFor({ state: 'attached' });
     await waitForText(page, '#auth-panel-title', '重置密码');
     await page.locator('#password').fill('newpassword123');
     await page.locator('#confirm-password').fill('newpassword123');
     await page.locator('#auth-submit').click();
-    await waitForText(page, '#auth-status', '密码已更新');
+    await page.waitForURL(`**${redirectTarget}`);
 
     authCalls.push('login/register/reset flow covered');
 
@@ -321,10 +352,3 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
-
-
-
-
-
-

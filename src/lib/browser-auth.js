@@ -41,6 +41,23 @@ function buildAuthRedirectUrl(pathname = 'login/', params = {}) {
   return url.toString();
 }
 
+function normalizeInternalRedirectTarget(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  try {
+    const parsed = new URL(raw, window.location.origin);
+    const basePath = new URL(resolveBase(''), window.location.origin).pathname;
+    const loginPath = new URL(resolveBase('login/'), window.location.origin).pathname;
+    if (parsed.origin !== window.location.origin) return '';
+    if (!parsed.pathname.startsWith(basePath)) return '';
+    if (parsed.pathname === loginPath) return '';
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return '';
+  }
+}
+
 export async function getSession() {
   const client = await getSupabaseClient();
   const { data } = await client.auth.getSession();
@@ -52,14 +69,14 @@ export async function getCurrentUser() {
   return session?.user ?? null;
 }
 
-export async function signUpWithEmailPassword({ email, password }) {
+export async function signUpWithEmailPassword({ email, password, redirect = '' }) {
   const client = await getSupabaseClient();
   const { data, error } = await client.auth.signUp({
     email,
     password,
     options: {
       // 注册后回到登录页，兼容 Supabase 邮箱确认链路。
-      emailRedirectTo: buildAuthRedirectUrl('login/'),
+      emailRedirectTo: buildAuthRedirectUrl('login/', { redirect: normalizeInternalRedirectTarget(redirect) }),
     },
   });
   if (error) throw error;
@@ -76,11 +93,14 @@ export async function signInWithEmailPassword({ email, password }) {
   return data;
 }
 
-export async function sendPasswordResetEmail(email) {
+export async function sendPasswordResetEmail({ email, redirect = '' }) {
   const client = await getSupabaseClient();
   const { error } = await client.auth.resetPasswordForEmail(email, {
     // 找回密码后回到登录页的重置模式，便于直接更新新密码。
-    emailRedirectTo: buildAuthRedirectUrl('login/', { mode: 'reset' }),
+    emailRedirectTo: buildAuthRedirectUrl('login/', {
+      mode: 'reset',
+      redirect: normalizeInternalRedirectTarget(redirect),
+    }),
   });
   if (error) throw error;
   return { ok: true };
@@ -258,3 +278,4 @@ export async function adminDeletePrice(targetId) {
   if (!session?.user) throw new Error('Please sign in first');
   return restRpc('admin_delete_price', { target_id: targetId }, { token: session.access_token });
 }
+
