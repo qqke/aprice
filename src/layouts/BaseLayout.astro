@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { buildLoginUrl } from '../lib/auth-redirect.js';
 
 const {
   title = 'Aprice',
@@ -9,35 +10,13 @@ const {
 const base = import.meta.env.BASE_URL || '/';
 const current = Astro.url.pathname;
 const loginPath = new URL(`${base}login/`, Astro.url.origin).pathname;
-const basePath = new URL(base, Astro.url.origin).pathname;
-const currentPath = Astro.url.pathname.startsWith(base) ? Astro.url.pathname : `${base}${Astro.url.pathname.replace(/^\/+/, '')}`;
-const currentTarget = `${currentPath}${Astro.url.search}${Astro.url.hash}`;
-
-function normalizeInternalRedirectTarget(value: string): string {
-  const raw = String(value || '').trim();
-  if (!raw) return '';
-
-  try {
-    const parsed = new URL(raw, Astro.url.origin);
-    if (parsed.origin !== Astro.url.origin) return '';
-    if (!parsed.pathname.startsWith(basePath)) return '';
-    if (parsed.pathname === loginPath) return '';
-    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-  } catch {
-    return '';
-  }
-}
-
-function buildLoginUrl(): string {
-  const loginUrl = new URL(`${base}login/`, Astro.url.origin);
-  const redirect = normalizeInternalRedirectTarget(currentTarget);
-  if (redirect) {
-    loginUrl.searchParams.set('redirect', redirect);
-  }
-  return `${loginUrl.pathname}${loginUrl.search}${loginUrl.hash}`;
-}
-
-const loginHref = buildLoginUrl();
+const loginHref = buildLoginUrl({
+  origin: Astro.url.origin,
+  loginHref: `${base}login/`,
+  currentUrl: `${Astro.url.pathname}${Astro.url.search}${Astro.url.hash}`,
+  basePath: new URL(base, Astro.url.origin).pathname,
+  loginPath,
+});
 const nav = [
   { href: `${base}`, label: '首页' },
   { href: `${base}scan/`, label: '扫码' },
@@ -115,7 +94,8 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
     <main class="page">
       <slot />
     </main>
-        <script type="module" is:inline>
+    <script type="module" is:inline>
+      import { buildLoginUrl } from '/aprice/auth-redirect.js';
       const runtimeBase = window.__APriceConfig?.baseUrl || '/';
       function resolveBase(pathname = '') {
         const base = runtimeBase.endsWith('/') ? runtimeBase : runtimeBase + '/';
@@ -131,31 +111,13 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
       let sessionSyncStarted = false;
       const loginPath = resolveBase('login/');
       const basePath = new URL(resolveBase(''), window.location.origin).pathname;
-      const loginRoutePath = new URL(loginPath, window.location.origin).pathname;
-
-      function normalizeInternalRedirectTarget(value) {
-        const raw = String(value || '').trim();
-        if (!raw) return '';
-
-        try {
-          const parsed = new URL(raw, window.location.origin);
-          if (parsed.origin !== window.location.origin) return '';
-          if (!parsed.pathname.startsWith(basePath)) return '';
-          if (parsed.pathname === loginRoutePath) return '';
-          return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-        } catch {
-          return '';
-        }
-      }
-
-      function buildLoginUrl() {
-        const loginUrl = new URL(loginPath, window.location.origin);
-        const currentTarget = normalizeInternalRedirectTarget(`${window.location.pathname}${window.location.search}${window.location.hash}`);
-        if (currentTarget) {
-          loginUrl.searchParams.set('redirect', currentTarget);
-        }
-        return `${loginUrl.pathname}${loginUrl.search}${loginUrl.hash}`;
-      }
+      const loginUrl = buildLoginUrl({
+        origin: window.location.origin,
+        loginHref: loginPath,
+        currentUrl: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+        basePath,
+        loginPath: new URL(loginPath, window.location.origin).pathname,
+      });
 
       // 顶栏会话徽章既要显示当前用户，也要跟随 Supabase 的 auth state 变化刷新。
       function loadAuthModule() {
@@ -178,11 +140,11 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
           const user = await getCurrentUser();
           if (!user) {
             chip.textContent = '未登录';
-            chip.href = buildLoginUrl();
+            chip.href = loginUrl;
             chip.className = 'chip session-chip session-chip--guest';
             if (authNav) {
               authNav.textContent = '登录';
-              authNav.href = buildLoginUrl();
+              authNav.href = loginUrl;
               authNav.dataset.authState = 'guest';
               if (window.location.pathname.endsWith('/login/')) {
                 authNav.setAttribute('aria-current', 'page');
@@ -207,11 +169,11 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
           }
         } catch {
           chip.textContent = '会话';
-          chip.href = buildLoginUrl();
+          chip.href = loginUrl;
           chip.className = 'chip session-chip session-chip--guest';
           if (authNav) {
             authNav.textContent = '登录';
-            authNav.href = buildLoginUrl();
+            authNav.href = loginUrl;
             authNav.dataset.authState = 'guest';
             if (window.location.pathname.endsWith('/login/')) {
               authNav.setAttribute('aria-current', 'page');
@@ -226,7 +188,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
         const { signOut } = await loadAuthModule();
         await signOut();
         await refreshSessionChip();
-        window.location.assign(buildLoginUrl());
+        window.location.assign(loginUrl);
       }
 
       // 顶栏登录入口会根据登录状态在“登录”和“退出”之间切换，避免已登录时还看到登录按钮。

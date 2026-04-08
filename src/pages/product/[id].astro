@@ -135,6 +135,7 @@ const { product } = Astro.props as { product: Product };
 
 
   <script type="module" is:inline>
+    import { buildLoginUrl } from '/aprice/auth-redirect.js';
     import { recordRecentView, resolveBase, fetchAllStores, fetchNearbyPrices, fetchPricesForProduct, formatDistance, formatYen, geolocate } from '/aprice/browser.js';
     import { getCurrentUser, savePersonalLog, toggleFavorite } from '/aprice/browser-auth.js';
 
@@ -173,33 +174,17 @@ const { product } = Astro.props as { product: Product };
 
     let stores = [];
     let activeStoreId = '';
-    const loginPath = resolveBase('login/');
+    const loginHrefBase = resolveBase('login/');
+    const loginPath = new URL(loginHrefBase, window.location.origin).pathname;
     const basePath = new URL(resolveBase(''), window.location.origin).pathname;
-    const loginRoutePath = new URL(loginPath, window.location.origin).pathname;
-
-    function normalizeInternalRedirectTarget(value) {
-      const raw = String(value || '').trim();
-      if (!raw) return '';
-
-      try {
-        const parsed = new URL(raw, window.location.origin);
-        if (parsed.origin !== window.location.origin) return '';
-        if (!parsed.pathname.startsWith(basePath)) return '';
-        if (parsed.pathname === loginRoutePath) return '';
-        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-      } catch {
-        return '';
-      }
-    }
-
-    function buildLoginUrl() {
-      const loginUrl = new URL(loginPath, window.location.origin);
-      const currentTarget = normalizeInternalRedirectTarget(`${window.location.pathname}${window.location.search}${window.location.hash}`);
-      if (currentTarget) {
-        loginUrl.searchParams.set('redirect', currentTarget);
-      }
-      return `${loginUrl.pathname}${loginUrl.search}${loginUrl.hash}`;
-    }
+    const currentTarget = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const loginUrl = buildLoginUrl({
+      origin: window.location.origin,
+      loginHref: loginHrefBase,
+      currentUrl: currentTarget,
+      basePath,
+      loginPath,
+    });
 
     function toTime(value) {
       const time = new Date(value || 0).getTime();
@@ -460,7 +445,7 @@ const { product } = Astro.props as { product: Product };
       const user = await getCurrentUser();
       if (!user) {
         if (favoriteStatus) favoriteStatus.textContent = '请登录后再添加商品收藏。';
-        window.location.assign(buildLoginUrl());
+        window.location.assign(loginUrl);
         return;
       }
 
@@ -478,7 +463,7 @@ const { product } = Astro.props as { product: Product };
       const user = await getCurrentUser();
       if (!user) {
         if (favoriteStatus) favoriteStatus.textContent = '请登录后再添加门店收藏。';
-        window.location.assign(buildLoginUrl());
+        window.location.assign(loginUrl);
         return;
       }
 
@@ -506,7 +491,7 @@ const { product } = Astro.props as { product: Product };
       const user = await getCurrentUser();
       if (!user) {
         if (favoriteStatus) favoriteStatus.textContent = '请登录后再添加门店收藏。';
-        window.location.assign(buildLoginUrl());
+        window.location.assign(loginUrl);
         return;
       }
 
@@ -541,7 +526,7 @@ const { product } = Astro.props as { product: Product };
       const user = await getCurrentUser();
       if (!user) {
         status.textContent = '请登录后再记录。';
-        window.location.assign(buildLoginUrl());
+        window.location.assign(loginUrl);
         return;
       }
 

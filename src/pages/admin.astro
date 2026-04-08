@@ -1,37 +1,16 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { buildLoginUrl } from '../lib/auth-redirect.js';
 const base = import.meta.env.BASE_URL || '/';
 const loginHrefBase = `${base}login/`;
 const loginPath = new URL(loginHrefBase, Astro.url.origin).pathname;
-const basePath = new URL(base, Astro.url.origin).pathname;
-const currentPath = Astro.url.pathname.startsWith(base) ? Astro.url.pathname : `${base}${Astro.url.pathname.replace(/^\/+/, '')}`;
-const currentTarget = `${currentPath}${Astro.url.search}${Astro.url.hash}`;
-
-function normalizeInternalRedirectTarget(value: string): string {
-  const raw = String(value || '').trim();
-  if (!raw) return '';
-
-  try {
-    const parsed = new URL(raw, Astro.url.origin);
-    if (parsed.origin !== Astro.url.origin) return '';
-    if (!parsed.pathname.startsWith(basePath)) return '';
-    if (parsed.pathname === loginPath) return '';
-    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-  } catch {
-    return '';
-  }
-}
-
-function buildLoginUrl(): string {
-  const loginUrl = new URL(loginHrefBase, Astro.url.origin);
-  const redirect = normalizeInternalRedirectTarget(currentTarget);
-  if (redirect) {
-    loginUrl.searchParams.set('redirect', redirect);
-  }
-  return `${loginUrl.pathname}${loginUrl.search}${loginUrl.hash}`;
-}
-
-const switchAccountHref = buildLoginUrl();
+const switchAccountHref = buildLoginUrl({
+  origin: Astro.url.origin,
+  loginHref: loginHrefBase,
+  currentUrl: `${Astro.url.pathname}${Astro.url.search}${Astro.url.hash}`,
+  basePath: new URL(base, Astro.url.origin).pathname,
+  loginPath,
+});
 ---
 <BaseLayout title="管理 - Aprice" description="维护商品、门店和价格记录的后台页面。">
   <section class="section section--first-workspace">
@@ -199,6 +178,7 @@ const switchAccountHref = buildLoginUrl();
   </section>
 
   <script type="module" is:inline>
+    import { buildLoginUrl } from '/aprice/auth-redirect.js';
     import { fetchAllProducts, fetchAllStores, fetchRecentPrices, resolveBase } from '/aprice/browser.js';
     import { adminDeletePrice, adminDeleteProduct, adminDeleteStore, adminUpsertPrice, adminUpsertProduct, adminUpsertStore, fetchCurrentProfile, getCurrentUser, signOut } from '/aprice/browser-auth.js';
 
@@ -225,30 +205,13 @@ const switchAccountHref = buildLoginUrl();
     const loginPath = new URL(loginHrefBase, window.location.origin).pathname;
     const basePath = new URL(base, window.location.origin).pathname;
     const currentTarget = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-
-    function normalizeInternalRedirectTarget(value) {
-      const raw = String(value || '').trim();
-      if (!raw) return '';
-
-      try {
-        const parsed = new URL(raw, window.location.origin);
-        if (parsed.origin !== window.location.origin) return '';
-        if (!parsed.pathname.startsWith(basePath)) return '';
-        if (parsed.pathname === loginPath) return '';
-        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-      } catch {
-        return '';
-      }
-    }
-
-    function buildLoginUrl() {
-      const loginUrl = new URL(loginHrefBase, window.location.origin);
-      const redirect = normalizeInternalRedirectTarget(currentTarget);
-      if (redirect) {
-        loginUrl.searchParams.set('redirect', redirect);
-      }
-      return `${loginUrl.pathname}${loginUrl.search}${loginUrl.hash}`;
-    }
+    const loginUrl = buildLoginUrl({
+      origin: window.location.origin,
+      loginHref: loginHrefBase,
+      currentUrl: currentTarget,
+      basePath,
+      loginPath,
+    });
 
     const productFields = {
       id: document.querySelector('#product-id'),
@@ -418,7 +381,7 @@ const switchAccountHref = buildLoginUrl();
         : '<div class="list__item"><div><strong>暂无价格</strong><small>请保存一条价格。</small></div><span class="meta">暂无</span></div>';
     }
 
-    switchAccountLink?.setAttribute('href', buildLoginUrl());
+    switchAccountLink?.setAttribute('href', loginUrl);
 
     async function loadData() {
       const [user, profile] = await Promise.all([getCurrentUser(), fetchCurrentProfile()]);
@@ -642,7 +605,7 @@ const switchAccountHref = buildLoginUrl();
 
     logoutButton?.addEventListener('click', async () => {
       await signOut();
-      window.location.assign(buildLoginUrl());
+      window.location.assign(loginUrl);
     });
 
     loadData();

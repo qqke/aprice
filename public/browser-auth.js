@@ -1,6 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
 import { restDelete, restGet, restInsert, restRpc } from './supabase-rest.js';
+import { normalizeInternalRedirectTarget } from './auth-redirect.js';
 import { resolveBase } from './browser.js';
 
 const runtimeConfig = globalThis.__APriceConfig || {};
@@ -41,23 +42,11 @@ function buildAuthRedirectUrl(pathname = 'login/', params = {}) {
   return url.toString();
 }
 
-function normalizeInternalRedirectTarget(value) {
-  const raw = String(value || '').trim();
-  if (!raw) return '';
-
-  try {
-    const parsed = new URL(raw, window.location.origin);
-    const basePath = new URL(resolveBase(''), window.location.origin).pathname;
-    const loginPath = new URL(resolveBase('login/'), window.location.origin).pathname;
-    if (parsed.origin !== window.location.origin) return '';
-    if (!parsed.pathname.startsWith(basePath)) return '';
-    if (parsed.pathname === loginPath) return '';
-    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-  } catch {
-    return '';
-  }
-}
-
+const authRedirectConfig = {
+  origin: window.location.origin,
+  basePath: new URL(resolveBase(''), window.location.origin).pathname,
+  loginPath: new URL(resolveBase('login/'), window.location.origin).pathname,
+};
 export async function getSession() {
   const client = await getSupabaseClient();
   const { data } = await client.auth.getSession();
@@ -76,7 +65,7 @@ export async function signUpWithEmailPassword({ email, password, redirect = '' }
     password,
     options: {
       // 注册后回到登录页，兼容 Supabase 邮箱确认链路。
-      emailRedirectTo: buildAuthRedirectUrl('login/', { redirect: normalizeInternalRedirectTarget(redirect) }),
+      emailRedirectTo: buildAuthRedirectUrl('login/', { redirect: normalizeInternalRedirectTarget(redirect, authRedirectConfig) }),
     },
   });
   if (error) throw error;
@@ -99,7 +88,7 @@ export async function sendPasswordResetEmail({ email, redirect = '' }) {
     // 找回密码后回到登录页的重置模式，便于直接更新新密码。
     emailRedirectTo: buildAuthRedirectUrl('login/', {
       mode: 'reset',
-      redirect: normalizeInternalRedirectTarget(redirect),
+      redirect: normalizeInternalRedirectTarget(redirect, authRedirectConfig),
     }),
   });
   if (error) throw error;

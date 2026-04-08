@@ -88,6 +88,7 @@ import { resolveBase } from '../lib/browser.js';
   </section>
 
   <script type="module" is:inline>
+    import { normalizeInternalRedirectTarget } from '/aprice/auth-redirect.js';
     const runtimeBase = window.__APriceConfig?.baseUrl || '/';
     function resolveBase(pathname = '') {
       const base = runtimeBase.endsWith('/') ? runtimeBase : runtimeBase + '/';
@@ -102,23 +103,11 @@ import { resolveBase } from '../lib/browser.js';
     const url = new URL(window.location.href);
     const basePath = new URL(resolveBase(''), window.location.origin).pathname;
     const loginPath = new URL(resolveBase('login/'), window.location.origin).pathname;
-
-    function normalizeInternalRedirectTarget(value) {
-      const raw = String(value || '').trim();
-      if (!raw) return '';
-
-      try {
-        const parsed = new URL(raw, window.location.origin);
-        if (parsed.origin !== window.location.origin) return '';
-        if (!parsed.pathname.startsWith(basePath)) return '';
-        if (parsed.pathname === loginPath) return '';
-        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
-      } catch {
-        return '';
-      }
-    }
-
-    const redirectTarget = normalizeInternalRedirectTarget(url.searchParams.get('redirect'));
+    const redirectTarget = normalizeInternalRedirectTarget(url.searchParams.get('redirect'), {
+      origin: window.location.origin,
+      basePath,
+      loginPath,
+    });
 
     function getPostLoginTarget() {
       return redirectTarget || resolveBase('');
@@ -572,6 +561,7 @@ import { resolveBase } from '../lib/browser.js';
     });
   </script>
 </BaseLayout>
+
 
 
 
