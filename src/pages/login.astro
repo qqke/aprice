@@ -8,7 +8,7 @@ import { resolveBase } from '../lib/browser.js';
       <div class="section__header section__header--tight">
         <div>
           <div class="eyebrow">登录 · 账号入口</div>
-          <h1 class="product-title" style="font-size: clamp(1.8rem, 3.8vw, 3rem);">邮箱密码登录后，个人数据可用。</h1>
+          <h1 class="product-title" style="font-size: clamp(1.3rem, 2vw, 1.8rem);">邮箱密码登录后，个人数据可用。</h1>
           <p class="product-sub">本页提供邮箱密码注册、登录和找回密码。</p>
         </div>
         <div class="pillrow">
@@ -88,7 +88,7 @@ import { resolveBase } from '../lib/browser.js';
   </section>
 
   <script type="module" is:inline>
-    import { normalizeInternalRedirectTarget } from '/aprice/auth-redirect.js';
+    const { normalizeInternalRedirectTarget } = await import(window.__APriceConfig?.authRedirectJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'auth-redirect.js');
     const runtimeBase = window.__APriceConfig?.baseUrl || '/';
     function resolveBase(pathname = '') {
       const base = runtimeBase.endsWith('/') ? runtimeBase : runtimeBase + '/';
@@ -114,7 +114,7 @@ import { resolveBase } from '../lib/browser.js';
     }
 
     function loadAuthModule() {
-      authModulePromise ??= import('/aprice/browser-auth.js');
+      authModulePromise ??= import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
       return authModulePromise;
     }
 
@@ -561,7 +561,6 @@ import { resolveBase } from '../lib/browser.js';
     });
   </script>
 </BaseLayout>
-
 
 
 

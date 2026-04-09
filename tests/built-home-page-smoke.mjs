@@ -12,7 +12,7 @@ const scriptEnd = html.indexOf('</script>', startMarker);
 assert.ok(scriptEnd >= 0, 'home module script end not found');
 
 let script = html.slice(scriptStart + '<script type="module">'.length, scriptEnd).trim();
-script = script.replace(/import \{([\s\S]*?)\} from '\/aprice\/browser\.js';/, `const { $1 } = await import('../public/browser.js');`);
+script = script.split("await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');").join("await import('../public/browser.js');");
 
 function makeElement(initial = {}) {
   return {
@@ -33,18 +33,17 @@ function makeElement(initial = {}) {
 }
 
 const nodes = {
+  '#home-search-form': makeElement(),
   '#home-search': makeElement({ value: '' }),
   '#home-search-button': makeElement(),
   '#search-results': makeElement(),
   '#search-status': makeElement(),
   '#geolocate-home': makeElement(),
-  '#popular-products': makeElement(),
-  '#nearby-status': makeElement({ textContent: '先选一个商品，附近价格就会在这里出现。' }),
+  '#nearby-status': makeElement({ textContent: '先搜索商品，再查看附近价格。' }),
   '#nearby-results': makeElement(),
-  '#hero-product-label': makeElement({ textContent: '加载中' }),
-  '#hero-price-label': makeElement({ textContent: '¥-- 起' }),
   '#recently-viewed': makeElement(),
   '#recent-status': makeElement(),
+  '#load-recent-prices': makeElement(),
 };
 
 const fetchLog = [];
@@ -99,7 +98,7 @@ await eval(`(async () => { ${script} })()`);
 assert.equal(fetchLog.length, 0);
 
 nodes['#home-search'].value = 'ロキソ';
-for (const handler of nodes['#home-search-button'].listeners.click || []) {
+for (const handler of nodes['#home-search-form'].listeners.submit || []) {
   await handler({ preventDefault() {} });
 }
 
@@ -109,10 +108,19 @@ await new Promise((resolve) => setTimeout(resolve, 0));
 
 assert.match(nodes['#search-status'].textContent, /找到 1 条匹配结果/);
 assert.match(nodes['#search-results'].innerHTML, /Loxonin S/);
-assert.equal(nodes['#hero-product-label'].textContent, 'Loxonin S');
-assert.match(nodes['#popular-products'].innerHTML, /Loxonin S/);
+assert.match(nodes['#nearby-status'].textContent, /暂无价格记录/);
+assert.match(nodes['#nearby-results'].innerHTML, /当前还没有价格记录/);
 assert.match(fetchLog.join('\n'), /\/rest\/v1\/products/);
+assert.match(fetchLog.join('\n'), /\/rest\/v1\/prices/);
+
+for (const handler of nodes['#load-recent-prices'].listeners.click || []) {
+  await handler();
+}
+
+await new Promise((resolve) => setTimeout(resolve, 0));
+await new Promise((resolve) => setTimeout(resolve, 0));
+
+assert.match(nodes['#recent-status'].textContent, /暂无最近价格采样/);
+assert.match(nodes['#recently-viewed'].innerHTML, /暂无采样/);
 
 console.log('built-home smoke test passed');
-
-

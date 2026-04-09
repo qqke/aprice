@@ -1,10 +1,10 @@
-﻿---
+---
 import BaseLayout from '../layouts/BaseLayout.astro';
 
 Astro.response.status = 404;
 const base = import.meta.env.BASE_URL || '/';
 ---
-<BaseLayout title="404 - Aprice" description="页面不存在。返回首页、扫码或打开个人页继续操作。">
+<BaseLayout title="404 - Aprice" description="页面不存在。返回首页、扫码或打开个人页继续操作。" bodyClass="error-page">
   <section class="hero hero--tight">
     <div class="shell hero__grid hero__grid--tight">
       <div class="hero__panel hero__panel--tight">

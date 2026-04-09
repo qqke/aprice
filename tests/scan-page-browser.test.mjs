@@ -181,6 +181,7 @@ async function main() {
 
       await page.locator('#product-page').waitFor({ state: 'attached' });
       await page.locator('.product-title').waitFor({ state: 'attached' });
+      await page.waitForFunction(() => document.querySelector('#price-list')?.textContent?.includes('Sugi Pharmacy Hiroo'));
       const heroTitle = await page.locator('.product-title').textContent();
       const priceListText = await page.locator('#price-list').textContent();
       const geoStatus = await page.locator('#geo-status').textContent();
@@ -205,4 +206,3 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-

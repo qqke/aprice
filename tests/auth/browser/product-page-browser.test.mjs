@@ -209,6 +209,8 @@ async function main() {
       });
 
       await page.goto(`${baseUrl}/aprice/product/loxonin-s/`, { waitUntil: 'networkidle' });
+      await page.locator('#product-page').waitFor({ state: 'attached' });
+      await page.locator('.product-title').waitFor({ state: 'attached' });
       const heroTitle = await page.locator('.product-title').textContent();
       const heroSub = await page.locator('.product-sub').textContent();
       const priceListText = await page.locator('#price-list').textContent();

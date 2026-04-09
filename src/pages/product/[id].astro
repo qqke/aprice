@@ -20,18 +20,18 @@ export async function getStaticPaths() {
 
 const { product } = Astro.props as { product: Product };
 ---
-<BaseLayout title={`${product.name} - Aprice`} description={`${product.name} 的门店价格、附近比价和个人记录。`}>
+<BaseLayout title={`${product.name} - Aprice`} description={`${product.name} 的门店价格、附近比价和个人记录。`} bodyClass="product-page">
   <section class="section section--first-workspace" id="product-page" data-product-id={product.id} data-product-name={product.name} data-product-brand={product.brand} data-product-pack={product.pack} data-product-barcode={product.barcode} data-product-tone={product.tone}>
     <div class="shell">
       <div class="eyebrow">商品 · 价格工作台</div>
-      <div class={`product-hero tone-${product.tone || 'sunset'}`} style="min-height: 210px;">
-        <div class="product-hero__overlay" style="gap: 10px; padding: 20px;">
+      <div class={`product-hero tone-${product.tone || 'sunset'}`} style="min-height: 170px;">
+        <div class="product-hero__overlay" style="gap: 6px; padding: 10px;">
           <div class="pillrow">
             <span class="pill">{product.category}</span>
             <span class="pill">JAN {product.barcode}</span>
             <span class="pill">{product.brand}</span>
           </div>
-          <h1 class="product-title" style="font-size: clamp(1.8rem, 4vw, 3rem);">{product.name}</h1>
+          <h1 class="product-title" style="font-size: clamp(1.15rem, 1.9vw, 1.55rem);">{product.name}</h1>
           <p class="product-sub" style="max-width: 58ch;">{product.description}</p>
           <div class="pillrow">
             <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>
@@ -41,7 +41,7 @@ const { product } = Astro.props as { product: Product };
         </div>
       </div>
 
-      <div class="grid" style="margin-top:16px;">
+      <div class="grid" style="margin-top:10px;">
         <section class="tile tile--wide tile--flow">
           <div class="section__header section__header--tight">
             <div>
@@ -50,7 +50,7 @@ const { product } = Astro.props as { product: Product };
             </div>
             <button class="button button--ghost" id="geo-sort" type="button">按当前位置排序</button>
           </div>
-          <div class="notice notice--compact" id="geo-status" style="margin-bottom:12px;">同步价格数据。</div>
+          <div class="notice notice--compact" id="geo-status" style="margin-bottom:6px;">同步价格数据。</div>
           <div class="feed" id="price-list">
             <div class="notice notice--compact">价格结果。</div>
           </div>
@@ -63,7 +63,7 @@ const { product } = Astro.props as { product: Product };
               <p>价格流之外，也能快速扫到门店分布。</p>
             </div>
           </div>
-          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">门店列表随价格更新。</div>
+          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:6px;">门店列表随价格更新。</div>
           <div class="feed" id="nearby-store-list">
             <div class="notice notice--compact">随价格更新。</div>
           </div>
@@ -83,7 +83,7 @@ const { product } = Astro.props as { product: Product };
                   <option value="">加载门店...</option>
                 </select>
               </label>
-              <div class="grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+              <div class="grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px;">
                 <label class="field">
                   <input id="personal-price" type="number" inputmode="numeric" placeholder="你的购买价" />
                 </label>
@@ -102,7 +102,7 @@ const { product } = Astro.props as { product: Product };
               <p>最低价、门店数量和最新采样。</p>
             </div>
             <div class="feed">
-              <div class="feed__item feed__item--featured" style="padding: 18px;">
+              <div class="feed__item feed__item--featured" style="padding: 10px;">
                 <div class="feed__copy">
                   <div class="feed__kicker">价格摘要</div>
                   <div class="pillrow" id="insight-pills">
@@ -135,9 +135,9 @@ const { product } = Astro.props as { product: Product };
 
 
   <script type="module" is:inline>
-    import { buildLoginUrl } from '/aprice/auth-redirect.js';
-    import { recordRecentView, resolveBase, fetchAllStores, fetchNearbyPrices, fetchPricesForProduct, formatDistance, formatYen, geolocate } from '/aprice/browser.js';
-    import { getCurrentUser, savePersonalLog, toggleFavorite } from '/aprice/browser-auth.js';
+    const { buildLoginUrl } = await import(window.__APriceConfig?.authRedirectJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'auth-redirect.js');
+    const { recordRecentView, resolveBase, fetchAllStores, fetchNearbyPrices, fetchPricesForProduct, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
+    const { getCurrentUser, savePersonalLog, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
 
     const page = document.querySelector('#product-page');
     const productId = page?.dataset.productId || '';
@@ -546,11 +546,9 @@ const { product } = Astro.props as { product: Product };
       }
     });
 
-    Promise.all([loadStores(), loadPrices()]);
+    await Promise.all([loadStores(), loadPrices()]);
   </script>
 </BaseLayout>
-
-
 
 
 

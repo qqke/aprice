@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
-<BaseLayout title="扫码查价 - Aprice" description="使用相机扫描 JAN 条码，或者手动输入编号进行商品搜索。">
+<BaseLayout title="扫码查价 - Aprice" description="使用相机扫描 JAN 条码，或者手动输入编号进行商品搜索。" bodyClass="scan-page">
   <section class="section">
     <div class="shell">
       <div class="hero-banner">
@@ -14,11 +14,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         </div>
       </div>
 
-      <div class="grid" style="margin-top:18px;">
+      <div class="grid" style="margin-top:10px;">
         <section class="tile tile--wide">
           <div class="stack">
             <div class="scan-frame">
-              <video id="camera" playsinline muted style="width:100%; height:100%; min-height:320px; object-fit:cover; display:block;"></video>
+              <video id="camera" playsinline muted style="width:100%; height:100%; min-height:220px; object-fit:cover; display:block;"></video>
               <canvas id="capture" hidden></canvas>
               <div class="scan-beam"></div>
             </div>
@@ -68,7 +68,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   </section>
 
   <script type="module" is:inline>
-    import { fetchProductByBarcode, resolveBase } from '/aprice/browser.js';
+    const { fetchProductByBarcode, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
 
     const video = document.querySelector('#camera');
     const capture = document.querySelector('#capture');
@@ -238,7 +238,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     startCamera();
   </script>
 </BaseLayout>
-
 
 
 

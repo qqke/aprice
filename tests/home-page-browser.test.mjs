@@ -112,7 +112,6 @@ async function startStaticServer() {
 }
 
 async function waitForText(page, selector, expectedText) {
-  // 统一等待指定节点出现目标文案，减少重复的 waitForFunction 写法。
   await page.waitForFunction(
     ([targetSelector, text]) => String(document.querySelector(targetSelector)?.textContent || '').includes(text),
     [selector, expectedText],
@@ -161,35 +160,31 @@ async function main() {
         }
       }
       assert.ok(loaded, 'homepage did not load from static server');
-      try {
-        await page.locator('#home-search').waitFor({ state: 'attached', timeout: 5000 });
-      } catch (error) {
-        const bodyText = await page.locator('body').innerText().catch(() => '');
-        const html = await page.content().catch(() => '');
-        throw new Error(`home shell did not render\nurl: ${page.url()}\nbody: ${bodyText.slice(0, 800)}\nhtml: ${html.slice(0, 800)}\n${error.message}`);
-      }
+      await page.locator('#home-search').waitFor({ state: 'attached', timeout: 5000 });
 
       assert.equal(requests.length, 0, 'homepage should not fetch REST data before interaction');
 
       await page.locator('#home-search').fill('ロキソ');
       await page.locator('#home-search-button').click();
       await waitForText(page, '#search-status', '找到 1 条匹配结果');
+      await waitForText(page, '#nearby-status', '暂无价格记录');
 
       const resultText = await page.locator('#search-results').textContent();
-      const heroLabel = await page.locator('#hero-product-label').textContent();
-      const popularText = await page.locator('#popular-products').textContent();
-      const statusText = await page.locator('#search-status').textContent();
-      const recentText = await page.locator('#recently-viewed').textContent();
+      const nearbyText = await page.locator('#nearby-results').textContent();
       const recentStatusText = await page.locator('#recent-status').textContent();
 
-      assert.match(statusText || '', /找到 1 条匹配结果/);
       assert.match(resultText || '', /Loxonin S/);
-      assert.equal(heroLabel, 'Loxonin S');
-      assert.match(popularText || '', /Loxonin S/);
+      assert.match(nearbyText || '', /当前还没有价格记录/);
       assert.match(recentStatusText || '', /点击按钮后加载最近采样/);
-      assert.match(recentText || '', /最近采样按时间线显示/);
       assert.match(requests.join('\n'), /name\.ilike/);
       assert.match(requests.join('\n'), /\/rest\/v1\/products/);
+      assert.match(requests.join('\n'), /\/rest\/v1\/prices/);
+
+      await page.locator('#load-recent-prices').click();
+      await waitForText(page, '#recent-status', '暂无最近价格采样');
+
+      const recentText = await page.locator('#recently-viewed').textContent();
+      assert.match(recentText || '', /暂无采样/);
 
       const ssrContext = await browser.newContext({ javaScriptEnabled: false });
       try {

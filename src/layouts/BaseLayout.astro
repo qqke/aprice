@@ -5,10 +5,12 @@ import { buildLoginUrl } from '../lib/auth-redirect.js';
 const {
   title = 'Aprice',
   description = '日本本地药店比价应用，支持扫码查价、附近价格对比、模糊搜索和个人价格记录。',
+  bodyClass = '',
 } = Astro.props;
 
 const base = import.meta.env.BASE_URL || '/';
 const current = Astro.url.pathname;
+const isHomePage = String(bodyClass).includes('home-page');
 const loginPath = new URL(`${base}login/`, Astro.url.origin).pathname;
 const loginHref = buildLoginUrl({
   origin: Astro.url.origin,
@@ -34,7 +36,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
-    <meta name="theme-color" content="#0b1020" />
+    <meta name="theme-color" content={isHomePage ? '#f7f9fc' : '#0b1020'} />
     <meta name="application-name" content="Aprice" />
     <meta name="generator" content={Astro.generator} />
     <link rel="icon" href={`${base}favicon.svg`} type="image/svg+xml" />
@@ -60,7 +62,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
       }
     </style>
   </head>
-  <body>
+  <body class={bodyClass}>
     <header class="topbar">
       <div class="topbar__inner">
         <a class="brand" href={base} aria-label="Aprice 首页">
@@ -89,14 +91,18 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
     </header>
     <script is:inline define:vars={{ baseUrl: base, supabaseUrl: import.meta.env.PUBLIC_SUPABASE_URL || '', supabaseAnonKey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '' }}>
       window.__APriceConfig = { baseUrl, supabaseUrl, supabaseAnonKey };
+      window.__APriceConfig.browserJsUrl = `${baseUrl}browser.js`;
+      window.__APriceConfig.browserAuthJsUrl = `${baseUrl}browser-auth.js`;
+      window.__APriceConfig.authRedirectJsUrl = `${baseUrl}auth-redirect.js`;
     </script>
 
     <main class="page">
       <slot />
     </main>
     <script type="module" is:inline>
-      import { buildLoginUrl } from '/aprice/auth-redirect.js';
       const runtimeBase = window.__APriceConfig?.baseUrl || '/';
+      const authRedirectUrl = window.__APriceConfig?.authRedirectJsUrl || `${runtimeBase}auth-redirect.js`;
+      const { buildLoginUrl } = await import(authRedirectUrl);
       function resolveBase(pathname = '') {
         const base = runtimeBase.endsWith('/') ? runtimeBase : runtimeBase + '/';
         const cleanPath = String(pathname || '').replace(/^\/+/, '');
@@ -121,7 +127,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
 
       // 顶栏会话徽章既要显示当前用户，也要跟随 Supabase 的 auth state 变化刷新。
       function loadAuthModule() {
-        authModulePromise ??= import('/aprice/browser-auth.js');
+        authModulePromise ??= import(window.__APriceConfig?.browserAuthJsUrl || `${runtimeBase}browser-auth.js`);
         return authModulePromise;
       }
 
@@ -237,20 +243,3 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
     </script>
   </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

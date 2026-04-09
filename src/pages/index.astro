@@ -1,154 +1,100 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+
+const base = import.meta.env.BASE_URL || '/';
 ---
-<BaseLayout title="Aprice - 日本本地药店比价" description="扫码、搜索、比较附近药店价格，并保存个人价格记录。">
-  
-  <section class="hero hero--tight">
-    <div class="shell hero__grid hero__grid--tight">
-      <div class="hero__panel hero__panel--tight">
-        <div class="hero__copy hero__copy--tight">
-          <div class="eyebrow">Aprice · 日本药店比价</div>
-          <h1 class="headline">查价格、比门店、记下买价。</h1>
-          <p class="lead">
-            扫码、搜索和定位共用同一份价格数据，适合在手机上快速查价和回填记录。
-          </p>
-          <div class="hero__actions hero__actions--tight">
-            <a class="button" href={`${import.meta.env.BASE_URL || '/'}scan/`}>开始扫码查价</a>
-            <a class="button button--ghost" href={`${import.meta.env.BASE_URL || '/'}me/`}>打开个人页</a>
-          </div>
-        </div>
+<BaseLayout title="Aprice - 日本本地药店比价" description="在手机上快速搜索商品、查看附近价格，并保留扫码入口。" bodyClass="home-page">
+  <section class="home-hero">
+    <div class="shell home-hero__inner">
+      <div class="home-brand">Aprice · 日本药店比价</div>
+      <h1 class="home-title">先搜，再比价。</h1>
+      <p class="home-copy">
+        在手机上输入商品名、品牌或 JAN 码，就能直接查到可比价格。扫码和个人页也都留在这里。
+      </p>
+
+      <form class="home-search" id="home-search-form">
+        <label class="field home-search__field" for="home-search">
+          <input
+            id="home-search"
+            type="search"
+            inputmode="search"
+            autocomplete="off"
+            placeholder="搜商品名、品牌或 JAN 码"
+          />
+        </label>
+        <button class="button home-search__button" id="home-search-button" type="submit">搜索</button>
+      </form>
+
+      <div class="home-actions" aria-label="快速入口">
+        <a class="button button--ghost" href={`${base}scan/`}>扫码查价</a>
+        <a class="button button--ghost" href={`${base}me/`}>个人页</a>
       </div>
 
-      <aside class="hero__panel hero__panel--tight">
-        <div class="hero__copy hero__copy--tight hero__summary">
-          <div class="section__header section__header--tight" style="margin:0;">
-            <div>
-              <h2>常用入口</h2>
-              <p>扫码、搜索和定位共用同一套价格数据。</p>
-            </div>
-            <span class="pill">在线</span>
-          </div>
+      <div class="home-links" aria-label="辅助入口">
+        <button class="home-link" id="geolocate-home" type="button">用当前位置找附近价格</button>
+        <span class="home-links__dot" aria-hidden="true">·</span>
+        <button class="home-link" id="load-recent-prices" type="button">查看最近采样</button>
+      </div>
 
-          <div class="list list--compact">
-            <div class="list__item">
-              <div>
-                <strong>扫码查价</strong>
-                <small>JAN 条码直接进入商品页。</small>
-              </div>
-              <span class="meta">扫码</span>
-            </div>
-            <div class="list__item">
-              <div>
-                <strong>模糊搜索</strong>
-                <small>商品名、品牌和假名片段都能命中。</small>
-              </div>
-              <span class="meta">搜索</span>
-            </div>
-            <div class="list__item">
-              <div>
-                <strong>附近排序</strong>
-                <small>按当前位置排序门店价格。</small>
-              </div>
-              <span class="meta">附近</span>
-            </div>
-          </div>
-
-          <div class="notice notice--compact">
-            <div>
-              <strong id="hero-product-label">尚未选择商品</strong>
-              <small id="hero-price-label">¥-- 起</small>
-            </div>
-            <span class="meta">当前</span>
-          </div>
-        </div>
-      </aside>
+      <p class="home-meta">支持商品名、品牌、假名片段和 JAN 条码。</p>
     </div>
   </section>
 
-  <section class="section section--first-workspace">
-    <div class="shell">
+  <section class="home-section">
+    <div class="shell home-section__shell">
       <div class="section__header section__header--tight">
         <div>
-          <h2>搜索</h2>
-          <p>支持商品名、品牌名、假名片段和 JAN 条码。</p>
+          <h2>搜索结果</h2>
+          <p id="search-status">输入关键词后显示匹配商品。</p>
         </div>
-        <div class="pillrow">
-          <span class="pill">名称</span>
-          <span class="pill">品牌</span>
-          <span class="pill">条码</span>
+        <span class="pill">搜索</span>
+      </div>
+      <div class="home-panel">
+        <div class="list home-results" id="search-results">
+          <div class="notice notice--compact">搜索后显示商品列表。</div>
         </div>
-      </div>
-      <div class="searchbar">
-        <label class="field" for="home-search">
-          <input id="home-search" type="search" placeholder="输入商品名或条码，例如 ロキソニン / 4987188161027" />
-        </label>
-        <button class="button" id="home-search-button" type="button">搜索</button>
-      </div>
-      <div class="divider"></div>
-      <div class="grid">
-        <section class="tile tile--wide tile--flow">
-          <div class="section__header section__header--tight">
-            <div>
-              <h3>搜索结果</h3>
-              <p id="search-status">输入商品名、品牌名或 JAN 码即可查价。</p>
-            </div>
-            <span class="pill">检索</span>
-          </div>
-          <div class="list" id="search-results">
-            <div class="notice notice--compact">搜索结果。</div>
-          </div>
-        </section>
-        <section class="tile tile--flow">
-          <div class="section__header section__header--tight">
-            <h3>热门商品</h3>
-            <p>从最近更新的几款开始。</p>
-          </div>
-          <div class="feed" id="popular-products">
-            <div class="notice notice--compact">近期更新商品。</div>
-          </div>
-        </section>
       </div>
     </div>
   </section>
 
-  <section class="section">
-    <div class="shell">
+  <section class="home-section">
+    <div class="shell home-section__shell">
       <div class="section__header section__header--tight">
         <div>
           <h2>附近比价</h2>
-          <p>打开定位后，门店价格按当前位置排序。</p>
+          <p>先选中商品，再按当前位置排序。</p>
         </div>
-        <button class="button button--ghost" id="geolocate-home" type="button">使用当前位置</button>
+        <span class="pill">附近</span>
       </div>
-      <div class="grid">
-        <section class="tile tile--wide tile--flow">
-          <div class="notice notice--compact" id="nearby-status" style="margin-bottom:12px;">选中商品后才显示附近价格。</div>
-          <div class="list" id="nearby-results">
-            <div class="notice notice--compact">选中商品后才显示附近价格。</div>
-          </div>
-        </section>
-        <section class="tile tile--flow">
-          <div class="section__header section__header--tight">
-            <div>
-              <h3>最近采样</h3>
-              <p>最近录入或更新的价格。</p>
-            </div>
-            <div class="pillrow">
-              <button class="button button--ghost" id="load-recent-prices" type="button">加载最近采样</button>
-              <span class="pill">采样</span>
-            </div>
-          </div>
-          <div class="notice notice--compact" id="recent-status" style="margin-bottom:12px;">点击按钮后加载最近采样。</div>
-          <div class="timeline" id="recently-viewed">
-            <div class="notice notice--compact">最近采样按时间线显示。</div>
-          </div>
-        </section>
+      <div class="home-panel">
+        <div class="notice notice--compact home-status" id="nearby-status">先搜索商品，再查看附近价格。</div>
+        <div class="list home-results" id="nearby-results">
+          <div class="notice notice--compact">搜索后，附近门店价格会显示在这里。</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-section home-section--last">
+    <div class="shell home-section__shell">
+      <div class="section__header section__header--tight">
+        <div>
+          <h2>最近采样</h2>
+          <p>最近录入或更新的价格。</p>
+        </div>
+        <span class="pill">采样</span>
+      </div>
+      <div class="home-panel">
+        <div class="notice notice--compact home-status" id="recent-status">点击按钮后加载最近采样。</div>
+        <div class="list home-results" id="recently-viewed">
+          <div class="notice notice--compact">最近采样会按时间显示在这里。</div>
+        </div>
       </div>
     </div>
   </section>
 
   <script type="module" is:inline>
-    import {
+    const {
       fetchNearbyPrices,
       fetchPricesForProduct,
       fetchRecentPrices,
@@ -157,102 +103,49 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       geolocate,
       resolveBase,
       searchProducts,
-    } from '/aprice/browser.js';
+    } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
 
+    const form = document.querySelector('#home-search-form');
     const input = document.querySelector('#home-search');
-    const button = document.querySelector('#home-search-button');
     const results = document.querySelector('#search-results');
     const status = document.querySelector('#search-status');
     const geolocateButton = document.querySelector('#geolocate-home');
-    const popularProducts = document.querySelector('#popular-products');
     const nearbyStatus = document.querySelector('#nearby-status');
     const nearbyResults = document.querySelector('#nearby-results');
-    const heroProductLabel = document.querySelector('#hero-product-label');
-    const heroPriceLabel = document.querySelector('#hero-price-label');
     const recentlyViewed = document.querySelector('#recently-viewed');
     const recentStatus = document.querySelector('#recent-status');
     const loadRecentButton = document.querySelector('#load-recent-prices');
 
     let activeProduct = null;
 
-    // 根据最近两次采样的差值，统一生成涨跌标签和颜色。
-    function trendMeta(delta) {
-      if (delta === null) return { label: '最新', tone: 'trend--flat', arrow: '→' };
-      if (delta === 0) return { label: '持平', tone: 'trend--flat', arrow: '→' };
-      if (delta > 0) return { label: `上涨 ${formatYen(delta)}`, tone: 'trend--up', arrow: '↑' };
-      return { label: `下跌 ${formatYen(Math.abs(delta))}`, tone: 'trend--down', arrow: '↓' };
+    function productHref(productId) {
+      return resolveBase(productId ? `product/${productId}/` : '');
     }
 
-    function productBadge(item) {
-      const seed = (item?.id || item?.barcode || item?.name || 'P').toString();
-      const sum = Array.from(seed).reduce((acc, char) => acc + char.charCodeAt(0), 0);
-      const palette = [
-        { label: '热门', tone: 'badge--mint' },
-        { label: '检索', tone: 'badge--sky' },
-        { label: '附近', tone: 'badge--sun' },
-        { label: '日本', tone: 'badge--violet' },
-        { label: '会员', tone: 'badge--leaf' },
-        { label: '最近', tone: 'badge--sand' },
-      ];
-      return palette[sum % palette.length];
-    }
-
-    function productCard(item, featured = false) {
-      if (featured) {
-        const badge = productBadge(item);
-        return `
-          <a class="feed__item feed__item--featured" href="${resolveBase(`product/${item.id}/`)}">
-            <div class="feed__copy">
-              <div class="timeline__icon ${badge.tone}">${badge.label}</div>
-              <div class="feed__kicker">热门商品</div>
-              <strong>${item.name}</strong>
-              <small>${item.brand} · ${item.pack}</small>
-            </div>
-            <div class="feed__meta">
-              <span class="pill">JAN ${item.barcode}</span>
-              <span class="price">查看</span>
-            </div>
-          </a>
-        `;
-      }
-      return `
-        <a class="feed__item" href="${resolveBase(`product/${item.id}/`)}">
+    function renderEmptyList(node, title, detail, meta) {
+      if (!node) return;
+      node.innerHTML = `
+        <div class="list__item">
           <div>
-            <strong>${item.name}</strong>
-            <small>${item.brand} · ${item.pack} · ${item.barcode}</small>
+            <strong>${title}</strong>
+            <small>${detail}</small>
           </div>
-          <span class="price">查看</span>
-        </a>
+          <span class="meta">${meta}</span>
+        </div>
       `;
     }
 
-    function renderProducts(items) {
+    function renderSearchResults(items) {
+      if (!results) return;
       if (!items.length) {
-        status.textContent = '没有找到匹配商品，请试试更短的关键词、品牌名或 JAN 码。';
-        popularProducts.innerHTML = `
-          <div class="feed__item">
-            <div>
-              <strong>暂无商品</strong>
-              <small>请录入商品数据。</small>
-            </div>
-            <span class="price">暂无</span>
-          </div>
-        `;
-        results.innerHTML = `
-          <div class="list__item">
-            <div>
-              <strong>暂无商品</strong>
-              <small>请录入商品数据。</small>
-            </div>
-            <span class="meta">暂无</span>
-          </div>
-        `;
+        activeProduct = null;
+        renderEmptyList(results, '暂无匹配商品', '换一个更短的关键词、品牌名或 JAN 码再试一次。', '空');
         return;
       }
 
-      popularProducts.innerHTML = [productCard(items[0], true), ...items.slice(1, 4).map((item) => productCard(item))].join('');
+      activeProduct = items[0];
       results.innerHTML = items.slice(0, 8).map((item) => `
-        <a class="list__item" href="${resolveBase(`product/${item.id}/`)}">
+        <a class="list__item" href="${productHref(item.id)}">
           <div>
             <strong>${item.name}</strong>
             <small>${item.brand} · ${item.pack} · ${item.barcode}</small>
@@ -260,52 +153,36 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <span class="price">查看</span>
         </a>
       `).join('');
-      activeProduct = items[0];
-      heroProductLabel.textContent = activeProduct.name;
     }
 
     async function renderNearbyForProduct(product) {
-      if (!product) return;
-      if (nearbyStatus) nearbyStatus.textContent = `读取 ${product.name} 的门店价格...`;
+      if (!product || !nearbyResults || !nearbyStatus) return;
+      nearbyStatus.textContent = `读取 ${product.name} 的门店价格...`;
       try {
         const prices = await fetchPricesForProduct(product.id);
         if (!prices.length) {
-          if (nearbyStatus) nearbyStatus.textContent = `${product.name} 还没有价格记录，请补第一笔。`;
-          nearbyResults.innerHTML = `
-            <div class="list__item">
-              <div>
-                <strong>${product.name}</strong>
-                <small>当前还没有价格记录。</small>
-              </div>
-              <span class="meta">暂无</span>
-            </div>
-          `;
-          heroPriceLabel.textContent = '¥-- 起';
+          renderEmptyList(nearbyResults, product.name, '当前还没有价格记录。', '暂无');
+          nearbyStatus.textContent = `${product.name} 暂无价格记录。`;
           return;
         }
 
-        nearbyResults.innerHTML = prices.slice(0, 4).map((row) => {
-          const badge = productBadge(row.products || row);
-          return `
-          <div class="list__item">
+        nearbyResults.innerHTML = prices.slice(0, 4).map((row) => `
+          <a class="list__item" href="${productHref(product.id)}">
             <div>
-              <div class="timeline__icon ${badge.tone} search-result__badge">${badge.label}</div>
               <strong>${row.stores?.name || 'Unknown store'}</strong>
-              <small>${row.stores?.address || ''} · ${row.stores?.hours || ''}</small>
+              <small>${row.stores?.city || ''}${row.stores?.city ? ' · ' : ''}${row.stores?.pref || ''}${row.is_member_price ? ' · 会员价' : ' · 公开价'}</small>
             </div>
-            <div style="text-align:right;">
-              <div class="price">¥${row.price_yen}</div>
-              <small>${row.is_member_price ? '会员价' : '公开价'}</small>
+            <div class="home-results__meta">
+              <div class="price">${formatYen(row.price_yen)}</div>
+              <small>${row.stores?.hours || ''}</small>
             </div>
-          </div>
-        `;
-        }).join('');
+          </a>
+        `).join('');
 
-        heroPriceLabel.textContent = `¥${Math.min(...prices.map((row) => row.price_yen))} 起`;
-        if (nearbyStatus) nearbyStatus.textContent = `${product.name} 已加载 ${prices.length} 条门店价格。`;
+        nearbyStatus.textContent = `${product.name} 已加载 ${prices.length} 条门店价格。`;
       } catch (error) {
-        heroPriceLabel.textContent = '¥-- 起';
-        if (nearbyStatus) nearbyStatus.textContent = `读取 ${product.name} 的价格失败：${error.message}`;
+        renderEmptyList(nearbyResults, '价格读取失败', '请稍后再试，或换一个商品。', '错误');
+        nearbyStatus.textContent = `读取 ${product.name} 的价格失败：${error.message}`;
       }
     }
 
@@ -313,233 +190,114 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       const query = term.trim();
       if (!query) {
         status.textContent = '输入关键词后再搜索商品。';
-        popularProducts.innerHTML = `
-          <div class="notice notice--compact">输入关键词后显示热门商品。</div>
-        `;
-        results.innerHTML = `
-          <div class="notice notice--compact">输入关键词后再搜索。</div>
-        `;
-        if (nearbyStatus) nearbyStatus.textContent = '先输入关键词，再显示附近价格。';
+        renderEmptyList(results, '等待搜索', '输入商品名、品牌名或 JAN 条码后再查价。', '空');
+        renderEmptyList(nearbyResults, '等待搜索', '选中商品后，这里会显示附近价格。', '空');
+        nearbyStatus.textContent = '先搜索商品，再查看附近价格。';
+        activeProduct = null;
         return;
       }
+
       status.textContent = `搜索“${query}”...`;
       try {
-        const items = await searchProducts(term);
-        if (query) {
-          status.textContent = items.length
-            ? `找到 ${items.length} 条匹配结果。`
-            : `没有找到“${query}”，可以换个关键词。`;
-        } else {
-          status.textContent = items.length
-            ? `已加载 ${items.length} 个商品，继续输入关键词筛选。`
-            : '当前没有商品数据，请导入商品。';
-        }
-        renderProducts(items);
+        const items = await searchProducts(query);
+        renderSearchResults(items);
         if (items.length) {
-          await renderNearbyForProduct(items[0]);
-        } else if (nearbyStatus) {
+          status.textContent = `找到 ${items.length} 条匹配结果。默认选中第一项。`;
+          void renderNearbyForProduct(activeProduct);
+        } else {
+          status.textContent = `没有找到“${query}”，可以换个关键词。`;
           nearbyStatus.textContent = '找到商品后才显示附近价格。';
+          renderEmptyList(nearbyResults, '没有可比价格', '先找到一个商品，再看附近门店。', '空');
         }
       } catch (error) {
         status.textContent = `搜索失败：${error.message}`;
-        if (nearbyStatus) nearbyStatus.textContent = '搜索失败后可重试。';
+        renderEmptyList(results, '搜索失败', '请稍后再试。', '错误');
+        nearbyStatus.textContent = '搜索失败后仍可重新尝试。';
       }
     }
 
-    button?.addEventListener('click', () => runSearch(input?.value || ''));
-    input?.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        runSearch(input.value);
-      }
-    });
-
-    geolocateButton?.addEventListener('click', async () => {
-      geolocateButton.textContent = '定位中...';
-      try {
-        const location = await geolocate();
-        status.textContent = `当前位置：${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}。`;
-        if (nearbyStatus) nearbyStatus.textContent = activeProduct ? `按当前位置排序 ${activeProduct.name}。` : '选中商品后再按当前位置排序。';
-        if (activeProduct) {
-          const rows = await fetchNearbyPrices({ productId: activeProduct.id, lat: location.lat, lng: location.lng, radiusKm: 20 });
-          nearbyResults.innerHTML = rows.length
-            ? rows.slice(0, 4).map((row) => {
-              const badge = productBadge(row.products || row);
-              return `
-              <div class="list__item">
-                <div>
-                  <div class="timeline__icon ${badge.tone} search-result__badge">${badge.label}</div>
-                  <strong>${row.stores?.name || 'Unknown store'}</strong>
-                  <small>${row.stores?.city || ''} · ${row.stores?.pref || ''} · ${row.distance_km !== null && row.distance_km !== undefined ? formatDistance(row.distance_km) : ''}</small>
-                </div>
-                <div style="text-align:right;">
-                  <div class="price">¥${row.price_yen}</div>
-                  <small>${row.is_member_price ? '会员价' : '公开价'}</small>
-                </div>
-              </div>
-            `;
-            }).join('')
-            : nearbyResults.innerHTML;
-          if (nearbyStatus) {
-            nearbyStatus.textContent = rows.length
-              ? `已按当前位置排序 ${rows.length} 条价格。`
-              : `${activeProduct.name} 在当前位置附近还没有可比价格。`;
-          }
-        }
-      } catch (error) {
-        status.textContent = `定位失败：${error.message}`;
-        if (nearbyStatus) nearbyStatus.textContent = '定位失败后仍可继续按商品名搜索。';
-      } finally {
-        geolocateButton.textContent = '使用当前位置';
-      }
-    });
-
-    function renderRecentPrices(rows) {
-      if (!recentlyViewed) return;
-      if (!rows.length) {
-        recentlyViewed.innerHTML = `
-          <div class="feed__item">
-            <div>
-              <strong>暂无采样</strong>
-              <small>插入价格记录后自动更新。</small>
-            </div>
-            <span class="price">暂无</span>
-          </div>
-        `;
-        if (recentStatus) {
-          recentStatus.textContent = '暂无最近价格采样。';
-        }
+    async function renderNearbyByLocation() {
+      if (!activeProduct) {
+        nearbyStatus.textContent = '先搜索并选中一个商品，再按当前位置排序。';
         return;
       }
 
-      const groups = new Map();
-      for (const row of rows) {
-        const productId = row.products?.id || row.product_id || 'unknown';
-        if (!groups.has(productId)) {
-          groups.set(productId, []);
+      nearbyStatus.textContent = `定位中，正在为 ${activeProduct.name} 排序...`;
+      try {
+        const location = await geolocate();
+        const rows = await fetchNearbyPrices({
+          productId: activeProduct.id,
+          lat: location.lat,
+          lng: location.lng,
+          radiusKm: 20,
+        });
+
+        if (!rows.length) {
+          renderEmptyList(nearbyResults, activeProduct.name, '当前位置附近还没有可比价格。', '暂无');
+          nearbyStatus.textContent = `${activeProduct.name} 在当前位置附近还没有可比价格。`;
+          return;
         }
-        groups.get(productId).push(row);
-      }
 
-      recentlyViewed.innerHTML = Array.from(groups.values())
-        .slice(0, 3)
-        .map((groupRows) => {
-          const [latest, second] = groupRows;
-          const delta = second ? latest.price_yen - second.price_yen : null;
-          const trend = trendMeta(delta);
-          const rowDate = latest.collected_at ? new Date(latest.collected_at).toLocaleDateString('ja-JP') : '';
-          const groupHeading = `${latest.products?.name || 'Unknown product'} · ${groupRows.length} 条`;
-          const groupMeta = `${latest.stores?.name || 'Unknown store'} · ${latest.stores?.city || ''}`;
-          const productHref = resolveBase(`product/${latest.products?.id || ''}/`);
-          const badge = productBadge(latest.products || latest);
-
-          return `
-            <div class="timeline__group">
-              <div class="timeline__group-header">
-                <div>
-                  <strong>${groupHeading}</strong>
-                  <small>${groupMeta}</small>
-                </div>
-                <span class="pill ${trend.tone}">${trend.arrow} ${trend.label}</span>
-              </div>
-              <a class="timeline__item timeline__item--featured" href="${productHref}">
-                <div class="timeline__rail">
-                  <span class="timeline__dot"></span>
-                  <span class="timeline__line"></span>
-                </div>
-                <div class="feed__copy">
-                  <div class="timeline__icon ${badge.tone}">${badge.label}</div>
-                  <div class="feed__kicker ${trend.tone}">${trend.arrow} 最近采样</div>
-                  <strong>${latest.products?.name || 'Unknown product'}</strong>
-                  <small>${latest.stores?.name || 'Unknown store'} · ${latest.stores?.city || ''} · ${latest.is_member_price ? '会员价' : '公开价'}</small>
-                </div>
-                <div class="feed__meta">
-                  <div class="price">${formatYen(latest.price_yen)}</div>
-                  <small>${rowDate}</small>
-                  <span class="pill ${trend.tone}">${trend.arrow} ${trend.label}</span>
-                </div>
-              </a>
-              ${groupRows.slice(1, 2).map((row, index) => {
-                const nextRow = groupRows[index + 2];
-                const rowTrend = trendMeta(nextRow ? row.price_yen - nextRow.price_yen : null);
-                const secondaryHref = resolveBase(`product/${row.products?.id || ''}/`);
-                return `
-                  <a class="timeline__item" href="${secondaryHref}">
-                    <div class="timeline__rail">
-                      <span class="timeline__dot"></span>
-                      <span class="timeline__line"></span>
-                    </div>
-                    <div>
-                      <strong>${row.products?.name || 'Unknown product'}</strong>
-                      <small>${row.stores?.name || 'Unknown store'} · ${row.stores?.city || ''} · ${row.is_member_price ? '会员价' : '公开价'}</small>
-                    </div>
-                    <div class="feed__meta">
-                      <span class="price">${formatYen(row.price_yen)}</span>
-                      <small class="trend__delta ${rowTrend.tone}">${rowTrend.arrow} ${rowTrend.label}</small>
-                    </div>
-                  </a>
-                `;
-              }).join('')}
+        nearbyResults.innerHTML = rows.slice(0, 4).map((row) => `
+          <a class="list__item" href="${productHref(activeProduct.id)}">
+            <div>
+              <strong>${row.stores?.name || 'Unknown store'}</strong>
+              <small>${row.stores?.city || ''}${row.stores?.city ? ' · ' : ''}${row.stores?.pref || ''}${row.distance_km !== null && row.distance_km !== undefined ? ` · ${formatDistance(row.distance_km)}` : ''}</small>
             </div>
-          `;
-        })
-        .join('');
+            <div class="home-results__meta">
+              <div class="price">${formatYen(row.price_yen)}</div>
+              <small>${row.is_member_price ? '会员价' : '公开价'}</small>
+            </div>
+          </a>
+        `).join('');
 
-      if (recentStatus) {
-        recentStatus.textContent = `已读取 ${rows.length} 条最近价格采样，按 ${groups.size} 个商品分组显示。`;
+        nearbyStatus.textContent = `已按当前位置排序 ${rows.length} 条价格。`;
+      } catch (error) {
+        nearbyStatus.textContent = `定位失败：${error.message}`;
       }
     }
+
     async function loadRecentPrices() {
-      if (recentStatus) recentStatus.textContent = '最近价格采样准备中...';
+      if (!recentStatus || !recentlyViewed) return;
+      recentStatus.textContent = '最近价格采样加载中...';
       try {
         const rows = await fetchRecentPrices(6);
-        renderRecentPrices(rows);
-      } catch (error) {
-        if (recentStatus) recentStatus.textContent = `最近价格读取失败：${error.message}`;
-        recentlyViewed.innerHTML = `
-          <div class="feed__item">
+        if (!rows.length) {
+          renderEmptyList(recentlyViewed, '暂无采样', '插入价格记录后这里会自动更新。', '空');
+          recentStatus.textContent = '暂无最近价格采样。';
+          return;
+        }
+
+        recentlyViewed.innerHTML = rows.slice(0, 6).map((row) => `
+          <a class="list__item" href="${productHref(row.products?.id || row.product_id || '')}">
             <div>
-              <strong>价格读取失败</strong>
-              <small>请检查后端连接和表权限。</small>
+              <strong>${row.products?.name || 'Unknown product'}</strong>
+              <small>${row.stores?.name || 'Unknown store'}${row.stores?.city ? ` · ${row.stores.city}` : ''}${row.is_member_price ? ' · 会员价' : ' · 公开价'}</small>
             </div>
-            <span class="price">error</span>
-          </div>
-        `;
+            <div class="home-results__meta">
+              <div class="price">${formatYen(row.price_yen)}</div>
+              <small>${row.collected_at ? new Date(row.collected_at).toLocaleDateString('ja-JP') : ''}</small>
+            </div>
+          </a>
+        `).join('');
+        recentStatus.textContent = `已读取 ${rows.length} 条最近价格采样。`;
+      } catch (error) {
+        renderEmptyList(recentlyViewed, '价格读取失败', '请检查后端连接和表权限。', '错误');
+        recentStatus.textContent = `最近价格读取失败：${error.message}`;
       }
     }
+
+    form?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      await runSearch(input?.value || '');
+    });
+
+    geolocateButton?.addEventListener('click', () => {
+      void renderNearbyByLocation();
+    });
 
     loadRecentButton?.addEventListener('click', () => {
       void loadRecentPrices();
     });
   </script>
 </BaseLayout>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

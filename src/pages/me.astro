@@ -7,7 +7,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <div class="eyebrow">个人 · 记录工作台</div>
       <div class="section__header section__header--tight">
         <div>
-          <h1 class="product-title" style="font-size: clamp(1.8rem, 3.6vw, 2.8rem);">你的价格历史和收藏，都在一处。</h1>
+          <h1 class="product-title" style="font-size: clamp(1.25rem, 2vw, 1.75rem);">你的价格历史和收藏，都在一处。</h1>
           <p class="product-sub">登录后可记录购买价与收藏。</p>
         </div>
         <div class="pillrow">
@@ -110,8 +110,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   </section>
 
   <script type="module" is:inline>
-    import { clearRecentViews, fetchAllProducts, fetchAllStores, fetchRecentViews, formatDateTime, formatYen, resolveBase } from '/aprice/browser.js';
-    import { fetchFavorites, fetchPersonalLogs, getCurrentUser, savePersonalLog, toggleFavorite } from '/aprice/browser-auth.js';
+    const { clearRecentViews, fetchAllProducts, fetchAllStores, fetchRecentViews, formatDateTime, formatYen, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
+    const { fetchFavorites, fetchPersonalLogs, getCurrentUser, savePersonalLog, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
 
     const logsEl = document.querySelector('#my-logs');
     const recentViewsEl = document.querySelector('#recent-views');
@@ -418,8 +418,6 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     refresh();
   </script>
 </BaseLayout>
-
-
 
 
 
