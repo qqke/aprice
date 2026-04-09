@@ -1858,7 +1858,7 @@ body:not(.home-page) .brand__mark {
 }
 
 body:not(.home-page) .brand__tag {
-  color: var(--muted);
+  display: none;
 }
 
 body:not(.home-page) .nav a,
@@ -2220,4 +2220,3 @@ body.admin-page #admin-status {
     border-radius: 20px;
   }
 }
-
