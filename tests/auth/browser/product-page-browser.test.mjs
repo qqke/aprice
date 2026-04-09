@@ -208,9 +208,17 @@ async function main() {
         });
       });
 
-      await page.goto(`${baseUrl}/aprice/product/loxonin-s/`, { waitUntil: 'networkidle' });
-      await page.locator('#product-page').waitFor({ state: 'attached' });
+      const productUrl = `${baseUrl}/aprice/product/loxonin-s/`;
+      await page.goto(productUrl, { waitUntil: 'domcontentloaded' });
+      try {
+        await page.locator('#product-page').waitFor({ state: 'attached', timeout: 10000 });
+      } catch {
+        await page.goto(productUrl, { waitUntil: 'domcontentloaded' });
+        await page.locator('#product-page').waitFor({ state: 'attached', timeout: 10000 });
+      }
       await page.locator('.product-title').waitFor({ state: 'attached' });
+      await page.waitForFunction(() => String(document.querySelector('#price-list')?.textContent || '').includes('Sugi Pharmacy Hiroo'), null, { timeout: 10000 });
+      await page.waitForFunction(() => String(document.querySelector('#nearby-store-list')?.textContent || '').includes('Welcia Shibuya'), null, { timeout: 10000 });
       const heroTitle = await page.locator('.product-title').textContent();
       const heroSub = await page.locator('.product-sub').textContent();
       const priceListText = await page.locator('#price-list').textContent();

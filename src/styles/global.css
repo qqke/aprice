@@ -2032,11 +2032,14 @@ body.scan-page .section--first-workspace {
 }
 
 body.scan-page .hero-banner {
-  border-radius: 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 body.scan-page .hero-banner__inner {
-  padding: 5px;
+  padding: 0;
   gap: 4px;
 }
 
