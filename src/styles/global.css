@@ -2213,6 +2213,10 @@ body.admin-page #admin-status {
     display: none;
   }
 
+  body:not(.home-page) .nav {
+    display: none;
+  }
+
   body.home-page .topbar__inner {
     gap: 6px;
   }
@@ -2227,5 +2231,8 @@ body.admin-page #admin-status {
     border-radius: 20px;
   }
 }
+
+
+
 
 
