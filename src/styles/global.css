@@ -1864,7 +1864,7 @@ body:not(.home-page) .brand__tag {
 body:not(.home-page) .nav a,
 body:not(.home-page) .nav button,
 body:not(.home-page) .chip {
-  background: rgba(255, 255, 255, 0.94);
+  background: #fff;
   border-color: var(--border);
   color: var(--text);
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
@@ -1908,7 +1908,7 @@ body:not(.home-page) .hero-banner,
 body:not(.home-page) .product-hero,
 body:not(.home-page) .scan-card,
 body:not(.home-page) .tile {
-  background: rgba(255, 255, 255, 0.92);
+  background: #fff;
   border-color: var(--border);
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
 }
@@ -2231,6 +2231,7 @@ body.admin-page #admin-status {
     border-radius: 20px;
   }
 }
+
 
 
 
