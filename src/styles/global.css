@@ -2060,6 +2060,13 @@ body.scan-page .scan-frame {
   min-height: 184px;
 }
 
+body.scan-page .scan-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 body.scan-page .tile {
   padding: 6px;
 }
@@ -2220,3 +2227,5 @@ body.admin-page #admin-status {
     border-radius: 20px;
   }
 }
+
+

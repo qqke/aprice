@@ -18,7 +18,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <section class="tile tile--wide">
           <div class="stack">
             <div class="scan-frame">
-              <video id="camera" playsinline muted style="width:100%; height:100%; object-fit:cover; display:block;"></video>
+              <video id="camera" class="scan-video" playsinline muted></video>
               <canvas id="capture" hidden></canvas>
               <div class="scan-beam"></div>
             </div>
@@ -52,7 +52,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             <p>识别到条码后，会自动跳转到商品页。</p>
           </div>
         </div>
-        <div class="tile" style="width:100%;">
+        <div class="tile tile--wide">
           <div class="list" id="scan-result-list">
             <div class="list__item">
               <div>
@@ -238,3 +238,4 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     startCamera();
   </script>
 </BaseLayout>
+
