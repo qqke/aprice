@@ -22,49 +22,16 @@ const base = import.meta.env.BASE_URL || '/';
         </div>
       </div>
 
-      <aside class="hero__panel hero__panel--tight">
-        <div class="hero__copy hero__copy--tight hero__summary">
-          <div class="section__header section__header--tight" style="margin:0;">
-            <div>
-              <h2>可继续的入口</h2>
-              <p>站点主路径都在这里。</p>
-            </div>
-            <span class="pill">404</span>
-          </div>
-
-          <div class="list list--compact">
-            <a class="list__item" href={`${base}`}>
-              <div>
-                <strong>首页搜索</strong>
-                <small>查商品名、品牌名或 JAN 条码。</small>
-              </div>
-              <span class="meta">首页</span>
-            </a>
-            <a class="list__item" href={`${base}scan/`}>
-              <div>
-                <strong>扫码查价</strong>
-                <small>直接进入商品页看门店价格。</small>
-              </div>
-              <span class="meta">扫码</span>
-            </a>
-            <a class="list__item" href={`${base}login/`}>
-              <div>
-                <strong>账号入口</strong>
-                <small>登录后保存价格、收藏和记录。</small>
-              </div>
-              <span class="meta">登录</span>
-            </a>
-          </div>
-
-          <div class="notice notice--compact">
-            <div>
-              <strong>路径未命中</strong>
-              <small>如果这是收藏链接，可以从首页重新进入。</small>
-            </div>
-            <span class="meta">提示</span>
-          </div>
+        <div class="home-links" aria-label="可继续的入口">
+          <a class="home-link" href={`${base}`}>首页搜索</a>
+          <span class="home-links__dot">·</span>
+          <a class="home-link" href={`${base}scan/`}>扫码查价</a>
+          <span class="home-links__dot">·</span>
+          <a class="home-link" href={`${base}login/`}>账号入口</a>
         </div>
-      </aside>
+        <div class="notice notice--compact">
+          路径未命中时，先回首页或直接扫码继续。
+        </div>
     </div>
   </section>
 </BaseLayout>

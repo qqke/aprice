@@ -24,15 +24,15 @@ const { product } = Astro.props as { product: Product };
   <section class="section section--first-workspace" id="product-page" data-product-id={product.id} data-product-name={product.name} data-product-brand={product.brand} data-product-pack={product.pack} data-product-barcode={product.barcode} data-product-tone={product.tone}>
     <div class="shell">
       <div class="eyebrow">商品 · 价格工作台</div>
-      <div class={`product-hero tone-${product.tone || 'sunset'}`} style="min-height: 170px;">
-        <div class="product-hero__overlay" style="gap: 6px; padding: 10px;">
+      <div class={`product-hero tone-${product.tone || 'sunset'}`} >
+        <div class="product-hero__overlay" >
           <div class="pillrow">
             <span class="pill">{product.category}</span>
             <span class="pill">JAN {product.barcode}</span>
             <span class="pill">{product.brand}</span>
           </div>
-          <h1 class="product-title" style="font-size: clamp(1.15rem, 1.9vw, 1.55rem);">{product.name}</h1>
-          <p class="product-sub" style="max-width: 58ch;">{product.description}</p>
+          <h1 class="product-title" >{product.name}</h1>
+          <p class="product-sub" >{product.description}</p>
           <div class="pillrow">
             <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>
             <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button>
@@ -41,7 +41,7 @@ const { product } = Astro.props as { product: Product };
         </div>
       </div>
 
-      <div class="grid" style="margin-top:10px;">
+      <div class="grid" >
         <section class="tile tile--wide tile--flow">
           <div class="section__header section__header--tight">
             <div>
@@ -83,7 +83,7 @@ const { product } = Astro.props as { product: Product };
                   <option value="">加载门店...</option>
                 </select>
               </label>
-              <div class="grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px;">
+              <div class="grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
                 <label class="field">
                   <input id="personal-price" type="number" inputmode="numeric" placeholder="你的购买价" />
                 </label>
@@ -102,7 +102,7 @@ const { product } = Astro.props as { product: Product };
               <p>最低价、门店数量和最新采样。</p>
             </div>
             <div class="feed">
-              <div class="feed__item feed__item--featured" style="padding: 10px;">
+              <div class="feed__item feed__item--featured" >
                 <div class="feed__copy">
                   <div class="feed__kicker">价格摘要</div>
                   <div class="pillrow" id="insight-pills">

@@ -10,7 +10,7 @@ const {
 
 const base = import.meta.env.BASE_URL || '/';
 const current = Astro.url.pathname;
-const isHomePage = String(bodyClass).includes('home-page');
+
 const loginPath = new URL(`${base}login/`, Astro.url.origin).pathname;
 const loginHref = buildLoginUrl({
   origin: Astro.url.origin,
@@ -36,7 +36,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
-    <meta name="theme-color" content={isHomePage ? '#f7f9fc' : '#0b1020'} />
+    <meta name="theme-color" content="#f7f9fc" />
     <meta name="application-name" content="Aprice" />
     <meta name="generator" content={Astro.generator} />
     <link rel="icon" href={`${base}favicon.svg`} type="image/svg+xml" />
