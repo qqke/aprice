@@ -1841,7 +1841,7 @@ body:not(.home-page) {
 }
 
 body:not(.home-page) .topbar {
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.78);
   border-bottom-color: rgba(15, 23, 42, 0.06);
   backdrop-filter: blur(18px);
 }
@@ -1864,10 +1864,10 @@ body:not(.home-page) .brand__tag {
 body:not(.home-page) .nav a,
 body:not(.home-page) .nav button,
 body:not(.home-page) .chip {
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.94);
   border-color: var(--border);
   color: var(--text);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
 }
 
 body:not(.home-page) .nav a:hover,
@@ -1908,9 +1908,9 @@ body:not(.home-page) .hero-banner,
 body:not(.home-page) .product-hero,
 body:not(.home-page) .scan-card,
 body:not(.home-page) .tile {
-  background: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.92);
   border-color: var(--border);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
 }
 
 body:not(.home-page) .hero__panel::after,
@@ -2231,6 +2231,7 @@ body.admin-page #admin-status {
     border-radius: 20px;
   }
 }
+
 
 
 
