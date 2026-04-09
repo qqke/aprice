@@ -7,7 +7,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <div class="eyebrow">个人</div>
       <div class="section__header section__header--tight">
         <div>
-          <h1 class="product-title" style="font-size: clamp(0.98rem, 1.5vw, 1.28rem);">你的价格历史和收藏，都在一处。</h1>
+          <h1 class="product-title">你的价格历史和收藏，都在一处。</h1>
           <p class="product-sub">登录后可记录购买价与收藏。</p>
         </div>
         <div class="pillrow">
@@ -84,7 +84,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
                 <option value="">加载商品...</option>
               </select>
             </label>
-            <div class="grid" style="grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+            <div class="grid grid--two">
               <label class="field">
                 <select id="log-store">
                   <option value="">加载门店...</option>
@@ -418,7 +418,3 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     refresh();
   </script>
 </BaseLayout>
-
-
-
-

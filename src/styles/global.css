@@ -530,6 +530,10 @@ img {
   gap: 8px;
 }
 
+.grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .tile {
   grid-column: span 4;
   border-radius: 20px;
@@ -2104,6 +2108,19 @@ body.product-page .grid {
   gap: 4px;
 }
 
+body.product-page .grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body.product-page .product-grid-top {
+  margin-top: 8px;
+}
+
+body.product-page #geo-status,
+body.product-page #nearby-status {
+  margin-bottom: 6px;
+}
+
 body.product-page .section {
   padding: 12px 0;
 }
@@ -2130,6 +2147,19 @@ body.login-page .tile,
 body.login-page .notice,
 body.login-page .list__item {
   animation: none;
+}
+
+body.login-page .product-title,
+body.admin-page .product-title {
+  font-size: clamp(1rem, 1.55vw, 1.32rem);
+}
+
+body.me-page .product-title {
+  font-size: clamp(0.98rem, 1.5vw, 1.28rem);
+}
+
+body.admin-page #admin-status {
+  margin-bottom: 12px;
 }
 
 @media (max-width: 720px) {
@@ -2190,6 +2220,4 @@ body.login-page .list__item {
     border-radius: 20px;
   }
 }
-
-
 

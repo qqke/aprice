@@ -190,8 +190,9 @@ async function main() {
       try {
         const ssrPage = await ssrContext.newPage();
         await ssrPage.goto(`${baseUrl}/aprice/`, { waitUntil: 'domcontentloaded' });
-        await ssrPage.locator('#session-chip').waitFor({ state: 'attached' });
-        await ssrPage.locator('a[data-auth-nav="true"]').waitFor({ state: 'attached' });
+        const ssrHtml = await ssrPage.content();
+        assert.match(ssrHtml, /id="session-chip"/);
+        assert.match(ssrHtml, /data-auth-nav="true"/);
 
         const ssrChipUrl = new URL(await ssrPage.locator('#session-chip').getAttribute('href'), baseUrl);
         const ssrNavUrl = new URL(await ssrPage.locator('a[data-auth-nav="true"]').getAttribute('href'), baseUrl);
@@ -217,3 +218,4 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
