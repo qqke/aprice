@@ -2063,7 +2063,7 @@ body.scan-page .product-sub {
 }
 
 body.scan-page .scan-frame {
-  min-height: 184px;
+  min-height: 172px;
 }
 
 body.scan-page .scan-video {
@@ -2096,11 +2096,11 @@ body.product-page .section--first-workspace {
 }
 
 body.product-page .product-hero {
-  min-height: 120px;
+  min-height: 104px;
 }
 
 body.product-page .product-hero__overlay {
-  padding: 5px;
+  padding: 4px;
   gap: 4px;
 }
 
