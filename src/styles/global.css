@@ -1848,8 +1848,8 @@ body:not(.home-page) .topbar {
 }
 
 body:not(.home-page) .topbar__inner {
-  min-height: 54px;
-  padding-block: 5px;
+  min-height: 50px;
+  padding-block: 4px;
 }
 
 body:not(.home-page) .brand__mark {
