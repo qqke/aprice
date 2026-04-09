@@ -25,11 +25,11 @@ npm run dev
 ```env
 PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-PUBLIC_SITE_URL=https://yourname.github.io/aprice
-ASTRO_BASE_PATH=/aprice/
+PUBLIC_SITE_URL=https://outlets.stbf.online
+ASTRO_BASE_PATH=/
 ```
 
-如果你的 GitHub Pages 仓库名不是 `aprice`，请同步修改 `ASTRO_BASE_PATH`。
+如果你要部署到 GitHub Pages 的项目子路径，`ASTRO_BASE_PATH` 仍然要改回仓库名路径；如果是像 `outlets.stbf.online` 这样的自定义域名根路径，就用 `/`。
 
 ## Supabase
 

@@ -1,6 +1,8 @@
-﻿import { defineConfig } from 'astro/config';
+import { defineConfig } from 'astro/config';
 
-const repoBase = process.env.ASTRO_BASE_PATH || '/aprice/';
+const publicSiteUrl = process.env.PUBLIC_SITE_URL || '';
+const usesCustomDomain = publicSiteUrl.length > 0 && !publicSiteUrl.includes('github.io');
+const repoBase = process.env.ASTRO_BASE_PATH || (usesCustomDomain ? '/' : '/aprice/');
 
 function createDev404Plugin(basePath) {
   const normalizedBase = basePath.endsWith('/') ? basePath.slice(0, -1) : basePath;
