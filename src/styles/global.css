@@ -1863,6 +1863,11 @@ body:not(.home-page) .brand__tag {
 }
 
 body:not(.home-page) .nav {
+  display: flex;
+}
+
+body:not(.home-page) .nav a:not([data-auth-nav='true']),
+body:not(.home-page) .nav button:not([data-auth-nav='true']) {
   display: none;
 }
 
