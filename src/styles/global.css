@@ -1915,7 +1915,7 @@ body:not(.home-page) .tile {
 
 body:not(.home-page) .hero__panel::after,
 body:not(.home-page) .hero-banner::after {
-  background: radial-gradient(circle, rgba(42, 109, 245, 0.08), transparent 70%);
+  background: radial-gradient(circle, rgba(42, 109, 245, 0.04), transparent 70%);
 }
 
 body:not(.home-page) .product-hero,
@@ -2231,6 +2231,7 @@ body.admin-page #admin-status {
     border-radius: 20px;
   }
 }
+
 
 
 
