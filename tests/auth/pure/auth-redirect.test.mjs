@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-import { buildLoginUrl, normalizeInternalRedirectTarget } from '../src/lib/auth-redirect.js';
+import { buildLoginUrl, normalizeInternalRedirectTarget } from '../../../src/lib/auth-redirect.js';
 
 const origin = 'https://aprice.example';
 const basePath = '/aprice/';
