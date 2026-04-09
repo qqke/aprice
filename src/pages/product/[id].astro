@@ -250,7 +250,7 @@ const { product } = Astro.props as { product: Product };
               <div class="price-gap">
                 <span class="price-gap__label ${gapTier.bar}">${gapTier.label}</span>
                 <span class="price-gap__percent ${gapTier.tone}">${gapTier.percent}</span>
-                <span class="price-gap__track"><span class="price-gap__fill ${gapTier.bar}" style="width:${barWidth}%"></span></span>
+                <span class="price-gap__track"><span class="price-gap__fill ${gapTier.bar}" data-bar-width="${barWidth}"></span></span>
               </div>
             </div>
           </a>
@@ -265,13 +265,20 @@ const { product } = Astro.props as { product: Product };
               <span class="pill ${gapTier.tone}">${gapTier.label}</span>
               <small class="trend__delta ${gapTier.tone}">${gapTier.percent} · ${gapPercent}%</small>
               <div class="price-gap">
-                <span class="price-gap__track"><span class="price-gap__fill ${gapTier.bar}" style="width:${barWidth}%"></span></span>
+                <span class="price-gap__track"><span class="price-gap__fill ${gapTier.bar}" data-bar-width="${barWidth}"></span></span>
               </div>
             </div>
           </a>
         `;
       }).join('');
+
+      priceList.querySelectorAll('[data-bar-width]').forEach((el) => {
+        if (!(el instanceof HTMLElement)) return;
+        const width = el.dataset.barWidth;
+        if (width) el.style.setProperty('--bar-width', `${width}%`);
+      });
     }
+
     function renderNearbyStores(rows) {
       if (!nearbyStoreList) return;
       activeStoreId = rows[0]?.store_id || '';
