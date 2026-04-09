@@ -1861,6 +1861,11 @@ body:not(.home-page) .brand__tag {
   display: none;
 }
 
+body:not(.home-page) .nav {
+  display: none;
+}
+
+
 body:not(.home-page) .nav a,
 body:not(.home-page) .nav button,
 body:not(.home-page) .chip {
