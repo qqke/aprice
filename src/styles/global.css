@@ -2985,11 +2985,12 @@ body.admin-page .admin-record-actions--price {
   }
 
   body.admin-page .admin-toolbar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
+    gap: 6px;
   }
 
   body.admin-page .admin-form__row {
-    gap: 8px;
+    gap: 6px;
   }
 
   body.admin-page .admin-form__submit {
@@ -3001,7 +3002,8 @@ body.admin-page .admin-record-actions--price {
   }
 
   body.admin-page .admin-record-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
+    gap: 6px;
     width: 100%;
   }
 
