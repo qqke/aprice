@@ -30,7 +30,7 @@ const footerLinks = [
   { href: `${base}`, label: '首页' },
   { href: `${base}scan/`, label: '扫码' },
   { href: `${base}me/`, label: '我的' },
-  { href: loginHref, label: '登录', activePath: loginPath },
+  { href: loginHref, label: '登录', auth: true, activePath: loginPath },
 ];
 
 const currentYear = new Date().getFullYear();
@@ -116,7 +116,11 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
         </div>
         <nav class="footer__links" aria-label="Footer">
           {footerLinks.map((item) => (
-            <a href={item.href} aria-current={current === item.activePath || current === item.href ? 'page' : undefined}>
+            <a
+              href={item.href}
+              data-auth-footer={item.auth ? 'true' : undefined}
+              aria-current={current === item.activePath || current === item.href ? 'page' : undefined}
+            >
               {item.label}
             </a>
           ))}
@@ -139,6 +143,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
       }
       const chip = document.querySelector('#session-chip');
       const authNav = document.querySelector('[data-auth-nav]');
+      const authFooter = document.querySelector('[data-auth-footer]');
       const sessionHintKey = 'aprice:session-hint';
       let unsubscribeAuth = null;
       let authModulePromise = null;
@@ -176,6 +181,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
             chip.textContent = '未登录';
             chip.href = loginUrl;
             chip.className = 'chip session-chip session-chip--guest';
+            chip.title = '未登录';
             if (authNav) {
               authNav.textContent = '登录';
               authNav.href = loginUrl;
@@ -186,25 +192,44 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
                 authNav.removeAttribute('aria-current');
               }
             }
+            if (authFooter) {
+              authFooter.textContent = '登录';
+              authFooter.href = loginUrl;
+              authFooter.dataset.authState = 'guest';
+              if (window.location.pathname.endsWith('/login/')) {
+                authFooter.setAttribute('aria-current', 'page');
+              } else {
+                authFooter.removeAttribute('aria-current');
+              }
+            }
             return;
           }
 
           const profile = await fetchCurrentProfile();
           const isAdmin = profile?.role === 'admin';
-          const label = isAdmin ? '管理员' : (user.email || '已登录');
+          const isMobile = window.matchMedia('(max-width: 720px)').matches;
+          const label = isAdmin ? '管理员' : (isMobile ? '我的' : (user.email || '已登录'));
           chip.textContent = label;
           chip.href = isAdmin ? resolveBase('admin/') : resolveBase('me/');
           chip.className = isAdmin ? 'chip session-chip session-chip--admin' : 'chip session-chip session-chip--member';
+          chip.title = user.email || label;
           if (authNav) {
             authNav.textContent = '退出登录';
             authNav.href = '#';
             authNav.dataset.authState = 'signed-in';
             authNav.removeAttribute('aria-current');
           }
+          if (authFooter) {
+            authFooter.textContent = '退出登录';
+            authFooter.href = '#';
+            authFooter.dataset.authState = 'signed-in';
+            authFooter.removeAttribute('aria-current');
+          }
         } catch {
           chip.textContent = '会话';
           chip.href = loginUrl;
           chip.className = 'chip session-chip session-chip--guest';
+          chip.title = '会话';
           if (authNav) {
             authNav.textContent = '登录';
             authNav.href = loginUrl;
@@ -213,6 +238,16 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
               authNav.setAttribute('aria-current', 'page');
             } else {
               authNav.removeAttribute('aria-current');
+            }
+          }
+          if (authFooter) {
+            authFooter.textContent = '登录';
+            authFooter.href = loginUrl;
+            authFooter.dataset.authState = 'guest';
+            if (window.location.pathname.endsWith('/login/')) {
+              authFooter.setAttribute('aria-current', 'page');
+            } else {
+              authFooter.removeAttribute('aria-current');
             }
           }
         }
@@ -228,6 +263,12 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
       // 顶栏登录入口会根据登录状态在“登录”和“退出”之间切换，避免已登录时还看到登录按钮。
       authNav?.addEventListener('click', async (event) => {
         if (authNav.dataset.authState !== 'signed-in') return;
+        event.preventDefault();
+        await signOutAndReset();
+      });
+
+      authFooter?.addEventListener('click', async (event) => {
+        if (authFooter.dataset.authState !== 'signed-in') return;
         event.preventDefault();
         await signOutAndReset();
       });

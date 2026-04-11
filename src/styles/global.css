@@ -1597,6 +1597,10 @@ textarea:focus-visible {
 }
 
 @media (max-width: 720px) {
+  :root {
+    --mobile-footer-space: 72px;
+  }
+
   .topbar {
     padding-top: max(6px, env(safe-area-inset-top));
   }
@@ -1618,8 +1622,8 @@ textarea:focus-visible {
   .home-link,
   .footer__links a {
     min-height: 32px;
-    padding: 5px 9px;
-    font-size: 0.7rem;
+    padding: 6px 10px;
+    font-size: 0.76rem;
   }
 
   .home-hero {
@@ -1685,6 +1689,7 @@ textarea:focus-visible {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-size: 0.76rem;
   }
 }
 
@@ -2170,11 +2175,11 @@ body:not(.home-page) .tone-azure {
 
 @media (max-width: 720px) {
   .page {
-    padding-bottom: calc(104px + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--mobile-footer-space, 72px) + env(safe-area-inset-bottom));
   }
 
   body.home-page .page {
-    padding-bottom: calc(104px + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--mobile-footer-space, 72px) + env(safe-area-inset-bottom));
   }
 
   body:not(.home-page) .topbar {
@@ -2204,6 +2209,11 @@ body:not(.home-page) .tone-azure {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-size: 0.76rem;
+  }
+
+  body.home-page .session-chip {
+    font-size: 0.76rem;
   }
 
   .footer {
@@ -2240,7 +2250,7 @@ body:not(.home-page) .tone-azure {
     width: 100%;
     min-height: 44px;
     padding: 7px 6px;
-    font-size: 0.74rem;
+    font-size: 0.76rem;
     font-weight: 700;
     line-height: 1.08;
   }
@@ -2251,6 +2261,10 @@ body:not(.home-page) .tone-azure {
 }
 
 @media (max-width: 420px) {
+  :root {
+    --mobile-footer-space: 68px;
+  }
+
   .footer {
     padding-bottom: max(8px, env(safe-area-inset-bottom));
   }
@@ -2269,7 +2283,7 @@ body:not(.home-page) .tone-azure {
   .footer__links a {
     min-height: 40px;
     padding: 6px 4px;
-    font-size: 0.68rem;
+    font-size: 0.72rem;
   }
 
   .footer__meta {
