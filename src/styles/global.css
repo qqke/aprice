@@ -2392,6 +2392,19 @@ body.admin-page #admin-status {
   margin-bottom: 12px;
 }
 
+body.login-page .login-state__card,
+body.login-page #session-state .list__item,
+body.me-page .me-favorites__item,
+body.admin-page .admin-record-item {
+  align-items: start;
+}
+
+body.me-page .me-favorites__meta,
+body.admin-page .admin-record-actions--price {
+  justify-items: end;
+  gap: 6px;
+}
+
 @media (max-width: 720px) {
   body.home-page .home-hero {
     min-height: auto;
@@ -2761,7 +2774,8 @@ body.admin-page #admin-status {
   body.login-page .feed__item,
   body.admin-page .list__item,
   body.admin-page .feed__item {
-    align-items: center;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
   }
 
   body.me-page .list__item strong,
@@ -2815,8 +2829,76 @@ body.admin-page #admin-status {
     grid-column: 1 / -1;
   }
 
+  body.login-page .auth-form__actions > .button:first-child,
+  body.me-page .me-log-actions > .button:first-child {
+    grid-column: 1 / -1;
+  }
+
+  body.login-page .login-state__actions > .button:last-child,
+  body.admin-page .admin-record-actions > .button:last-child {
+    grid-column: auto;
+  }
+
+  body.login-page .auth-form__footer > .button {
+    width: 100%;
+  }
+
+  body.login-page .login-state__card,
+  body.login-page #session-state .list__item {
+    gap: 6px;
+  }
+
+  body.login-page .login-state__card .meta,
+  body.login-page #session-state .meta {
+    justify-self: start;
+  }
+
+  body.me-page .me-favorites-filter {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  body.me-page .me-favorites-sort {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.me-page .me-favorites__meta {
+    justify-items: start;
+    text-align: left;
+    width: 100%;
+  }
+
+  body.me-page .me-log-form .grid--two {
+    gap: 8px;
+  }
+
+  body.admin-page .admin-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   body.admin-page .admin-form__row {
     gap: 8px;
+  }
+
+  body.admin-page .admin-form__submit {
+    width: 100%;
+  }
+
+  body.admin-page .admin-record-item {
+    gap: 8px;
+  }
+
+  body.admin-page .admin-record-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  body.admin-page .admin-record-actions--price {
+    justify-items: stretch;
+  }
+
+  body.admin-page .admin-record-price {
+    grid-column: 1 / -1;
+    justify-self: start;
   }
 
   body.error-page .hero__grid {
