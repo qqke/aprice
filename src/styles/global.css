@@ -2330,12 +2330,9 @@ body.product-page .product-title {
 }
 
 body.product-page .product-sub {
+  max-width: 52ch;
   font-size: 0.96rem;
   line-height: 1.7;
-}
-
-body.product-page .product-sub {
-  max-width: 52ch;
 }
 
 body.product-page .grid {
