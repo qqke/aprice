@@ -2652,9 +2652,19 @@ body.admin-page #admin-status {
     background: linear-gradient(180deg, transparent, rgba(6, 10, 18, 0.72));
   }
 
+  body.product-page .product-title {
+    font-size: clamp(1.45rem, 7vw, 1.95rem);
+  }
+
+  body.product-page .product-sub {
+    max-width: none;
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+
   body.product-page .product-hero .pillrow:last-of-type {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     width: 100%;
   }
 
@@ -2666,12 +2676,24 @@ body.admin-page #admin-status {
     grid-column: 1 / -1;
   }
 
+  body.product-page .grid {
+    gap: 8px;
+  }
+
+  body.product-page .grid--two {
+    grid-template-columns: 1fr;
+  }
+
   body.product-page .feed__item--featured {
     padding: 12px;
   }
 
   body.product-page .product-grid-top {
-    margin-top: 10px;
+    margin-top: 8px;
+  }
+
+  body.product-page .section {
+    padding: 12px 0;
   }
 
   body.product-page .section__header--tight {
