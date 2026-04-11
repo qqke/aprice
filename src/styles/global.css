@@ -1597,14 +1597,16 @@ textarea:focus-visible {
 
 @media (max-width: 720px) {
   .topbar {
-    padding-top: 8px;
+    padding-top: 6px;
   }
 
   .topbar__inner {
-    width: min(100vw - 20px, 1180px);
-    min-height: 56px;
-    padding: 8px 10px;
-    gap: 8px;
+    width: min(100vw - 16px, 1180px);
+    min-height: 54px;
+    padding: 8px 10px 9px;
+    gap: 6px;
+    align-items: flex-start;
+    flex-wrap: wrap;
     border-radius: 22px;
   }
 
@@ -1616,7 +1618,7 @@ textarea:focus-visible {
   .footer__links a {
     min-height: 32px;
     padding: 5px 9px;
-    font-size: 0.72rem;
+    font-size: 0.7rem;
   }
 
   .home-hero {
@@ -1662,12 +1664,26 @@ textarea:focus-visible {
     display: none;
   }
 
+  .brand {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
   .nav {
+    flex: 1 1 100%;
     gap: 6px;
+    width: 100%;
+    justify-content: flex-start;
+    order: 3;
   }
 
   .session-chip {
+    margin-left: auto;
     min-width: auto;
+    max-width: 44vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -2153,22 +2169,36 @@ body:not(.home-page) .tone-azure {
 
 @media (max-width: 720px) {
   .footer {
-    padding-top: 14px;
-    padding-bottom: 18px;
+    padding-top: 12px;
+    padding-bottom: 14px;
+  }
+
+  .footer__inner {
+    width: min(100vw - 16px, 760px);
+    padding: 12px;
+    gap: 8px;
+    justify-items: stretch;
+  }
+
+  .footer__brand {
+    justify-items: center;
   }
 
   .footer__links {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
     width: 100%;
   }
 
   .footer__links a {
     width: 100%;
+    min-height: 32px;
   }
 
   .footer__meta {
+    flex-direction: column;
+    gap: 2px;
     font-size: 0.64rem;
   }
 }
@@ -2365,13 +2395,13 @@ body.admin-page #admin-status {
 @media (max-width: 720px) {
   body.home-page .home-hero {
     min-height: auto;
-    padding: 8px 0 6px;
+    padding: 6px 0 4px;
   }
 
   body.home-page .home-hero__inner {
     justify-items: stretch;
     text-align: left;
-    gap: 10px;
+    gap: 8px;
   }
 
   body.home-page .home-brand {
@@ -2380,13 +2410,13 @@ body.admin-page #admin-status {
 
   body.home-page .home-title {
     max-width: 12ch;
-    font-size: clamp(1.6rem, 8vw, 2.15rem);
+    font-size: clamp(1.55rem, 7.5vw, 2.05rem);
   }
 
   body.home-page .home-copy {
     max-width: none;
-    font-size: 0.78rem;
-    line-height: 1.65;
+    font-size: 0.76rem;
+    line-height: 1.55;
   }
 
   body.home-page .home-signals {
@@ -2395,19 +2425,20 @@ body.admin-page #admin-status {
   }
 
   body.home-page .home-signal {
-    min-height: 30px;
-    padding: 5px 10px;
-    font-size: 0.72rem;
+    min-height: 28px;
+    padding: 4px 9px;
+    font-size: 0.68rem;
   }
 
   body.home-page .home-search {
     grid-template-columns: 1fr;
+    gap: 8px;
   }
 
   body.home-page .home-search__button {
     width: 100%;
     min-width: 0;
-    font-size: 0.72rem;
+    font-size: 0.7rem;
   }
 
   body.home-page .home-actions,
@@ -2418,7 +2449,7 @@ body.admin-page #admin-status {
   body.home-page .home-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
     width: 100%;
   }
 
@@ -2429,7 +2460,7 @@ body.admin-page #admin-status {
   body.home-page .home-links {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
     width: 100%;
   }
 
@@ -2447,33 +2478,60 @@ body.admin-page #admin-status {
   }
 
   body.home-page .topbar__inner {
+    min-height: 54px;
+    padding: 8px 10px;
     gap: 6px;
   }
 
+  body.home-page .brand {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
   body.home-page .session-chip {
+    max-width: 44vw;
     min-width: auto;
     padding-inline: 9px;
   }
 
   body.home-page .home-panel {
-    padding: 0;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-    border-radius: 0;
+    padding: 12px;
+    border-radius: 20px;
   }
 
   body.home-page .home-section__shell {
-    gap: 8px;
+    gap: 6px;
+  }
+
+  body.home-page .section__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
   }
 
   body.home-page .section__header h2 {
-    font-size: 0.96rem;
+    font-size: 0.94rem;
   }
 
-body.home-page .section__header p {
+  body.home-page .section__header p {
     font-size: 0.74rem;
     line-height: 1.45;
+  }
+
+  body.home-page .home-results {
+    gap: 5px;
+  }
+
+  body.home-page .home-results .list__item {
+    border-radius: 14px;
+  }
+
+  body.home-page .home-results__meta {
+    gap: 2px;
+  }
+
+  body.home-page .home-status {
+    margin-bottom: 8px;
   }
 }
 
