@@ -2749,11 +2749,6 @@ body.home-page .section__header p {
     gap: 8px;
   }
 
-  body.admin-page .admin-form__row--two,
-  body.admin-page .admin-form__row--nested {
-    grid-template-columns: 1fr;
-  }
-
   body.error-page .hero__grid {
     gap: 10px;
   }
