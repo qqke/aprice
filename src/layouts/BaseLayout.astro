@@ -26,6 +26,15 @@ const nav = [
   { href: loginHref, label: '登录', auth: true, activePath: loginPath },
 ];
 
+const footerLinks = [
+  { href: `${base}`, label: '首页' },
+  { href: `${base}scan/`, label: '扫码' },
+  { href: `${base}me/`, label: '我的' },
+  { href: loginHref, label: '登录', activePath: loginPath },
+];
+
+const currentYear = new Date().getFullYear();
+
 function isCurrentNavItem(item: { href: string; activePath?: string }) {
   return item.activePath ? current === item.activePath : current === item.href;
 }
@@ -99,6 +108,25 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
     <main class="page">
       <slot />
     </main>
+    <footer class="footer" aria-label="站点页脚">
+      <div class="shell footer__inner">
+        <div class="footer__brand">
+          <div class="footer__name">搜比价</div>
+          <div class="footer__kicker">继续使用</div>
+        </div>
+        <nav class="footer__links" aria-label="Footer">
+          {footerLinks.map((item) => (
+            <a href={item.href} aria-current={current === item.activePath || current === item.href ? 'page' : undefined}>
+              {item.label}
+            </a>
+          ))}
+        </nav>
+        <div class="footer__meta">
+          <span>© {currentYear} 搜比价</span>
+          <span>搜索 · 扫码 · 比价 · 收藏</span>
+        </div>
+      </div>
+    </footer>
     <script type="module" is:inline>
       const runtimeBase = window.__APriceConfig?.baseUrl || '/';
       const authRedirectUrl = window.__APriceConfig?.authRedirectJsUrl || `${runtimeBase}auth-redirect.js`;

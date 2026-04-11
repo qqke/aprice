@@ -9,8 +9,14 @@ const base = import.meta.env.BASE_URL || '/';
       <div class="home-brand">搜比价 · 日本药店比价</div>
       <h1 class="home-title">搜比价</h1>
       <p class="home-copy">
-        在手机上输入商品名、品牌或 JAN 码，就能直接查到可比价格。扫码和个人页也都留在这里。
+        输入商品名、品牌或 JAN 码，快速找到附近门店价格。
       </p>
+
+      <div class="home-signals" aria-label="支持的搜索类型">
+        <span class="home-signal">JAN 码</span>
+        <span class="home-signal">商品名</span>
+        <span class="home-signal">品牌</span>
+      </div>
 
       <form class="home-search" id="home-search-form">
         <label class="field home-search__field" for="home-search">
