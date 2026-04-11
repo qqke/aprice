@@ -2612,43 +2612,6 @@ body.home-page .section__header p {
     padding: 12px;
   }
 
-  body.product-page .section {
-    padding: 14px 0;
-  }
-
-  body.product-page .grid {
-    gap: 8px;
-  }
-
-  body.product-page .tile,
-  body.product-page .notice,
-  body.product-page .feed__item,
-  body.product-page .list__item {
-    padding: 10px 12px;
-  }
-
-  body.product-page .feed__item {
-    align-items: center;
-  }
-
-  body.product-page .feed__item strong {
-    font-size: 0.9rem;
-  }
-
-  body.product-page .feed__item small {
-    margin-top: 4px;
-    font-size: 0.74rem;
-  }
-
-  body.product-page .price {
-    font-size: 0.92rem;
-  }
-
-  body.product-page .section__header p {
-    font-size: 0.74rem;
-    line-height: 1.45;
-  }
-
   body.product-page .product-grid-top {
     margin-top: 10px;
   }
