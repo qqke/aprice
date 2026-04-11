@@ -2204,52 +2204,54 @@ body:not(.home-page) .footer__inner {
   }
 }
 body.error-page .hero {
-  padding: 14px 0 8px;
+  padding: 12px 0 10px;
 }
 
 body.error-page .hero__grid {
   max-width: 720px;
   margin: 0 auto;
-  gap: 6px;
+  gap: 8px;
   grid-template-columns: 1fr;
 }
 
 body.error-page .hero__panel {
-  border-radius: 18px;
-  box-shadow: none;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
 }
 
 body.error-page .hero__copy {
-  padding: 8px;
-  gap: 8px;
+  padding: 12px;
+  gap: 10px;
 }
 
 body.error-page .hero__copy--tight {
-  padding: 10px;
+  padding: 12px;
 }
 
 body.error-page .headline {
   max-width: 12ch;
-  font-size: clamp(1.15rem, 2vw, 1.6rem);
+  font-size: clamp(1.4rem, 2.2vw, 1.95rem);
 }
 
 body.error-page .lead {
-  font-size: 0.68rem;
-  line-height: 1.5;
+  font-size: 0.78rem;
+  line-height: 1.6;
 }
 
 body.error-page .hero__actions {
-  gap: 5px;
+  gap: 8px;
 }
 
 body.error-page .button {
-  padding: 4px 7px;
-  font-size: 0.68rem;
+  padding: 8px 12px;
+  font-size: 0.82rem;
 }
 
 body.error-page .list__item,
 body.error-page .notice {
-  padding: 6px 7px;
+  padding: 10px 12px;
 }
 
   body.scan-page .section {
@@ -2888,6 +2890,6 @@ body.home-page .section__header p {
   }
 
   body.error-page .notice {
-    font-size: 0.76rem;
+    font-size: 0.74rem;
   }
 }
