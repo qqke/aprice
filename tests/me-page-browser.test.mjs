@@ -1,103 +1,15 @@
 import assert from 'node:assert/strict';
-import { createServer } from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
-import { extname, normalize, resolve } from 'node:path';
 
-import { chromium } from 'playwright';
-
-const distRoot = resolve(process.cwd(), 'dist');
-const browserPath = `${process.env.LOCALAPPDATA}\\ms-playwright\\chromium_headless_shell-1217\\chrome-headless-shell-win64\\chrome-headless-shell.exe`;
-
-const mimeTypes = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.css': 'text/css; charset=utf-8',
-  '.json': 'application/json; charset=utf-8',
-  '.svg': 'image/svg+xml',
-  '.txt': 'text/plain; charset=utf-8',
-  '.ico': 'image/x-icon',
-};
-
-function toFilePath(urlPath) {
-  const cleanPath = decodeURIComponent(String(urlPath || '/').split('?')[0].split('#')[0]).replace(/^\/+/, '');
-  const strippedPath = cleanPath.startsWith('aprice/') ? cleanPath.slice('aprice/'.length) : cleanPath;
-  if (strippedPath === 'lib/browser.js') return resolve(distRoot, 'browser.js');
-  if (strippedPath === 'lib/browser-auth.js') return resolve(distRoot, 'browser-auth.js');
-  if (strippedPath === 'lib/supabase-rest.js') return resolve(distRoot, 'supabase-rest.js');
-  const joined = normalize(resolve(distRoot, strippedPath || 'index.html'));
-  if (!joined.startsWith(normalize(distRoot))) return null;
-  return joined;
-}
-
-async function startStaticServer() {
-  const server = createServer(async (req, res) => {
-    try {
-      const url = new URL(req.url || '/', 'http://127.0.0.1');
-      let pathname = url.pathname;
-      if (pathname === '/' || pathname === '/aprice/') {
-        pathname = '/index.html';
-      }
-      if (pathname.endsWith('/')) {
-        pathname += 'index.html';
-      }
-
-      const filePath = toFilePath(pathname);
-      if (!filePath) {
-        res.writeHead(403);
-        res.end('Forbidden');
-        return;
-      }
-
-      let finalPath = filePath;
-      try {
-        const fileStat = await stat(finalPath);
-        if (fileStat.isDirectory()) {
-          finalPath = resolve(finalPath, 'index.html');
-        }
-      } catch {
-        if (pathname === '/index.html') {
-          throw new Error('dist not built');
-        }
-        finalPath = resolve(distRoot, 'index.html');
-      }
-
-      const body = await readFile(finalPath);
-      const type = mimeTypes[extname(finalPath)] || 'application/octet-stream';
-      res.writeHead(200, { 'Content-Type': type });
-      res.end(body);
-    } catch (error) {
-      res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end(String(error.message || error));
-    }
-  });
-
-  await new Promise((resolvePromise) => server.listen(0, '127.0.0.1', resolvePromise));
-  const address = server.address();
-  assert.ok(address && typeof address === 'object', 'static server did not start');
-  return { server, baseUrl: `http://127.0.0.1:${address.port}` };
-}
-
-async function waitForText(page, selector, expectedText) {
-  // 统一等待指定节点出现目标文案，减少重复的 waitForFunction 写法。
-  await page.waitForFunction(
-    ([targetSelector, text]) => String(document.querySelector(targetSelector)?.textContent || '').includes(text),
-    [selector, expectedText],
-  );
-}
+import { launchChromiumForTest } from './_playwright-launch.mjs';
+import { startStaticServer } from './_browser-test-server.mjs';
+import { waitForText } from './_browser-test-wait.mjs';
 
 async function main() {
   const { server, baseUrl } = await startStaticServer();
-  let browser;
+  const browser = await launchChromiumForTest('me-page');
 
   try {
-    try {
-      browser = await chromium.launch({
-        headless: true,
-        executablePath: browserPath,
-      });
-    } catch (error) {
-      console.log(`me-page browser test skipped: ${error.message}`);
-      process.exitCode = 0;
+    if (!browser) {
       return;
     }
 
@@ -164,10 +76,6 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
-
-
-
 
 
 

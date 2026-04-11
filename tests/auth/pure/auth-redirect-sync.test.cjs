@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 
-const root = 'C:/work/aprice';
+const root = process.cwd();
 const normalize = (value) => String(value).replace(/\r\n/g, '\n');
 const src = normalize(fs.readFileSync(path.join(root, 'src/lib/auth-redirect.js'), 'utf8'));
 const pub = normalize(fs.readFileSync(path.join(root, 'public/auth-redirect.js'), 'utf8'));

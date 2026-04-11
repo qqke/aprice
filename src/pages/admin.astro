@@ -43,26 +43,26 @@ const switchAccountHref = buildLoginUrl({
           </div>
           <form class="form admin-form" id="product-form">
             <div class="admin-form__row admin-form__row--two">
-              <label class="field"><input id="product-id" placeholder="id，例如 loxonin-s" /></label>
-              <label class="field"><input id="product-barcode" placeholder="barcode / JAN" /></label>
+              <label class="field"><input id="product-id" placeholder="id，例如 loxonin-s" aria-label="商品 ID" /></label>
+              <label class="field"><input id="product-barcode" placeholder="barcode / JAN" aria-label="商品条码" /></label>
             </div>
             <div class="admin-form__row admin-form__row--two">
-              <label class="field"><input id="product-name" placeholder="名称" /></label>
-              <label class="field"><input id="product-brand" placeholder="品牌" /></label>
+              <label class="field"><input id="product-name" placeholder="名称" aria-label="商品名称" /></label>
+              <label class="field"><input id="product-brand" placeholder="品牌" aria-label="商品品牌" /></label>
             </div>
             <div class="admin-form__row admin-form__row--two">
-              <label class="field"><input id="product-pack" placeholder="规格" /></label>
-              <label class="field"><input id="product-category" placeholder="分类" /></label>
+              <label class="field"><input id="product-pack" placeholder="规格" aria-label="商品规格" /></label>
+              <label class="field"><input id="product-category" placeholder="分类" aria-label="商品分类" /></label>
             </div>
             <div class="admin-form__row admin-form__row--two">
               <label class="field">
-                <select id="product-tone">
+                <select id="product-tone" aria-label="商品色调">
                   <option value="sunset">sunset</option>
                   <option value="mint">mint</option>
                   <option value="azure">azure</option>
                 </select>
               </label>
-              <label class="field"><input id="product-description" placeholder="简短描述" /></label>
+              <label class="field"><input id="product-description" placeholder="简短描述" aria-label="商品简短描述" /></label>
             </div>
             <button class="button" type="submit">保存商品</button>
           </form>
@@ -96,22 +96,22 @@ const switchAccountHref = buildLoginUrl({
           </div>
           <form class="form admin-form" id="store-form">
             <div class="admin-form__row admin-form__row--two">
-              <label class="field"><input id="store-id" placeholder="id，例如 shibuya-matsumoto" /></label>
-              <label class="field"><input id="store-name" placeholder="门店名" /></label>
+              <label class="field"><input id="store-id" placeholder="id，例如 shibuya-matsumoto" aria-label="门店 ID" /></label>
+              <label class="field"><input id="store-name" placeholder="门店名" aria-label="门店名称" /></label>
             </div>
             <div class="admin-form__row admin-form__row--two">
-              <label class="field"><input id="store-chain" placeholder="连锁名" /></label>
-              <label class="field"><input id="store-hours" placeholder="营业时间" /></label>
+              <label class="field"><input id="store-chain" placeholder="连锁名" aria-label="连锁名称" /></label>
+              <label class="field"><input id="store-hours" placeholder="营业时间" aria-label="营业时间" /></label>
             </div>
             <div class="admin-form__row admin-form__row--two">
-              <label class="field"><input id="store-address" placeholder="地址" /></label>
-              <label class="field"><input id="store-city" placeholder="城市" /></label>
+              <label class="field"><input id="store-address" placeholder="地址" aria-label="门店地址" /></label>
+              <label class="field"><input id="store-city" placeholder="城市" aria-label="城市" /></label>
             </div>
             <div class="admin-form__row admin-form__row--two">
-              <label class="field"><input id="store-pref" placeholder="都道府县" /></label>
+              <label class="field"><input id="store-pref" placeholder="都道府县" aria-label="都道府县" /></label>
               <div class="admin-form__row admin-form__row--two admin-form__row--nested">
-                <label class="field"><input id="store-lat" type="number" step="0.000001" placeholder="纬度" /></label>
-                <label class="field"><input id="store-lng" type="number" step="0.000001" placeholder="经度" /></label>
+                <label class="field"><input id="store-lat" type="number" step="0.000001" placeholder="纬度" aria-label="纬度" /></label>
+                <label class="field"><input id="store-lng" type="number" step="0.000001" placeholder="经度" aria-label="经度" /></label>
               </div>
             </div>
             <button class="button" type="submit">保存门店</button>
@@ -131,16 +131,16 @@ const switchAccountHref = buildLoginUrl({
           </div>
           <form class="form admin-form" id="price-form">
             <div class="admin-form__row admin-form__row--two">
-              <label class="field"><select id="price-product"></select></label>
-              <label class="field"><select id="price-store"></select></label>
+              <label class="field"><select id="price-product" aria-label="价格对应商品"></select></label>
+              <label class="field"><select id="price-store" aria-label="价格对应门店"></select></label>
             </div>
             <div class="admin-form__row admin-form__row--two">
-              <label class="field"><input id="price-yen" type="number" inputmode="numeric" placeholder="价格（円）" /></label>
-              <label class="field"><input id="price-source" placeholder="来源，例如 store shelf / community" /></label>
+              <label class="field"><input id="price-yen" type="number" inputmode="numeric" placeholder="价格（円）" aria-label="价格（日元）" /></label>
+              <label class="field"><input id="price-source" placeholder="来源，例如 store shelf / community" aria-label="价格来源" /></label>
             </div>
             <div class="admin-form__row admin-form__row--two">
-              <label class="field"><input id="price-note" placeholder="备注" /></label>
-              <label class="field"><input id="price-collected" type="datetime-local" /></label>
+              <label class="field"><input id="price-note" placeholder="备注" aria-label="价格备注" /></label>
+              <label class="field"><input id="price-collected" type="datetime-local" aria-label="采集时间" /></label>
             </div>
             <label class="field field--inline">
               <input id="price-member" type="checkbox" />

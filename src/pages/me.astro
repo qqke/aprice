@@ -80,23 +80,23 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           </div>
           <form class="form" id="log-form">
             <label class="field">
-              <select id="log-product">
-                <option value="">加载商品...</option>
-              </select>
-            </label>
-            <div class="grid grid--two">
-              <label class="field">
-                <select id="log-store">
-                  <option value="">加载门店...</option>
+                <select id="log-product" aria-label="商品">
+                  <option value="">加载商品...</option>
                 </select>
               </label>
+              <div class="grid grid--two">
+                <label class="field">
+                  <select id="log-store" aria-label="门店">
+                    <option value="">加载门店...</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <input id="log-price" type="number" inputmode="numeric" placeholder="价格（円）" aria-label="价格（日元）" />
+                </label>
+              </div>
               <label class="field">
-                <input id="log-price" type="number" inputmode="numeric" placeholder="价格（円）" />
+                <input id="log-note" placeholder="备注，例如会员价 / 促销 / 税后" aria-label="备注" />
               </label>
-            </div>
-            <label class="field">
-              <input id="log-note" placeholder="备注，例如会员价 / 促销 / 税后" />
-            </label>
             <div class="pillrow">
               <button class="button" type="submit">保存价格记录</button>
               <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>

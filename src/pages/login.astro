@@ -44,13 +44,13 @@ import { resolveBase } from '../lib/browser.js';
           <div id="auth-form-shell">
             <form class="form" id="auth-form">
               <label class="field" for="email" id="email-field">
-                <input id="email" type="email" placeholder="name@example.com" autocomplete="email" required />
+                <input id="email" type="email" placeholder="name@example.com" autocomplete="email" aria-label="邮箱地址" required />
               </label>
               <label class="field" for="password" id="password-field">
-                <input id="password" type="password" placeholder="至少 8 位密码" autocomplete="current-password" required />
+                <input id="password" type="password" placeholder="至少 8 位密码" autocomplete="current-password" aria-label="密码" required />
               </label>
               <label class="field" for="confirm-password" id="confirm-field" hidden>
-                <input id="confirm-password" type="password" placeholder="再次输入密码" autocomplete="new-password" />
+                <input id="confirm-password" type="password" placeholder="再次输入密码" autocomplete="new-password" aria-label="确认密码" />
               </label>
               <div class="pillrow">
                 <button class="button" type="submit" id="auth-submit">登录</button>
