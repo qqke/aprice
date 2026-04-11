@@ -2783,6 +2783,21 @@ body.home-page .section__header p {
     gap: 8px;
   }
 
+  body.login-page .section__header--tight,
+  body.admin-page .section__header--tight {
+    margin-bottom: 6px;
+  }
+
+  body.login-page .section,
+  body.admin-page .section {
+    padding: 12px 0;
+  }
+
+  body.login-page .grid,
+  body.admin-page .grid {
+    gap: 8px;
+  }
+
   body.login-page .field,
   body.admin-page .field {
     padding: 9px 10px;
