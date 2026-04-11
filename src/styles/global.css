@@ -2637,21 +2637,37 @@ body.admin-page .admin-record-actions--price {
   }
 
   body.scan-page .scan-frame {
-    min-height: 300px;
+    min-height: clamp(280px, 72vw, 390px);
   }
 
   body.scan-page .pillrow {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     width: 100%;
   }
 
-  body.scan-page .pillrow > .button:last-child {
-    grid-column: 1 / -1;
+  body.scan-page .pillrow > .button {
+    width: 100%;
   }
 
   body.scan-page .notice {
     font-size: 0.76rem;
+  }
+
+  body.scan-page .list {
+    gap: 5px;
+  }
+
+  body.scan-page .list__item {
+    padding: 9px 10px;
+  }
+
+  body.scan-page .list__item strong {
+    font-size: 0.9rem;
+  }
+
+  body.scan-page .list__item small {
+    font-size: 0.72rem;
   }
 
   body.product-page .product-hero {
@@ -2661,8 +2677,19 @@ body.admin-page .admin-record-actions--price {
   }
 
   body.product-page .product-hero__overlay {
+    padding: 12px;
     gap: 8px;
     background: linear-gradient(180deg, transparent, rgba(6, 10, 18, 0.72));
+  }
+
+  body.product-page .product-hero .pillrow:first-of-type {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  body.product-page .product-hero .pillrow:first-of-type > .pill {
+    flex: 0 1 auto;
   }
 
   body.product-page .product-title {
@@ -2679,14 +2706,11 @@ body.admin-page .admin-record-actions--price {
     display: grid;
     grid-template-columns: 1fr;
     width: 100%;
+    gap: 8px;
   }
 
   body.product-page .product-hero .pillrow:last-of-type > .button {
     width: 100%;
-  }
-
-  body.product-page .product-hero .pillrow:last-of-type > .pill {
-    grid-column: 1 / -1;
   }
 
   body.product-page .grid {
@@ -2707,6 +2731,17 @@ body.admin-page .admin-record-actions--price {
 
   body.product-page .section {
     padding: 12px 0;
+  }
+
+  body.product-page .feed {
+    gap: 6px;
+  }
+
+  body.product-page .tile,
+  body.product-page .notice,
+  body.product-page .feed__item,
+  body.product-page .list__item {
+    padding: 10px 12px;
   }
 
   body.product-page .section__header--tight {

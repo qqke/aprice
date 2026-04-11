@@ -36,7 +36,7 @@ const switchAccountHref = buildLoginUrl({
               <h2>商品</h2>
               <p>新增、更新或删除产品基础信息。</p>
             </div>
-            <div class="pillrow">
+            <div class="pillrow admin-toolbar">
               <button class="button button--ghost" id="product-reset" type="button">清空</button>
               <button class="button button--ghost" id="product-delete" type="button">删除</button>
             </div>
@@ -64,7 +64,7 @@ const switchAccountHref = buildLoginUrl({
               </label>
               <label class="field"><input id="product-description" placeholder="简短描述" aria-label="商品简短描述" /></label>
             </div>
-            <button class="button" type="submit">保存商品</button>
+            <button class="button admin-form__submit" type="submit">保存商品</button>
           </form>
         </section>
 
@@ -89,7 +89,7 @@ const switchAccountHref = buildLoginUrl({
               <h2>门店</h2>
               <p>新增、更新或删除门店坐标与营业信息。</p>
             </div>
-            <div class="pillrow">
+            <div class="pillrow admin-toolbar">
               <button class="button button--ghost" id="store-reset" type="button">清空</button>
               <button class="button button--ghost" id="store-delete" type="button">删除</button>
             </div>
@@ -114,7 +114,7 @@ const switchAccountHref = buildLoginUrl({
                 <label class="field"><input id="store-lng" type="number" step="0.000001" placeholder="经度" aria-label="经度" /></label>
               </div>
             </div>
-            <button class="button" type="submit">保存门店</button>
+            <button class="button admin-form__submit" type="submit">保存门店</button>
           </form>
         </section>
 
@@ -124,7 +124,7 @@ const switchAccountHref = buildLoginUrl({
               <h2>价格</h2>
               <p>录入公开价格或会员价，或删除最近采样。</p>
             </div>
-            <div class="pillrow">
+            <div class="pillrow admin-toolbar">
               <button class="button button--ghost" id="price-reset" type="button">清空</button>
               <button class="button button--ghost" id="price-delete" type="button">删除</button>
             </div>
@@ -146,7 +146,7 @@ const switchAccountHref = buildLoginUrl({
               <input id="price-member" type="checkbox" />
               <span>会员价</span>
             </label>
-            <button class="button" type="submit">保存价格</button>
+            <button class="button admin-form__submit" type="submit">保存价格</button>
           </form>
         </section>
 
@@ -330,12 +330,12 @@ const switchAccountHref = buildLoginUrl({
       if (!productList) return;
       productList.innerHTML = products.length
         ? products.map((item) => `
-          <div class="list__item">
+          <div class="list__item admin-record-item">
             <div>
               <strong>${item.name}</strong>
               <small>${item.barcode} · ${item.brand} · ${item.pack}</small>
             </div>
-            <div class="pillrow">
+            <div class="pillrow admin-record-actions">
               <button class="button button--ghost" data-edit-product="${item.id}" type="button">编辑</button>
               <button class="button button--ghost" data-delete-product="${item.id}" type="button">删除</button>
             </div>
@@ -348,12 +348,12 @@ const switchAccountHref = buildLoginUrl({
       if (!storeList) return;
       storeList.innerHTML = stores.length
         ? stores.map((item) => `
-          <div class="list__item">
+          <div class="list__item admin-record-item">
             <div>
               <strong>${item.name}</strong>
               <small>${item.city} · ${item.pref} · ${item.hours}</small>
             </div>
-            <div class="pillrow">
+            <div class="pillrow admin-record-actions">
               <button class="button button--ghost" data-edit-store="${item.id}" type="button">编辑</button>
               <button class="button button--ghost" data-delete-store="${item.id}" type="button">删除</button>
             </div>
@@ -366,13 +366,13 @@ const switchAccountHref = buildLoginUrl({
       if (!priceList) return;
       priceList.innerHTML = prices.length
         ? prices.map((item) => `
-          <div class="list__item">
+          <div class="list__item admin-record-item admin-record-item--price">
             <div>
               <strong>${item.products?.name || 'Unknown product'}</strong>
               <small>${item.stores?.name || 'Unknown store'} · ${item.stores?.city || ''} · ${item.is_member_price ? '会员价' : '公开价'}</small>
             </div>
-            <div class="pillrow">
-              <span class="price">¥${item.price_yen}</span>
+            <div class="pillrow admin-record-actions admin-record-actions--price">
+              <span class="price admin-record-price">¥${item.price_yen}</span>
               <button class="button button--ghost" data-edit-price="${item.id}" type="button">编辑</button>
               <button class="button button--ghost" data-delete-price="${item.id}" type="button">删除</button>
             </div>

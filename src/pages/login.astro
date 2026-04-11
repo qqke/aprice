@@ -26,23 +26,23 @@ import { resolveBase } from '../lib/browser.js';
             <span class="pill" id="auth-panel-pill">登录</span>
           </div>
 
-          <div class="stack" id="signed-in-state" hidden>
+          <div class="stack login-state" id="signed-in-state" hidden>
             <div class="notice notice--compact" id="signed-in-message">账号已登录。</div>
-            <div class="list__item">
+            <div class="list__item login-state__card">
               <div>
                 <strong id="signed-in-label">当前账号</strong>
                 <small id="signed-in-subtitle">可打开个人页。</small>
               </div>
               <span class="meta" id="signed-in-role">member</span>
             </div>
-            <div class="pillrow">
+            <div class="pillrow login-state__actions">
               <a class="button" id="signed-in-action" href={resolveBase('me/')}>打开个人页</a>
               <button class="button button--ghost" type="button" id="switch-account-button">切换账号</button>
             </div>
           </div>
 
           <div id="auth-form-shell">
-            <form class="form" id="auth-form">
+            <form class="form auth-form" id="auth-form">
               <label class="field" for="email" id="email-field">
                 <input id="email" type="email" placeholder="name@example.com" autocomplete="email" aria-label="邮箱地址" required />
               </label>
@@ -52,7 +52,7 @@ import { resolveBase } from '../lib/browser.js';
               <label class="field" for="confirm-password" id="confirm-field" hidden>
                 <input id="confirm-password" type="password" placeholder="再次输入密码" autocomplete="new-password" aria-label="确认密码" />
               </label>
-              <div class="pillrow">
+              <div class="pillrow auth-form__actions">
                 <button class="button" type="submit" id="auth-submit">登录</button>
                 <button class="button button--ghost" type="button" id="mode-toggle">切换到注册</button>
                 <button class="button button--ghost" type="button" id="forgot-toggle">忘记密码</button>
@@ -61,7 +61,7 @@ import { resolveBase } from '../lib/browser.js';
             </form>
 
             <div class="divider"></div>
-            <div class="stack">
+            <div class="stack auth-form__footer">
               <div class="notice notice--compact" id="auth-hint">登录状态已保留。</div>
               <a class="button button--ghost" href={resolveBase('')}>返回首页继续搜索</a>
             </div>

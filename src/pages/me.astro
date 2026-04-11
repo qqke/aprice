@@ -56,12 +56,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <p>商品和门店收藏集中展示。</p>
               <small class="muted" id="favorites-summary">读取收藏中...</small>
             </div>
-            <div class="pillrow" aria-label="收藏筛选">
+            <div class="pillrow me-favorites-filter" aria-label="收藏筛选">
               <button class="button button--ghost button--active" type="button" data-favorite-filter="all">全部</button>
               <button class="button button--ghost" type="button" data-favorite-filter="product">商品</button>
               <button class="button button--ghost" type="button" data-favorite-filter="store">门店</button>
             </div>
-            <div class="pillrow" aria-label="收藏排序">
+            <div class="pillrow me-favorites-sort" aria-label="收藏排序">
               <button class="button button--ghost button--active" type="button" data-favorite-sort="recent">最新添加</button>
               <button class="button button--ghost" type="button" data-favorite-sort="oldest">最早添加</button>
             </div>
@@ -78,7 +78,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <p>把刚看到的价格直接记一笔。</p>
             </div>
           </div>
-          <form class="form" id="log-form">
+          <form class="form me-log-form" id="log-form">
             <label class="field">
                 <select id="log-product" aria-label="商品">
                   <option value="">加载商品...</option>
@@ -97,7 +97,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <label class="field">
                 <input id="log-note" placeholder="备注，例如会员价 / 促销 / 税后" aria-label="备注" />
               </label>
-            <div class="pillrow">
+            <div class="pillrow me-log-actions">
               <button class="button" type="submit">保存价格记录</button>
               <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>
               <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button>
@@ -197,12 +197,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       }
       favsEl.innerHTML = filtered.length
         ? filtered.map((fav) => `
-          <div class="feed__item">
+          <div class="feed__item me-favorites__item">
             <div>
               <strong>${fav.entity_type === 'product' ? productName(fav.entity_id) : storeName(fav.entity_id)}</strong>
               <small>${fav.entity_type === 'product' ? '商品' : '门店'} · ${fav.entity_id}</small>
             </div>
-            <div class="feed__meta">
+            <div class="feed__meta me-favorites__meta">
               <span class="price">收藏</span>
               <small>${fav.created_at ? formatDateTime(fav.created_at) : ''}</small>
               <button class="button button--ghost" type="button" data-remove-favorite="${fav.id}" data-remove-favorite-type="${fav.entity_type}" data-remove-favorite-entity="${fav.entity_id}">取消</button>
@@ -225,6 +225,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       favoriteFilterButtons.forEach((button) => {
         const selected = button.dataset.favoriteFilter === favoriteFilter;
         button.classList.toggle('button--active', selected);
+        button.setAttribute('aria-pressed', selected ? 'true' : 'false');
       });
       renderFavorites(favorites);
     }
@@ -234,6 +235,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       favoriteSortButtons.forEach((button) => {
         const selected = button.dataset.favoriteSort === favoriteSort;
         button.classList.toggle('button--active', selected);
+        button.setAttribute('aria-pressed', selected ? 'true' : 'false');
       });
       renderFavorites(favorites);
     }
