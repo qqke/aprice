@@ -2695,80 +2695,28 @@ body.home-page .section__header p {
     gap: 6px;
   }
 
+  body.me-page .section,
   body.login-page .section,
   body.admin-page .section {
-    padding: 14px 0;
+    padding: 12px 0;
   }
 
+  body.me-page .grid,
   body.login-page .grid,
   body.admin-page .grid {
     gap: 8px;
   }
 
-  body.me-page .pillrow,
-  body.admin-page .pillrow {
-    width: 100%;
-  }
-
-  body.me-page .pillrow {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  body.me-page .pillrow > .button,
-  body.admin-page .pillrow > .button {
-    width: 100%;
-    min-width: 0;
-  }
-
-  body.me-page .pillrow > .button:last-child,
-  body.admin-page .pillrow > .button:last-child {
-    grid-column: auto;
-  }
-
-  body.me-page .section {
-    padding: 14px 0;
-  }
-
-  body.me-page .grid {
-    gap: 8px;
+  body.me-page .section__header--tight,
+  body.login-page .section__header--tight,
+  body.admin-page .section__header--tight {
+    margin-bottom: 6px;
   }
 
   body.me-page .tile,
   body.me-page .notice,
   body.me-page .list__item,
-  body.me-page .feed__item {
-    padding: 10px 12px;
-  }
-
-  body.me-page .list__item,
-  body.me-page .feed__item {
-    align-items: center;
-  }
-
-  body.me-page .list__item strong,
-  body.me-page .feed__item strong {
-    font-size: 0.9rem;
-  }
-
-  body.me-page .list__item small,
-  body.me-page .feed__item small {
-    margin-top: 4px;
-    font-size: 0.74rem;
-  }
-
-  body.me-page .section__header--tight {
-    margin-bottom: 6px;
-  }
-
-  body.me-page .pillrow {
-    gap: 6px;
-  }
-
-  body.me-page .button {
-    width: 100%;
-  }
-
+  body.me-page .feed__item,
   body.login-page .tile,
   body.login-page .notice,
   body.login-page .list__item,
@@ -2780,34 +2728,92 @@ body.home-page .section__header p {
     padding: 10px 12px;
   }
 
+  body.me-page .form,
   body.login-page .form,
   body.admin-page .admin-form {
     gap: 8px;
   }
 
-  body.login-page .section__header--tight,
-  body.admin-page .section__header--tight {
-    margin-bottom: 6px;
-  }
-
-  body.login-page .section,
-  body.admin-page .section {
-    padding: 12px 0;
-  }
-
-  body.login-page .grid,
-  body.admin-page .grid {
-    gap: 8px;
-  }
-
+  body.me-page .field,
   body.login-page .field,
   body.admin-page .field {
     padding: 9px 10px;
   }
 
+  body.me-page .button,
   body.login-page .button,
   body.admin-page .button {
     width: 100%;
+  }
+
+  body.me-page .list__item,
+  body.me-page .feed__item,
+  body.login-page .list__item,
+  body.login-page .feed__item,
+  body.admin-page .list__item,
+  body.admin-page .feed__item {
+    align-items: center;
+  }
+
+  body.me-page .list__item strong,
+  body.me-page .feed__item strong,
+  body.login-page .list__item strong,
+  body.login-page .feed__item strong,
+  body.admin-page .list__item strong,
+  body.admin-page .feed__item strong {
+    font-size: 0.9rem;
+  }
+
+  body.me-page .list__item small,
+  body.me-page .feed__item small,
+  body.login-page .list__item small,
+  body.login-page .feed__item small,
+  body.admin-page .list__item small,
+  body.admin-page .feed__item small {
+    margin-top: 4px;
+    font-size: 0.74rem;
+  }
+
+  body.me-page .pillrow {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+  }
+
+  body.me-page .pillrow > .button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  body.login-page #auth-form .pillrow,
+  body.login-page #signed-in-state .pillrow,
+  body.login-page .stack .pillrow,
+  body.admin-page .pillrow,
+  body.admin-page .section__header .pillrow,
+  body.admin-page .admin-form .pillrow,
+  body.admin-page .list__item .pillrow {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  body.login-page #auth-form .pillrow > .button,
+  body.login-page #signed-in-state .pillrow > .button,
+  body.login-page .stack .pillrow > .button,
+  body.admin-page .pillrow > .button,
+  body.admin-page .section__header .pillrow > .button,
+  body.admin-page .admin-form .pillrow > .button,
+  body.admin-page .list__item .pillrow > .button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  body.login-page #auth-form .pillrow > .button:last-child,
+  body.login-page #signed-in-state .pillrow > .button:last-child,
+  body.admin-page .list__item .pillrow > .button:last-child {
+    grid-column: 1 / -1;
   }
 
   body.admin-page .admin-form__row {
@@ -2817,52 +2823,6 @@ body.home-page .section__header p {
   body.admin-page .admin-form__row--two,
   body.admin-page .admin-form__row--nested {
     grid-template-columns: 1fr;
-  }
-
-  body.admin-page .list__item .pillrow {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    width: 100%;
-  }
-
-  body.login-page #auth-form .pillrow,
-  body.login-page #signed-in-state .pillrow,
-  body.login-page .stack .pillrow {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: 100%;
-  }
-
-  body.login-page #auth-form .pillrow > .button:last-child,
-  body.login-page #signed-in-state .pillrow > .button:last-child {
-    grid-column: 1 / -1;
-  }
-
-  body.login-page .button {
-    width: 100%;
-  }
-
-  body.admin-page .section__header .pillrow,
-  body.admin-page .admin-form .pillrow {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: 100%;
-  }
-
-  body.admin-page .section__header .pillrow > .button,
-  body.admin-page .admin-form .pillrow > .button {
-    width: 100%;
-    min-width: 0;
-  }
-
-  body.admin-page .admin-form__row--two,
-  body.admin-page .admin-form__row--nested {
-    grid-template-columns: 1fr;
-  }
-
-  body.admin-page .list__item .pillrow > .button:last-child {
-    grid-column: 1 / -1;
   }
 
   body.error-page .hero__grid {
