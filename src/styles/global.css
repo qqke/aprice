@@ -2252,9 +2252,9 @@ body.error-page .notice {
   padding: 6px 7px;
 }
 
-body.scan-page .section {
-  padding: 14px 0;
-}
+  body.scan-page .section {
+    padding: 12px 0;
+  }
 
 body.scan-page .section--first-workspace {
   padding-top: 6px;
@@ -2267,10 +2267,10 @@ body.scan-page .hero-banner {
   box-shadow: none;
 }
 
-body.scan-page .hero-banner__inner {
-  padding: 4px 0 0;
-  gap: 10px;
-}
+  body.scan-page .hero-banner__inner {
+    padding: 4px 0 0;
+    gap: 8px;
+  }
 
 body.scan-page .product-title {
   font-size: clamp(1.55rem, 3vw, 2.35rem);
@@ -2281,9 +2281,9 @@ body.scan-page .product-sub {
   line-height: 1.65;
 }
 
-body.scan-page .scan-frame {
-  min-height: 260px;
-}
+  body.scan-page .scan-frame {
+    min-height: 240px;
+  }
 
 body.scan-page .scan-video {
   width: 100%;
@@ -2292,23 +2292,23 @@ body.scan-page .scan-video {
   display: block;
 }
 
-body.scan-page .tile {
-  padding: 14px;
-}
+  body.scan-page .tile {
+    padding: 10px 12px;
+  }
 
-body.scan-page .grid {
-  gap: 12px;
-}
+  body.scan-page .grid {
+    gap: 8px;
+  }
 
-body.scan-page .button {
-  padding: 9px 15px;
-  font-size: 0.9rem;
-}
+  body.scan-page .button {
+    padding: 8px 12px;
+    font-size: 0.82rem;
+  }
 
-body.scan-page .notice,
-body.scan-page .field {
-  padding: 10px 12px;
-}
+  body.scan-page .notice,
+  body.scan-page .field {
+    padding: 9px 10px;
+  }
 
 body.product-page .section--first-workspace {
   padding-top: 6px;
