@@ -2151,27 +2151,6 @@ body:not(.home-page) .tone-azure {
     linear-gradient(180deg, #f4f8ff, #f7fbff 68%);
 }
 
-body.home-page .footer__links a,
-body:not(.home-page) .footer__links a {
-  font-size: 0.72rem;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
-}
-
-body.home-page .footer__name,
-body:not(.home-page) .footer__name {
-  font-size: 0.74rem;
-}
-
-body.home-page .footer__kicker,
-body:not(.home-page) .footer__kicker {
-  font-size: 0.64rem;
-}
-
-body.home-page .footer__inner,
-body:not(.home-page) .footer__inner {
-  gap: 10px;
-}
-
 @media (max-width: 720px) {
   .footer {
     padding-top: 14px;
