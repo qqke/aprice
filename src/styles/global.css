@@ -2978,10 +2978,19 @@ body.admin-page .admin-record-actions--price {
     grid-template-columns: 1fr;
     gap: 6px;
     width: 100%;
+    justify-items: stretch;
   }
 
   body.error-page .home-links__dot {
     display: none;
+  }
+
+  body.error-page .hero__actions > .button,
+  body.error-page .home-links > .home-link {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    text-align: center;
   }
 
   body.error-page .hero__actions > .button:last-child,
