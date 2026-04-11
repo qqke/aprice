@@ -2958,11 +2958,20 @@ body.admin-page .admin-record-actions--price {
   }
 
   body.me-page .me-favorites-filter {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.me-page .me-favorites-filter > .button:last-child {
+    grid-column: 1 / -1;
   }
 
   body.me-page .me-favorites-sort {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  body.me-page .me-favorites-sort > .button {
+    min-width: 0;
   }
 
   body.me-page .me-favorites__meta {
