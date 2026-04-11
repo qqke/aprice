@@ -2915,6 +2915,13 @@ body.admin-page .admin-record-actions--price {
     width: 100%;
   }
 
+  body.login-page .auth-form__actions,
+  body.login-page .login-state__actions {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    align-items: stretch;
+  }
+
   body.login-page #auth-form .pillrow > .button,
   body.login-page #signed-in-state .pillrow > .button,
   body.login-page .stack .pillrow > .button,
