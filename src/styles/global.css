@@ -2168,6 +2168,43 @@ body:not(.home-page) .tone-azure {
 }
 
 @media (max-width: 720px) {
+  body:not(.home-page) .topbar__inner {
+    min-height: 52px;
+    padding: 8px 9px 9px;
+    gap: 5px 6px;
+  }
+
+  body:not(.home-page) .brand {
+    flex: 1 1 calc(100% - 96px);
+    min-width: 0;
+  }
+
+  body:not(.home-page) .nav {
+    flex: 1 1 100%;
+    order: 3;
+    gap: 5px;
+    justify-content: flex-start;
+  }
+
+  body:not(.home-page) .nav a,
+  body:not(.home-page) .nav button {
+    flex: 1 1 calc(50% - 3px);
+    justify-content: center;
+    min-width: 0;
+    padding-inline: 8px;
+  }
+
+  body:not(.home-page) .session-chip {
+    margin-left: auto;
+    min-width: 0;
+    max-width: 42vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 720px) {
   .footer {
     padding-top: 12px;
     padding-bottom: 14px;
