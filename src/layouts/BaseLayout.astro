@@ -3,7 +3,7 @@ import '../styles/global.css';
 import { buildLoginUrl } from '../lib/auth-redirect.js';
 
 const {
-  title = 'Aprice',
+  title = '搜比价',
   description = '日本本地药店比价应用，支持扫码查价、附近价格对比、模糊搜索和个人价格记录。',
   bodyClass = '',
 } = Astro.props;
@@ -37,7 +37,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
     <meta name="theme-color" content="#f7f9fc" />
-    <meta name="application-name" content="Aprice" />
+    <meta name="application-name" content="搜比价" />
     <meta name="generator" content={Astro.generator} />
     <link rel="icon" href={`${base}favicon.svg`} type="image/svg+xml" />
     <link rel="shortcut icon" href={`${base}favicon.svg`} />
@@ -65,7 +65,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
   <body class={bodyClass}>
     <header class="topbar">
       <div class="topbar__inner">
-        <a class="brand" href={base} aria-label="Aprice 首页">
+        <a class="brand" href={base} aria-label="搜比价 首页">
           <span class="brand__mark" aria-hidden="true">
             <svg viewBox="0 0 48 48" role="presentation" focusable="false" aria-hidden="true">
               <path d="M15 36.5L24 14.5L33 36.5" fill="none" stroke="#08101b" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" />
@@ -75,7 +75,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
             </svg>
           </span>
           <span class="brand__copy">
-            <span class="brand__name">Aprice</span>
+            <span class="brand__name">搜比价</span>
             <span class="brand__tag">日本药店比价</span>
           </span>
         </a>

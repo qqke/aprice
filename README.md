@@ -1,4 +1,4 @@
-# Aprice
+# 搜比价
 
 日本本地药店比价应用，基于 Astro + Supabase，适合部署到 GitHub Pages。
 

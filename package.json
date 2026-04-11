@@ -1,7 +1,7 @@
 {
   "name": "aprice",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "astro dev",
@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
-    "astro": "^5.16.6"
+    "astro": "^6.1.5"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.8",

@@ -20,8 +20,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      ASTRO_BASE_PATH: /
-      PUBLIC_SITE_URL: https://outlets.stbf.online
+      ASTRO_BASE_PATH: ${{ secrets.ASTRO_BASE_PATH }}
+      PUBLIC_SITE_URL: ${{ secrets.PUBLIC_SITE_URL }}
       PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
       PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
     steps:
@@ -58,4 +58,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
