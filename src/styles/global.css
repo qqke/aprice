@@ -2239,6 +2239,36 @@ body:not(.home-page) .tone-azure {
     font-size: 0.64rem;
   }
 }
+
+@media (max-width: 420px) {
+  .footer {
+    padding-top: 10px;
+    padding-bottom: 12px;
+  }
+
+  .footer__inner {
+    width: calc(100vw - 12px);
+    padding: 10px 11px 11px;
+    gap: 6px;
+    border-radius: 22px;
+  }
+
+  .footer__links {
+    gap: 4px;
+  }
+
+  .footer__links a {
+    min-height: 30px;
+    padding: 4px 8px;
+    font-size: 0.68rem;
+  }
+
+  .footer__meta {
+    gap: 1px;
+    font-size: 0.62rem;
+    line-height: 1.35;
+  }
+}
 body.error-page .hero {
   padding: 12px 0 10px;
 }
