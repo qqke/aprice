@@ -1090,6 +1090,8 @@ img {
 .footer {
   margin-top: 8px;
   padding: 18px 0 22px;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(10px);
   color: var(--muted);
   font-size: 0.72rem;
   text-align: center;
@@ -1118,7 +1120,7 @@ img {
 
 .footer__name {
   color: var(--text);
-  font-size: 0.84rem;
+  font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.04em;
 }
@@ -1140,7 +1142,9 @@ img {
 }
 
 .footer__links a {
+  font-size: 0.72rem;
   font-weight: 600;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
 }
 
 .footer__links a[aria-current='page'] {
@@ -1865,13 +1869,6 @@ body.home-page .button {
   padding: 10px 16px;
 }
 
-body.home-page .button--ghost {
-  background: #fff;
-  color: var(--text);
-  border-color: var(--border);
-  box-shadow: none;
-}
-
 body.home-page .home-actions {
   width: min(100%, 620px);
 }
@@ -2069,13 +2066,6 @@ body:not(.home-page) .button {
   box-shadow: 0 12px 24px rgba(42, 109, 245, 0.16);
   font-size: 0.9rem;
   padding: 9px 15px;
-}
-
-body:not(.home-page) .button--ghost {
-  background: #fff;
-  color: var(--text);
-  border-color: var(--border);
-  box-shadow: none;
 }
 
 body:not(.home-page) .field,
