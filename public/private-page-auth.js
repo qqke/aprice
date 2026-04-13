@@ -32,6 +32,19 @@ const GATE_COPY = {
 };
 
 const STATUS_COPY = {
+  shell: {
+    guestChip: '未登录',
+    guestNav: '登录',
+    guestFooter: '登录',
+    guestTitle: '未登录',
+    signedInChip: ({ isAdmin = false, isMobile = false, email = '' } = {}) =>
+      isAdmin ? '管理员' : (isMobile ? '我的' : (email || '已登录')),
+    signedInNav: '退出登录',
+    signedInFooter: '退出登录',
+    fallbackChip: '会话',
+    adminChipTitle: '管理员',
+    signedInTitle: '已登录',
+  },
   me: {
     pageSub: '登录后可记录购买价与收藏。',
     loggedOutTitle: '请登录',
