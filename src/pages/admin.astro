@@ -1,16 +1,14 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { buildLoginUrl } from '../lib/auth-redirect.js';
+import { buildPrivatePageLoginUrl, getPrivatePageGateCopy, getPrivatePageStatusCopy } from '../lib/private-page-auth.js';
 const base = import.meta.env.BASE_URL || '/';
-const loginHrefBase = `${base}login/`;
-const loginPath = new URL(loginHrefBase, Astro.url.origin).pathname;
-const switchAccountHref = buildLoginUrl({
+const loginUrl = buildPrivatePageLoginUrl({
   origin: Astro.url.origin,
-  loginHref: loginHrefBase,
+  baseUrl: base,
   currentUrl: `${Astro.url.pathname}${Astro.url.search}${Astro.url.hash}`,
-  basePath: new URL(base, Astro.url.origin).pathname,
-  loginPath,
 });
+const switchAccountHref = loginUrl;
+const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
 ---
 <BaseLayout title="管理 - 搜比价" description="维护商品、门店和价格记录的后台页面。" bodyClass="admin-page">
   <section class="section section--first-workspace">
@@ -19,11 +17,22 @@ const switchAccountHref = buildLoginUrl({
         <div>
           <div class="eyebrow">管理</div>
           <h1 class="product-title">商品、门店、价格，一屏维护。</h1>
-          <p class="product-sub">仅管理员账号可用。通过后端调用写入基础数据和价格采样。</p>
+          <p class="product-sub">{getPrivatePageStatusCopy('admin', 'pageSub')}</p>
         </div>
         <div class="pillrow">
-          <a class="button button--ghost" id="admin-switch-account" href={switchAccountHref}>切换账号</a>
+          <a class="button button--ghost" id="admin-switch-account" href={switchAccountHref}>{getPrivatePageStatusCopy('admin', 'actionLabel')}</a>
           <button class="button button--ghost" id="admin-logout" type="button">退出登录</button>
+        </div>
+      </div>
+
+      <div class="notice notice--warning" id="admin-auth-gate">
+        <div class="stack">
+          <strong id="admin-gate-title">{adminGuestCopy.title}</strong>
+          <small id="admin-gate-description">{adminGuestCopy.description}</small>
+        </div>
+        <div class="pillrow">
+          <a class="button" id="admin-login-link" href={switchAccountHref}>{adminGuestCopy.primaryButtonLabel}</a>
+          <a class="button button--ghost" id="admin-switch-link" href={switchAccountHref}>{adminGuestCopy.secondaryButtonLabel}</a>
         </div>
       </div>
 
@@ -177,12 +186,17 @@ const switchAccountHref = buildLoginUrl({
     </div>
   </section>
 
-  <script type="module" is:inline>
-    const { buildLoginUrl } = await import(window.__APriceConfig?.authRedirectJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'auth-redirect.js');
+  <script type="module" is:inline define:vars={{ loginUrl }}>
     const { fetchAllProducts, fetchAllStores, fetchRecentPrices, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
     const { adminDeletePrice, adminDeleteProduct, adminDeleteStore, adminUpsertPrice, adminUpsertProduct, adminUpsertStore, fetchCurrentProfile, getCurrentUser, signOut } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+    const { applyPrivatePageGateCopy, getPrivatePageGateCopy, getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
 
     const status = document.querySelector('#admin-status');
+    const authGate = document.querySelector('#admin-auth-gate');
+    const gateTitle = document.querySelector('#admin-gate-title');
+    const gateDescription = document.querySelector('#admin-gate-description');
+    const loginLink = document.querySelector('#admin-login-link');
+    const switchLink = document.querySelector('#admin-switch-link');
     const accessState = document.querySelector('#admin-access');
     const logoutButton = document.querySelector('#admin-logout');
     const switchAccountLink = document.querySelector('#admin-switch-account');
@@ -200,18 +214,6 @@ const switchAccountHref = buildLoginUrl({
     const productDelete = document.querySelector('#product-delete');
     const storeDelete = document.querySelector('#store-delete');
     const priceDelete = document.querySelector('#price-delete');
-    const base = resolveBase('');
-    const loginHrefBase = resolveBase('login/');
-    const loginPath = new URL(loginHrefBase, window.location.origin).pathname;
-    const basePath = new URL(base, window.location.origin).pathname;
-    const currentTarget = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-    const loginUrl = buildLoginUrl({
-      origin: window.location.origin,
-      loginHref: loginHrefBase,
-      currentUrl: currentTarget,
-      basePath,
-      loginPath,
-    });
 
     const productFields = {
       id: document.querySelector('#product-id'),
@@ -381,18 +383,22 @@ const switchAccountHref = buildLoginUrl({
         : '<div class="list__item"><div><strong>暂无价格</strong><small>请保存一条价格。</small></div><span class="meta">暂无</span></div>';
     }
 
+    syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: false });
     switchAccountLink?.setAttribute('href', loginUrl);
 
     async function loadData() {
       const [user, profile] = await Promise.all([getCurrentUser(), fetchCurrentProfile()]);
       if (!user) {
-        if (status) status.textContent = '请登录后再进入管理页。';
+        const copy = getPrivatePageGateCopy('admin', 'guest');
+        syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
+        applyPrivatePageGateCopy({ titleEl: gateTitle, descriptionEl: gateDescription, primaryButtonEl: loginLink, secondaryButtonEl: switchLink }, copy);
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'notLoggedIn');
         if (accessState) {
           accessState.innerHTML = `
             <div class="list__item">
               <div>
-                <strong>未登录</strong>
-                <small>需要登录才能继续。</small>
+                <strong>${getPrivatePageStatusCopy('admin', 'accessLoggedOutTitle')}</strong>
+                <small>${getPrivatePageStatusCopy('admin', 'accessLoggedOutDescription')}</small>
               </div>
               <span class="meta">guest</span>
             </div>
@@ -401,13 +407,16 @@ const switchAccountHref = buildLoginUrl({
         return false;
       }
       if (profile?.role !== 'admin') {
-        if (status) status.textContent = '当前账号不是管理员，请使用管理员账号进入管理页。';
+        const copy = getPrivatePageGateCopy('admin', 'forbidden');
+        syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
+        applyPrivatePageGateCopy({ titleEl: gateTitle, descriptionEl: gateDescription, primaryButtonEl: loginLink, secondaryButtonEl: switchLink }, copy);
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'notAdmin');
         if (accessState) {
           accessState.innerHTML = `
             <div class="list__item">
               <div>
                 <strong>${profile?.email || user.email || '已登录用户'}</strong>
-                <small>当前角色不足以访问管理功能。</small>
+                <small>${getPrivatePageStatusCopy('admin', 'accessNotAdminDescription')}</small>
               </div>
               <span class="meta">${profile?.role || 'unknown'}</span>
             </div>
@@ -421,6 +430,7 @@ const switchAccountHref = buildLoginUrl({
         fetchAllStores(),
         fetchRecentPrices(12),
       ]);
+      syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: false });
       products = productItems;
       stores = storeItems;
       prices = priceItems;
@@ -429,13 +439,13 @@ const switchAccountHref = buildLoginUrl({
       renderProducts();
       renderStores();
       renderPrices();
-      if (status) status.textContent = `已登录为 ${profile.email || user.email}，可以开始维护数据。`;
+      if (status) status.textContent = getPrivatePageStatusCopy('admin', 'loaded', { email: profile.email || user.email });
       if (accessState) {
         accessState.innerHTML = `
           <div class="list__item">
             <div>
               <strong>${profile.email || user.email || 'admin'}</strong>
-              <small>管理员权限已开启。</small>
+              <small>${getPrivatePageStatusCopy('admin', 'accessAdminDescription')}</small>
             </div>
             <span class="meta">admin</span>
           </div>
@@ -457,10 +467,10 @@ const switchAccountHref = buildLoginUrl({
           tone: elValue(productFields.tone),
           description: elValue(productFields.description),
         });
-        if (status) status.textContent = '商品已保存。';
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'saveProductSuccess');
         await loadData();
       } catch (error) {
-        if (status) status.textContent = `保存商品失败：${error.message}`;
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'saveProductFailure', { message: error.message });
       }
     });
 
@@ -478,10 +488,10 @@ const switchAccountHref = buildLoginUrl({
           lng: elValue(storeFields.lng),
           hours: elValue(storeFields.hours),
         });
-        if (status) status.textContent = '门店已保存。';
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'saveStoreSuccess');
         await loadData();
       } catch (error) {
-        if (status) status.textContent = `保存门店失败：${error.message}`;
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'saveStoreFailure', { message: error.message });
       }
     });
 
@@ -498,10 +508,10 @@ const switchAccountHref = buildLoginUrl({
           collected_at: elValue(priceFields.collected_at),
           is_member_price: elValue(priceFields.is_member_price),
         });
-        if (status) status.textContent = '价格已保存。';
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'savePriceSuccess');
         await loadData();
       } catch (error) {
-        if (status) status.textContent = `保存价格失败：${error.message}`;
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'savePriceFailure', { message: error.message });
       }
     });
 
@@ -516,10 +526,10 @@ const switchAccountHref = buildLoginUrl({
       try {
         await adminDeleteProduct(targetId);
         resetProductForm();
-        if (status) status.textContent = '商品已删除。';
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deleteProductSuccess');
         await loadData();
       } catch (error) {
-        if (status) status.textContent = `删除商品失败：${error.message}`;
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deleteProductFailure', { message: error.message });
       }
     });
 
@@ -530,10 +540,10 @@ const switchAccountHref = buildLoginUrl({
       try {
         await adminDeleteStore(targetId);
         resetStoreForm();
-        if (status) status.textContent = '门店已删除。';
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deleteStoreSuccess');
         await loadData();
       } catch (error) {
-        if (status) status.textContent = `删除门店失败：${error.message}`;
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deleteStoreFailure', { message: error.message });
       }
     });
 
@@ -544,10 +554,10 @@ const switchAccountHref = buildLoginUrl({
       try {
         await adminDeletePrice(targetId);
         resetPriceForm();
-        if (status) status.textContent = '价格已删除。';
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deletePriceSuccess');
         await loadData();
       } catch (error) {
-        if (status) status.textContent = `删除价格失败：${error.message}`;
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deletePriceFailure', { message: error.message });
       }
     });
 
@@ -563,7 +573,7 @@ const switchAccountHref = buildLoginUrl({
       if (deleteId && window.confirm(`删除商品 ${deleteId} ?`)) {
         await adminDeleteProduct(deleteId);
         resetProductForm();
-        if (status) status.textContent = '商品已删除。';
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deleteProductSuccess');
         await loadData();
       }
     });
@@ -580,7 +590,7 @@ const switchAccountHref = buildLoginUrl({
       if (deleteId && window.confirm(`删除门店 ${deleteId} ?`)) {
         await adminDeleteStore(deleteId);
         resetStoreForm();
-        if (status) status.textContent = '门店已删除。';
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deleteStoreSuccess');
         await loadData();
       }
     });
@@ -598,14 +608,14 @@ const switchAccountHref = buildLoginUrl({
       if (deleteId && window.confirm(`删除价格记录 ${deleteId} ?`)) {
         await adminDeletePrice(deleteId);
         resetPriceForm();
-        if (status) status.textContent = '价格已删除。';
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deletePriceSuccess');
         await loadData();
       }
     });
 
     logoutButton?.addEventListener('click', async () => {
       await signOut();
-      window.location.assign(loginUrl);
+      redirectToLogin(loginUrl, authGate);
     });
 
     loadData();

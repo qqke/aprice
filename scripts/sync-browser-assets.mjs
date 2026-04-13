@@ -26,6 +26,8 @@ function makeBrowserRestJs(source) {
 const browserSource = await readFile(resolve(root, 'src/lib/browser.js'), 'utf8');
 const authRedirectSource = await readFile(resolve(root, 'src/lib/auth-redirect.js'), 'utf8');
 const authSource = await readFile(resolve(root, 'src/lib/browser-auth.js'), 'utf8');
+const loginPageStateSource = await readFile(resolve(root, 'src/lib/login-page-state.js'), 'utf8');
+const privatePageAuthSource = await readFile(resolve(root, 'src/lib/private-page-auth.js'), 'utf8');
 const restSource = await readFile(resolve(root, 'src/lib/supabase-rest.js'), 'utf8');
 
 ensureNoImportMetaEnv(browserSource, 'browser.js source');
@@ -34,5 +36,7 @@ ensureNoImportMetaEnv(authSource, 'browser-auth.js source');
 await writeFile(resolve(root, 'public/browser.js'), normalize(browserSource));
 await writeFile(resolve(root, 'public/auth-redirect.js'), normalize(authRedirectSource));
 await writeFile(resolve(root, 'public/browser-auth.js'), normalize(authSource));
+await writeFile(resolve(root, 'public/login-page-state.js'), normalize(loginPageStateSource));
+await writeFile(resolve(root, 'public/private-page-auth.js'), normalize(privatePageAuthSource));
 await writeFile(resolve(root, 'public/supabase-rest.js'), makeBrowserRestJs(restSource));
 

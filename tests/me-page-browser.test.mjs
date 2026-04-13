@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 
 import { launchChromiumForTest } from './_playwright-launch.mjs';
 import { startStaticServer } from './_browser-test-server.mjs';
-import { waitForText } from './_browser-test-wait.mjs';
+import { waitForVisible } from './_browser-test-wait.mjs';
 
 async function main() {
   const { server, baseUrl } = await startStaticServer();
@@ -46,20 +46,23 @@ async function main() {
 
       await page.goto(`${baseUrl}/aprice/me/`, { waitUntil: 'domcontentloaded' });
 
+      await page.locator('#me-auth-gate').waitFor({ state: 'attached' });
       await page.locator('#my-logs').waitFor({ state: 'attached' });
       await page.locator('#recent-views').waitFor({ state: 'attached' });
       await page.locator('#my-favorites').waitFor({ state: 'attached' });
       await page.locator('#log-status').waitFor({ state: 'attached' });
-      await waitForText(page, '#my-logs', '请登录');
-      await waitForText(page, '#my-favorites', '未登录');
+      await waitForVisible(page, '#me-auth-gate');
 
-      const logsText = await page.locator('#my-logs').textContent();
+      const gateHref = new URL(await page.locator('#me-login-link').getAttribute('href'), baseUrl);
+      const gateText = await page.locator('#me-auth-gate').textContent();
       const recentText = await page.locator('#recent-views').textContent();
       const favsText = await page.locator('#my-favorites').textContent();
       const statusText = await page.locator('#log-status').textContent();
 
-      assert.match(logsText || '', /请登录/);
-      assert.match(favsText || '', /未登录/);
+      assert.equal(gateHref.pathname, '/aprice/login/');
+      assert.equal(gateHref.searchParams.get('redirect'), '/aprice/me/');
+      assert.match(gateText || '', /登录后可查看个人价格记录与收藏/);
+      assert.match(favsText || '', /(登录后可查看收藏|未登录)/);
       assert.match(recentText || '', /暂无浏览记录/);
       assert.match(statusText || '', /登录后/);
 
@@ -76,8 +79,4 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
-
-
-
 

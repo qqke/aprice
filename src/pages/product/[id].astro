@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import { buildPrivatePageLoginUrl, getPrivatePageGateCopy, getPrivatePageStatusCopy } from '../../lib/private-page-auth.js';
 import { fetchPublicProducts } from '../../lib/supabase-rest.js';
 
 type Product = {
@@ -19,6 +20,14 @@ export async function getStaticPaths() {
 }
 
 const { product } = Astro.props as { product: Product };
+const base = import.meta.env.BASE_URL || '/';
+const loginUrl = buildPrivatePageLoginUrl({
+  origin: Astro.url.origin,
+  baseUrl: base,
+  currentUrl: `${Astro.url.pathname}${Astro.url.search}${Astro.url.hash}`,
+});
+const productGateCopy = getPrivatePageGateCopy('product');
+const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
 ---
 <BaseLayout title={`${product.name} - 搜比价`} description={`${product.name} 的门店价格、附近比价和个人记录。`} bodyClass="product-page">
   <section class="section section--first-workspace" id="product-page" data-product-id={product.id} data-product-name={product.name} data-product-brand={product.brand} data-product-pack={product.pack} data-product-barcode={product.barcode} data-product-tone={product.tone}>
@@ -36,9 +45,17 @@ const { product } = Astro.props as { product: Product };
           <div class="pillrow">
             <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>
             <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button>
-            <span class="pill" id="favorite-status">登录后可添加收藏。</span>
+            <span class="pill" id="favorite-status">{getPrivatePageStatusCopy('product', 'favoriteStatus')}</span>
           </div>
         </div>
+      </div>
+
+      <div class="notice notice--warning" id="product-auth-gate">
+        <div class="stack">
+          <strong>{productGateCopy.title}</strong>
+          <small>{productGateCopy.description}</small>
+        </div>
+        <a class="button" id="product-login-link" href={loginUrl}>{productGateCopy.primaryButtonLabel}</a>
       </div>
 
       <div class="grid product-grid-top">
@@ -50,7 +67,7 @@ const { product } = Astro.props as { product: Product };
             </div>
             <button class="button button--ghost" id="geo-sort" type="button">按当前位置排序</button>
           </div>
-          <div class="notice notice--compact" id="geo-status">同步价格数据。</div>
+          <div class="notice notice--compact" id="geo-status">{getPrivatePageStatusCopy('product', 'geoStatus')}</div>
           <div class="feed" id="price-list">
             <div class="notice notice--compact">价格结果。</div>
           </div>
@@ -92,7 +109,7 @@ const { product } = Astro.props as { product: Product };
                 </label>
               </div>
               <button class="button" type="submit">记录个人价格</button>
-              <div class="notice notice--compact" id="personal-status">登录后记录个人购买价。</div>
+              <div class="notice notice--compact" id="personal-status">{productLogPrompt}</div>
             </form>
           </section>
 
@@ -134,10 +151,10 @@ const { product } = Astro.props as { product: Product };
       </section>
 
 
-  <script type="module" is:inline>
-    const { buildLoginUrl } = await import(window.__APriceConfig?.authRedirectJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'auth-redirect.js');
+  <script type="module" is:inline define:vars={{ loginUrl }}>
     const { recordRecentView, resolveBase, fetchAllStores, fetchNearbyPrices, fetchPricesForProduct, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
     const { getCurrentUser, savePersonalLog, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+    const { getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
 
     const page = document.querySelector('#product-page');
     const productId = page?.dataset.productId || '';
@@ -164,6 +181,8 @@ const { product } = Astro.props as { product: Product };
     const favoriteButton = document.querySelector('#favorite-product-button');
     const favoriteStoreButton = document.querySelector('#favorite-store-button');
     const favoriteStatus = document.querySelector('#favorite-status');
+    const authGate = document.querySelector('#product-auth-gate');
+    const authGateLink = document.querySelector('#product-login-link');
     const geoButton = document.querySelector('#geo-sort');
     const geoStatus = document.querySelector('#geo-status');
     const nearbyStatus = document.querySelector('#nearby-status');
@@ -174,17 +193,12 @@ const { product } = Astro.props as { product: Product };
 
     let stores = [];
     let activeStoreId = '';
-    const loginHrefBase = resolveBase('login/');
-    const loginPath = new URL(loginHrefBase, window.location.origin).pathname;
-    const basePath = new URL(resolveBase(''), window.location.origin).pathname;
-    const currentTarget = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-    const loginUrl = buildLoginUrl({
-      origin: window.location.origin,
-      loginHref: loginHrefBase,
-      currentUrl: currentTarget,
-      basePath,
-      loginPath,
-    });
+
+    async function syncAuthGate() {
+      const user = await getCurrentUser();
+      syncPrivatePageGate({ gateEl: authGate, loginLinkEl: authGateLink, loginUrl, visible: !user });
+      return user;
+    }
 
     function toTime(value) {
       const time = new Date(value || 0).getTime();
@@ -451,41 +465,43 @@ const { product } = Astro.props as { product: Product };
     favoriteButton?.addEventListener('click', async () => {
       const user = await getCurrentUser();
       if (!user) {
-        if (favoriteStatus) favoriteStatus.textContent = '请登录后再添加商品收藏。';
-        window.location.assign(loginUrl);
+        syncPrivatePageGate({ gateEl: authGate, loginLinkEl: authGateLink, loginUrl, visible: true });
+        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteProductRequired');
+        redirectToLogin(loginUrl, authGate);
         return;
       }
 
       try {
         const result = await toggleFavorite('product', productId);
         if (favoriteStatus) {
-          favoriteStatus.textContent = result.action === 'added' ? '已添加商品收藏。' : '已取消商品收藏。';
+          favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteProductSuccess', result);
         }
       } catch (error) {
-        if (favoriteStatus) favoriteStatus.textContent = `收藏失败：${error.message}`;
+        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteFailure', { message: error.message });
       }
     });
 
     favoriteStoreButton?.addEventListener('click', async () => {
       const user = await getCurrentUser();
       if (!user) {
-        if (favoriteStatus) favoriteStatus.textContent = '请登录后再添加门店收藏。';
-        window.location.assign(loginUrl);
+        syncPrivatePageGate({ gateEl: authGate, loginLinkEl: authGateLink, loginUrl, visible: true });
+        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteStoreRequired');
+        redirectToLogin(loginUrl, authGate);
         return;
       }
 
       if (!activeStoreId) {
-        if (favoriteStatus) favoriteStatus.textContent = '当前没有可添加收藏的门店。';
+        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteStoreUnavailable');
         return;
       }
 
       try {
         const result = await toggleFavorite('store', activeStoreId);
         if (favoriteStatus) {
-          favoriteStatus.textContent = result.action === 'added' ? '已添加门店收藏。' : '已取消门店收藏。';
+          favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteStoreSuccess', result);
         }
       } catch (error) {
-        if (favoriteStatus) favoriteStatus.textContent = `收藏失败：${error.message}`;
+        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteFailure', { message: error.message });
       }
     });
 
@@ -497,18 +513,19 @@ const { product } = Astro.props as { product: Product };
 
       const user = await getCurrentUser();
       if (!user) {
-        if (favoriteStatus) favoriteStatus.textContent = '请登录后再添加门店收藏。';
-        window.location.assign(loginUrl);
+        syncPrivatePageGate({ gateEl: authGate, loginLinkEl: authGateLink, loginUrl, visible: true });
+        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteStoreRequired');
+        redirectToLogin(loginUrl, authGate);
         return;
       }
 
       try {
         const result = await toggleFavorite('store', storeId);
         if (favoriteStatus) {
-          favoriteStatus.textContent = result.action === 'added' ? '已添加门店收藏。' : '已取消门店收藏。';
+          favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteStoreSuccess', result);
         }
       } catch (error) {
-        if (favoriteStatus) favoriteStatus.textContent = `收藏失败：${error.message}`;
+        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteFailure', { message: error.message });
       }
     });
 
@@ -532,8 +549,9 @@ const { product } = Astro.props as { product: Product };
       event.preventDefault();
       const user = await getCurrentUser();
       if (!user) {
-        status.textContent = '请登录后再记录。';
-        window.location.assign(loginUrl);
+        syncPrivatePageGate({ gateEl: authGate, loginLinkEl: authGateLink, loginUrl, visible: true });
+        status.textContent = getPrivatePageStatusCopy('product', 'logRequired');
+        redirectToLogin(loginUrl, authGate);
         return;
       }
 
@@ -545,14 +563,14 @@ const { product } = Astro.props as { product: Product };
           note: note.value.trim(),
           purchased_at: new Date().toISOString().slice(0, 10),
         });
-        status.textContent = `已保存 ${formatYen(Number(price.value))}。`;
+        status.textContent = getPrivatePageStatusCopy('product', 'logSuccess', { price: formatYen(Number(price.value)) });
         price.value = '';
         note.value = '';
       } catch (error) {
-        status.textContent = `记录失败：${error.message}`;
+        status.textContent = getPrivatePageStatusCopy('product', 'logFailure', { message: error.message });
       }
     });
 
-    await Promise.all([loadStores(), loadPrices()]);
+    await Promise.all([loadStores(), loadPrices(), syncAuthGate()]);
   </script>
 </BaseLayout>

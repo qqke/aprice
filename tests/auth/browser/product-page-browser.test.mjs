@@ -53,11 +53,14 @@ async function main() {
         await page.goto(productUrl, { waitUntil: 'domcontentloaded' });
         await page.locator('#product-page').waitFor({ state: 'attached', timeout: 10000 });
       }
+      await page.locator('#product-auth-gate').waitFor({ state: 'attached' });
       await page.locator('.product-title').waitFor({ state: 'attached' });
       await page.waitForFunction(() => String(document.querySelector('#price-list')?.textContent || '').includes('Sugi Pharmacy Hiroo'), null, { timeout: 10000 });
       await page.waitForFunction(() => String(document.querySelector('#nearby-store-list')?.textContent || '').includes('Welcia Shibuya'), null, { timeout: 10000 });
       const heroTitle = await page.locator('.product-title').textContent();
       const heroSub = await page.locator('.product-sub').textContent();
+      const authGateHref = new URL(await page.locator('#product-login-link').getAttribute('href'), baseUrl);
+      const authGateText = await page.locator('#product-auth-gate').textContent();
       const priceListText = await page.locator('#price-list').textContent();
       const nearbyListText = await page.locator('#nearby-store-list').textContent();
       const insightText = await page.locator('#insight-pills').textContent();
@@ -66,6 +69,9 @@ async function main() {
 
       assert.match(heroTitle || '', /ロキソニンS|Loxonin S/);
       assert.ok((heroSub || '').length > 0);
+      assert.equal(authGateHref.pathname, '/aprice/login/');
+      assert.equal(authGateHref.searchParams.get('redirect'), '/aprice/product/loxonin-s/');
+      assert.match(authGateText || '', /登录后可收藏商品、保存个人价格记录/);
       assert.match(priceListText || '', /Sugi Pharmacy Hiroo/);
       assert.match(nearbyListText || '', /Welcia Shibuya/);
       assert.match(insightText || '', /最低价/);
@@ -92,7 +98,6 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
 
 
 

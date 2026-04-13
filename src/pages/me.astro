@@ -1,5 +1,14 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { buildPrivatePageLoginUrl, getPrivatePageGateCopy, getPrivatePageStatusCopy } from '../lib/private-page-auth.js';
+
+const base = import.meta.env.BASE_URL || '/';
+const loginUrl = buildPrivatePageLoginUrl({
+  origin: Astro.url.origin,
+  baseUrl: base,
+  currentUrl: `${Astro.url.pathname}${Astro.url.search}${Astro.url.hash}`,
+});
+const meGateCopy = getPrivatePageGateCopy('me');
 ---
 <BaseLayout title="我的 - 搜比价" description="查看个人价格记录、收藏和最近查看的药店商品。" bodyClass="me-page">
   <section class="section section--first-workspace">
@@ -8,13 +17,21 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <div class="section__header section__header--tight">
         <div>
           <h1 class="product-title">你的价格历史和收藏，都在一处。</h1>
-          <p class="product-sub">登录后可记录购买价与收藏。</p>
+          <p class="product-sub">{getPrivatePageStatusCopy('me', 'pageSub')}</p>
         </div>
         <div class="pillrow">
           <span class="pill">最近浏览</span>
           <span class="pill">个人价格</span>
           <span class="pill">收藏</span>
         </div>
+      </div>
+
+      <div class="notice notice--warning" id="me-auth-gate">
+        <div class="stack">
+          <strong>{meGateCopy.title}</strong>
+          <small>{meGateCopy.description}</small>
+        </div>
+        <a class="button" id="me-login-link" href={loginUrl}>{meGateCopy.primaryButtonLabel}</a>
       </div>
 
       <div class="grid">
@@ -28,8 +45,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <div class="list" id="my-logs">
             <div class="list__item">
               <div>
-                <strong>请登录</strong>
-                <small>登录后同步价格历史。</small>
+                <strong>{getPrivatePageStatusCopy('me', 'loggedOutTitle')}</strong>
+                <small>{getPrivatePageStatusCopy('me', 'loggedOutDescription')}</small>
               </div>
               <span class="meta">me</span>
             </div>
@@ -67,7 +84,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             </div>
           </div>
           <div class="feed" id="my-favorites">
-            <div class="notice notice--compact">登录后可查看收藏。</div>
+            <div class="notice notice--compact">{getPrivatePageStatusCopy('me', 'loggedOutFavoritesDescription')}</div>
           </div>
         </section>
 
@@ -102,17 +119,20 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>
               <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button>
             </div>
-            <div class="notice notice--compact" id="log-status">确认登录状态。</div>
+            <div class="notice notice--compact" id="log-status">{getPrivatePageStatusCopy('me', 'loggedOutStatus')}</div>
           </form>
         </section>
       </div>
     </div>
   </section>
 
-  <script type="module" is:inline>
+  <script type="module" is:inline define:vars={{ loginUrl }}>
     const { clearRecentViews, fetchAllProducts, fetchAllStores, fetchRecentViews, formatDateTime, formatYen, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
     const { fetchFavorites, fetchPersonalLogs, getCurrentUser, savePersonalLog, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+    const { getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
 
+    const loginLink = document.querySelector('#me-login-link');
+    const authGate = document.querySelector('#me-auth-gate');
     const logsEl = document.querySelector('#my-logs');
     const recentViewsEl = document.querySelector('#recent-views');
     const clearRecentViewsButton = document.querySelector('#clear-recent-views');
@@ -193,7 +213,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       if (favoritesSummary) {
         favoritesSummary.textContent = favoritesList.length
           ? `共 ${favoritesList.length} 项收藏，当前显示 ${filtered.length} 项，按${favoriteSort === 'recent' ? '最新添加' : '最早添加'}排序。`
-          : '登录后可查看收藏。';
+          : getPrivatePageStatusCopy('me', 'loggedOutFavoritesDescription');
       }
       favsEl.innerHTML = filtered.length
         ? filtered.map((fav) => `
@@ -264,11 +284,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     }
 
     function renderLoggedOutState() {
+      syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
       logsEl.innerHTML = `
         <div class="list__item">
           <div>
-            <strong>请登录</strong>
-            <small>请完成邮箱密码登录。</small>
+            <strong>${getPrivatePageStatusCopy('me', 'loggedOutTitle')}</strong>
+            <small>${getPrivatePageStatusCopy('me', 'loggedOutDescription')}</small>
           </div>
           <span class="meta">offline</span>
         </div>
@@ -276,13 +297,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       favsEl.innerHTML = `
         <div class="feed__item">
           <div>
-            <strong>未登录</strong>
-            <small>登录后可看收藏。</small>
+            <strong>${getPrivatePageStatusCopy('me', 'loggedOutFavoritesTitle')}</strong>
+            <small>${getPrivatePageStatusCopy('me', 'loggedOutFavoritesDescription')}</small>
           </div>
           <span class="price">offline</span>
         </div>
       `;
-      status.textContent = '登录后保存记录与收藏。';
+      status.textContent = getPrivatePageStatusCopy('me', 'loggedOutStatus');
       setControlsDisabled(true);
     }
 
@@ -294,7 +315,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         return;
       }
 
-      status.textContent = '同步价格记录和收藏...';
+      syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: false });
+      status.textContent = getPrivatePageStatusCopy('me', 'loading');
       setControlsDisabled(false);
 
       const [loadedProducts, loadedStores, logs, loadedFavorites] = await Promise.all([
@@ -320,17 +342,22 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
       renderLogs(logs);
       renderFavorites(favorites);
-      status.textContent = logs.length || favorites.length
-        ? `已同步 ${logs.length} 条价格记录和 ${favorites.length} 条收藏。`
-        : '还没有个人价格记录，保存第一笔。';
+      status.textContent = getPrivatePageStatusCopy('me', 'syncSummary', { logsCount: logs.length, favoritesCount: favorites.length });
     }
 
     form?.addEventListener('submit', async (event) => {
       event.preventDefault();
       status.textContent = '保存中...';
       try {
+        const user = await getCurrentUser();
+        if (!user) {
+          syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
+          status.textContent = getPrivatePageStatusCopy('me', 'saveRequired');
+          redirectToLogin(loginUrl, authGate);
+          return;
+        }
         if (!productInput?.value) {
-          status.textContent = '选中商品后再保存。';
+          status.textContent = getPrivatePageStatusCopy('me', 'saveSelectionRequired');
           return;
         }
         const priceValue = Number(priceInput.value);
@@ -345,47 +372,61 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           note: noteInput.value.trim(),
           purchased_at: new Date().toISOString().slice(0, 10),
         });
-        status.textContent = '已保存个人价格记录。';
+        status.textContent = getPrivatePageStatusCopy('me', 'saveSuccess');
         priceInput.value = '';
         noteInput.value = '';
         await refresh();
       } catch (error) {
-        status.textContent = `记录失败：${error.message}`;
+        status.textContent = getPrivatePageStatusCopy('me', 'saveFailure', { message: error.message });
       }
     });
 
     favoriteProductButton?.addEventListener('click', async () => {
       if (!productInput?.value) {
-        status.textContent = '选中商品后再添加收藏。';
+        status.textContent = getPrivatePageStatusCopy('me', 'favoriteProductRequired');
+        return;
+      }
+      const user = await getCurrentUser();
+      if (!user) {
+        syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
+        status.textContent = getPrivatePageStatusCopy('me', 'favoriteProductRequired');
+        redirectToLogin(loginUrl, authGate);
         return;
       }
       try {
         await toggleFavorite('product', productInput.value);
-        status.textContent = '已更新商品收藏。';
+        status.textContent = getPrivatePageStatusCopy('me', 'favoriteProductSuccess');
         await refresh();
       } catch (error) {
-        status.textContent = `收藏失败：${error.message}`;
+        status.textContent = getPrivatePageStatusCopy('me', 'favoriteFailure', { message: error.message });
       }
     });
 
     favoriteStoreButton?.addEventListener('click', async () => {
       if (!storeInput?.value) {
-        status.textContent = '选中门店后再添加收藏。';
+        status.textContent = getPrivatePageStatusCopy('me', 'favoriteStoreRequired');
+        return;
+      }
+      const user = await getCurrentUser();
+      if (!user) {
+        syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
+        status.textContent = getPrivatePageStatusCopy('me', 'favoriteStoreRequired');
+        redirectToLogin(loginUrl, authGate);
         return;
       }
       try {
         await toggleFavorite('store', storeInput.value);
-        status.textContent = '已更新门店收藏。';
+        status.textContent = getPrivatePageStatusCopy('me', 'favoriteStoreSuccess');
         await refresh();
       } catch (error) {
-        status.textContent = `收藏失败：${error.message}`;
+        status.textContent = getPrivatePageStatusCopy('me', 'favoriteFailure', { message: error.message });
       }
     });
 
     clearRecentViewsButton?.addEventListener('click', () => {
       clearRecentViews();
       renderRecentViews(fetchRecentViews());
-      status.textContent = '已清空最近浏览。';
+      status.textContent = getPrivatePageStatusCopy('me', 'recentViewsCleared');
     });
 
     favsEl?.addEventListener('click', async (event) => {
@@ -395,13 +436,20 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       const favoriteType = target.dataset.removeFavoriteType;
       const favoriteEntity = target.dataset.removeFavoriteEntity;
       if (!favoriteId || !favoriteType || !favoriteEntity) return;
+      const user = await getCurrentUser();
+      if (!user) {
+        syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
+        status.textContent = getPrivatePageStatusCopy('me', 'removeFavoriteRequired');
+        redirectToLogin(loginUrl, authGate);
+        return;
+      }
 
       try {
         await toggleFavorite(favoriteType, favoriteEntity);
-        status.textContent = '已更新收藏。';
+        status.textContent = getPrivatePageStatusCopy('me', 'favoriteSaved');
         await refresh();
       } catch (error) {
-        status.textContent = `收藏失败：${error.message}`;
+        status.textContent = getPrivatePageStatusCopy('me', 'favoriteFailure', { message: error.message });
       }
     });
 

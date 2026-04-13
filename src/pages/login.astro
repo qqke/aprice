@@ -27,7 +27,7 @@ import { resolveBase } from '../lib/browser.js';
           </div>
 
           <div class="stack login-state" id="signed-in-state" hidden>
-            <div class="notice notice--compact" id="signed-in-message">账号已登录。</div>
+            <div class="notice notice--compact" id="signed-in-message" role="status" aria-live="polite" aria-atomic="true">账号已登录。</div>
             <div class="list__item login-state__card">
               <div>
                 <strong id="signed-in-label">当前账号</strong>
@@ -57,12 +57,12 @@ import { resolveBase } from '../lib/browser.js';
                 <button class="button button--ghost" type="button" id="mode-toggle">切换到注册</button>
                 <button class="button button--ghost" type="button" id="forgot-toggle">忘记密码</button>
               </div>
-              <div class="notice notice--compact" id="auth-status">登录后保存价格与收藏。</div>
+              <div class="notice notice--compact" id="auth-status" role="status" aria-live="polite" aria-atomic="true">登录后保存价格与收藏。</div>
             </form>
 
             <div class="divider"></div>
             <div class="stack auth-form__footer">
-              <div class="notice notice--compact" id="auth-hint">登录状态已保留。</div>
+              <div class="notice notice--compact" id="auth-hint" role="status" aria-live="polite" aria-atomic="true">登录状态已保留。</div>
               <a class="button button--ghost" href={resolveBase('')}>返回首页继续搜索</a>
             </div>
           </div>
@@ -76,7 +76,7 @@ import { resolveBase } from '../lib/browser.js';
             </div>
           </div>
 
-          <div class="list" id="session-state">
+          <div class="list" id="session-state" role="status" aria-live="polite" aria-atomic="true">
             <div class="notice notice--compact">未登录，登录后可保存价格与收藏。</div>
           </div>
 
@@ -89,6 +89,17 @@ import { resolveBase } from '../lib/browser.js';
 
   <script type="module" is:inline>
     const { normalizeInternalRedirectTarget } = await import(window.__APriceConfig?.authRedirectJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'auth-redirect.js');
+    const loginStateUrl = window.__APriceConfig?.loginPageStateJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'login-page-state.js';
+    const {
+      formatAuthError,
+      getInitialLoginMode,
+      getLoginPanelCopy,
+      getPostLoginTarget,
+      isSignedInSessionHint,
+      readSessionHint,
+      validateLoginInputs,
+      writeSessionHint,
+    } = await import(loginStateUrl);
     const runtimeBase = window.__APriceConfig?.baseUrl || '/';
     function resolveBase(pathname = '') {
       const base = runtimeBase.endsWith('/') ? runtimeBase : runtimeBase + '/';
@@ -100,6 +111,7 @@ import { resolveBase } from '../lib/browser.js';
     let unsubscribeAuth = null;
     let currentSession = null;
     let authRefreshStarted = false;
+    let authRefreshTimer = null;
     const url = new URL(window.location.href);
     const basePath = new URL(resolveBase(''), window.location.origin).pathname;
     const loginPath = new URL(resolveBase('login/'), window.location.origin).pathname;
@@ -108,10 +120,6 @@ import { resolveBase } from '../lib/browser.js';
       basePath,
       loginPath,
     });
-
-    function getPostLoginTarget() {
-      return redirectTarget || resolveBase('');
-    }
 
     function loadAuthModule() {
       authModulePromise ??= import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
@@ -144,63 +152,14 @@ import { resolveBase } from '../lib/browser.js';
     const signedInAction = document.querySelector('#signed-in-action');
     const switchAccountButton = document.querySelector('#switch-account-button');
 
-    const isRecoveryRedirect = url.searchParams.get('mode') === 'reset' || url.searchParams.get('type') === 'recovery';
-    let mode = isRecoveryRedirect ? 'reset-password' : 'login';
-    const hasSessionHint = (() => {
-      try {
-        return window.localStorage.getItem('aprice:session-hint') === 'signed-in';
-      } catch {
-        return false;
-      }
-    })();
-
-    const modeConfig = {
-      login: {
-        title: '登录账号',
-        description: '输入邮箱和密码即可登录，或者切换到注册和找回密码。',
-        pill: '登录',
-        submit: '登录',
-        modeToggle: '切换到注册',
-        forgotToggle: '忘记密码',
-        hint: '登录后保存价格与收藏。',
-        status: '登录后保存价格与收藏。',
-      },
-      register: {
-        title: '注册账号',
-        description: '输入邮箱、密码和确认密码，完成注册。',
-        pill: '注册',
-        submit: '创建账号',
-        modeToggle: '切换到登录',
-        forgotToggle: '忘记密码',
-        hint: '注册后会收到确认邮件。',
-        status: '注册后会收到确认邮件。',
-      },
-      'request-reset': {
-        title: '找回密码',
-        description: '输入注册邮箱，我们会发送重置密码邮件。',
-        pill: '找回',
-        submit: '发送重置链接',
-        modeToggle: '返回登录',
-        forgotToggle: '返回登录',
-        hint: '重置邮件会把你带回这个页面的新密码流程。',
-        status: '输入邮箱后发送重置链接。',
-      },
-      'reset-password': {
-        title: '重置密码',
-        description: '点击邮件里的重置链接后，在这里设置新密码。',
-        pill: '重置',
-        submit: '更新密码',
-        modeToggle: '返回登录',
-        forgotToggle: '返回登录',
-        hint: '请通过邮件中的重置链接进入，再设置新密码。',
-        status: '请设置新的登录密码。',
-      },
-    };
+    const initialMode = getInitialLoginMode(url);
+    let mode = initialMode;
+    const hasSessionHint = isSignedInSessionHint();
 
     // 根据当前模式切换表单字段、按钮文案和提示，保持一个页面覆盖注册、登录和找回密码。
     function setMode(nextMode) {
       mode = nextMode;
-      const config = modeConfig[mode];
+      const config = getLoginPanelCopy(mode, { redirectTarget });
       if (!config) return;
 
       if (panelTitle) panelTitle.textContent = config.title;
@@ -211,7 +170,7 @@ import { resolveBase } from '../lib/browser.js';
       if (forgotToggle) forgotToggle.textContent = config.forgotToggle;
       if (hint) hint.textContent = config.hint;
       if (status && !status.dataset.locked) {
-        status.textContent = redirectTarget && mode === 'login' ? '登录后返回原页面。' : config.status;
+        status.textContent = config.status;
       }
 
       const showPassword = mode !== 'request-reset';
@@ -271,63 +230,6 @@ import { resolveBase } from '../lib/browser.js';
       }
     }
 
-    function readSessionHint() {
-      try {
-        return window.localStorage.getItem('aprice:session-hint');
-      } catch {
-        return null;
-      }
-    }
-
-    function setSessionHint(value) {
-      try {
-        if (value) {
-          window.localStorage.setItem('aprice:session-hint', value);
-        } else {
-          window.localStorage.removeItem('aprice:session-hint');
-        }
-      } catch {}
-    }
-
-    // 统一校验邮箱、密码长度和确认密码，避免把无效请求发给 Supabase。
-    function validateInputs() {
-      const email = emailInput?.value.trim() || '';
-      const password = passwordInput?.value || '';
-      const confirmPassword = confirmPasswordInput?.value || '';
-
-      if (mode !== 'reset-password' && !email) {
-        return '请输入邮箱地址。';
-      }
-      if ((mode === 'login' || mode === 'register') && !password) {
-        return '请输入密码。';
-      }
-      if ((mode === 'register' || mode === 'reset-password') && password.length < 8) {
-        return '密码至少需要 8 位。';
-      }
-      if ((mode === 'register' || mode === 'reset-password') && password !== confirmPassword) {
-        return '两次输入的密码不一致。';
-      }
-      return '';
-    }
-
-    // 把 Supabase 的常见英文错误翻成更容易理解的中文，减少用户误会。
-    function formatAuthError(error, submitMode) {
-      const message = String(error?.message || '');
-      if (message.includes('Invalid login credentials')) {
-        return '邮箱或密码不正确；请完成邮箱确认。';
-      }
-      if (message.includes('Email not confirmed')) {
-        return '邮箱未确认，请点击邮件里的确认链接。';
-      }
-      if (message.includes('Password should be at least')) {
-        return '密码长度不够，请至少设置 8 位。';
-      }
-      if (submitMode === 'request-reset' && message.includes('For security purposes')) {
-        return '如果这个邮箱存在，我们会发送重置链接。请检查收件箱和垃圾箱。';
-      }
-      return message || '未知错误，请稍后再试。';
-    }
-
     // 读取登录状态并渲染顶部状态卡，登录、登出和重置后都会自动刷新。
     async function refreshSession() {
       try {
@@ -336,12 +238,13 @@ import { resolveBase } from '../lib/browser.js';
         currentSession = session ?? null;
 
         if (session?.user) {
-          setSessionHint('signed-in');
+          writeSessionHint('signed-in');
         } else {
-          setSessionHint(null);
+          writeSessionHint(null);
         }
 
         if (!session?.user) {
+          const config = getLoginPanelCopy(mode, { redirectTarget });
           sessionState.innerHTML = `
             <div class="list__item">
               <div>
@@ -352,9 +255,9 @@ import { resolveBase } from '../lib/browser.js';
             </div>
           `;
           if (mode === 'login') {
-            if (panelTitle) panelTitle.textContent = modeConfig.login.title;
-            if (panelDescription) panelDescription.textContent = modeConfig.login.description;
-            if (panelPill) panelPill.textContent = modeConfig.login.pill;
+            if (panelTitle) panelTitle.textContent = config.title;
+            if (panelDescription) panelDescription.textContent = config.description;
+            if (panelPill) panelPill.textContent = config.pill;
           }
           if (mode === 'reset-password' && status) {
             status.textContent = '请通过重置链接进入，再设置新密码。';
@@ -368,7 +271,7 @@ import { resolveBase } from '../lib/browser.js';
         const isAdmin = role === 'admin';
         const label = profile?.full_name || session.user.email || '已登录用户';
         const actionLabel = redirectTarget ? '继续访问' : isAdmin ? '打开管理页' : '打开个人页';
-        const actionHref = redirectTarget || resolveBase(isAdmin ? 'admin/' : 'me/');
+        const actionHref = getPostLoginTarget(redirectTarget, resolveBase(isAdmin ? 'admin/' : 'me/'));
         sessionState.innerHTML = `
           <div class="list__item">
             <div>
@@ -417,7 +320,12 @@ import { resolveBase } from '../lib/browser.js';
         status.textContent = '处理中...';
       }
 
-      const validationMessage = validateInputs();
+      const validationMessage = validateLoginInputs({
+        mode: submitMode,
+        email: emailInput?.value.trim() || '',
+        password: passwordInput?.value || '',
+        confirmPassword: confirmPasswordInput?.value || '',
+      });
       if (validationMessage) {
         if (status) {
           status.textContent = validationMessage;
@@ -433,9 +341,9 @@ import { resolveBase } from '../lib/browser.js';
         if (submitMode === 'login') {
           const { signInWithEmailPassword } = await loadAuthModule();
           await signInWithEmailPassword({ email, password });
-          setSessionHint('signed-in');
+          writeSessionHint('signed-in');
           if (status) status.textContent = '登录成功。';
-          window.location.assign(getPostLoginTarget());
+          window.location.assign(getPostLoginTarget(redirectTarget, resolveBase('')));
           return;
         } else if (submitMode === 'register') {
           const { signUpWithEmailPassword } = await loadAuthModule();
@@ -445,8 +353,8 @@ import { resolveBase } from '../lib/browser.js';
           if (confirmPasswordInput) confirmPasswordInput.value = '';
           setMode('login');
           if (result?.session) {
-            setSessionHint('signed-in');
-            window.location.assign(getPostLoginTarget());
+            writeSessionHint('signed-in');
+            window.location.assign(getPostLoginTarget(redirectTarget, resolveBase('')));
             return;
           }
           if (status) {
@@ -459,12 +367,12 @@ import { resolveBase } from '../lib/browser.js';
         } else if (submitMode === 'reset-password') {
           const { updatePassword } = await loadAuthModule();
           await updatePassword(password);
-          setSessionHint('signed-in');
+          writeSessionHint('signed-in');
           setMode('login');
           if (passwordInput) passwordInput.value = '';
           if (confirmPasswordInput) confirmPasswordInput.value = '';
           if (status) status.textContent = '密码已更新。';
-          window.location.assign(getPostLoginTarget());
+          window.location.assign(getPostLoginTarget(redirectTarget, resolveBase('')));
           return;
         }
       } catch (error) {
@@ -499,7 +407,7 @@ import { resolveBase } from '../lib/browser.js';
     switchAccountButton?.addEventListener('click', async () => {
       const { signOut } = await loadAuthModule();
       await signOut();
-      setSessionHint(null);
+      writeSessionHint(null);
       setMode('login');
       if (status) {
         status.dataset.locked = 'true';
@@ -512,7 +420,7 @@ import { resolveBase } from '../lib/browser.js';
     logoutButton?.addEventListener('click', async () => {
       const { signOut } = await loadAuthModule();
       await signOut();
-      setSessionHint(null);
+      writeSessionHint(null);
       if (status) {
         status.dataset.locked = 'true';
         status.textContent = '已退出登录。';
@@ -527,6 +435,10 @@ import { resolveBase } from '../lib/browser.js';
     function startAuthRefresh() {
       if (authRefreshStarted) return;
       authRefreshStarted = true;
+      if (authRefreshTimer) {
+        window.clearTimeout(authRefreshTimer);
+        authRefreshTimer = null;
+      }
       refreshSession();
       loadAuthModule()
         .then(({ subscribeAuthState }) => {
@@ -546,6 +458,7 @@ import { resolveBase } from '../lib/browser.js';
         startAuthRefresh();
         return;
       }
+      authRefreshTimer = window.setTimeout(startAuthRefresh, 1400);
       window.addEventListener('pointerdown', startAuthRefresh, { once: true, passive: true });
       window.addEventListener('keydown', startAuthRefresh, { once: true });
     }
@@ -558,6 +471,9 @@ import { resolveBase } from '../lib/browser.js';
 
     window.addEventListener('beforeunload', () => {
       unsubscribeAuth?.();
+      if (authRefreshTimer) {
+        window.clearTimeout(authRefreshTimer);
+      }
     });
   </script>
 </BaseLayout>

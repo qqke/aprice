@@ -87,11 +87,13 @@ async function main() {
 
       await page.goto(`${baseUrl}/aprice/admin/`, { waitUntil: 'domcontentloaded' });
 
+      await page.locator('#admin-auth-gate').waitFor({ state: 'attached' });
       await page.locator('#admin-status').waitFor({ state: 'attached' });
       await page.locator('#admin-access').waitFor({ state: 'attached' });
       await page.locator('#admin-products').waitFor({ state: 'attached' });
       await page.locator('#admin-stores').waitFor({ state: 'attached' });
       await page.locator('#admin-prices').waitFor({ state: 'attached' });
+      await page.locator('#admin-auth-gate').waitFor({ state: 'hidden' });
 
       await waitForText(page, '#admin-status', '可以开始维护数据');
       await waitForText(page, '#admin-access', '管理员权限已开启');
@@ -248,8 +250,6 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
-
 
 
 
