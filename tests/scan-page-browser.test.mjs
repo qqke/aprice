@@ -28,9 +28,9 @@ async function main() {
       });
 
       await page.goto(`${baseUrl}/aprice/scan/`, { waitUntil: 'domcontentloaded' });
-      await page.locator('#barcode-input').fill('4987188161027');
+      await page.locator('#barcode-input').fill('4902162055576');
       await Promise.all([
-        page.waitForURL(/\/aprice\/product\/loxonin-s\/$/),
+        page.waitForURL(/\/aprice\/product\/sundrug-4902162055576\/$/),
         page.locator('#barcode-search').click(),
       ]);
 
@@ -41,10 +41,10 @@ async function main() {
       const priceListText = await page.locator('#price-list').textContent();
       const geoStatus = await page.locator('#geo-status').textContent();
 
-      assert.match(heroTitle || '', /Loxonin S|ロキソニンS/);
+      assert.match(heroTitle || '', /JP和の究み|腎臓ガード/);
       assert.match(priceListText || '', /Sugi Pharmacy Hiroo/);
       assert.match(geoStatus || '', /已加载 1 条价格记录|已加载 2 条价格记录/);
-      assert.match(requests.join('\n'), /barcode=eq\.4987188161027/);
+      assert.match(requests.join('\n'), /barcode=eq\.4902162055576/);
       assert.match(requests.join('\n'), /\/rest\/v1\/products/);
       assert.match(requests.join('\n'), /\/rest\/v1\/prices/);
 

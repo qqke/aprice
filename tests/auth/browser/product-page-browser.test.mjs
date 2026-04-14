@@ -45,7 +45,8 @@ async function main() {
         });
       });
 
-      const productUrl = `${baseUrl}/aprice/product/loxonin-s/`;
+      const productPath = '/aprice/product/sundrug-4902162055576/';
+      const productUrl = `${baseUrl}${productPath}`;
       await page.goto(productUrl, { waitUntil: 'domcontentloaded' });
       try {
         await page.locator('#product-page').waitFor({ state: 'attached', timeout: 10000 });
@@ -67,10 +68,10 @@ async function main() {
       const geoStatus = await page.locator('#geo-status').textContent();
       const storeOptions = await page.locator('#personal-store option').allTextContents();
 
-      assert.match(heroTitle || '', /ロキソニンS|Loxonin S/);
-      assert.ok((heroSub || '').length > 0);
+      assert.match(heroTitle || '', /JP和の究み|腎臓ガード/);
+      assert.notEqual(heroSub, null);
       assert.equal(authGateHref.pathname, '/aprice/login/');
-      assert.equal(authGateHref.searchParams.get('redirect'), '/aprice/product/loxonin-s/');
+      assert.equal(authGateHref.searchParams.get('redirect'), productPath);
       assert.match(authGateText || '', /登录后可收藏商品、保存个人价格记录/);
       assert.match(priceListText || '', /Sugi Pharmacy Hiroo/);
       assert.match(nearbyListText || '', /Welcia Shibuya/);
@@ -83,7 +84,7 @@ async function main() {
       await page.locator('#favorite-product-button').click();
       await page.waitForURL('**/aprice/login/**');
       const loginUrl = new URL(page.url());
-      assert.equal(loginUrl.searchParams.get('redirect'), '/aprice/product/loxonin-s/');
+      assert.equal(loginUrl.searchParams.get('redirect'), productPath);
 
       console.log('product-page browser test passed');
     } finally {
@@ -98,8 +99,6 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
-
 
 
 

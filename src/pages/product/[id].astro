@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { buildPrivatePageLoginUrl, getPrivatePageGateCopy, getPrivatePageStatusCopy } from '../../lib/private-page-auth.js';
-import { fetchPublicProducts } from '../../lib/supabase-rest.js';
+import { fetchAllPublicProducts } from '../../lib/supabase-rest.js';
 
 type Product = {
   id: string;
@@ -15,7 +15,7 @@ type Product = {
 };
 
 export async function getStaticPaths() {
-  const products = ((await fetchPublicProducts({ limit: 500, order: 'updated_at.desc' })) ?? []) as Product[];
+  const products = ((await fetchAllPublicProducts({ batchSize: 1000, order: 'id.asc' })) ?? []) as Product[];
   return products.map((product) => ({ params: { id: product.id }, props: { product } }));
 }
 

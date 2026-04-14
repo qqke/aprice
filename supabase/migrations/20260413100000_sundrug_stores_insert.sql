@@ -1,5 +1,8 @@
 -- Generated from https://sundrug-online.com/tools/locations/listings/search_v2.json?locale=ja
 -- Rows: 1234
+
+set client_encoding = 'UTF8';
+
 begin;
 insert into public.stores (id, name, chain_name, address, city, pref, lat, lng, hours) values
   ('sundrug-00000', 'オンラインショップ', 'サンドラッグ', '東京都', '', '東京都', 35.710351, 139.774385, '月-日 00:00-23:59'),

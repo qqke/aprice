@@ -23,14 +23,14 @@ export function makeAspirinProductResponse() {
 
 export function makeProductDetailsResponse() {
   return {
-    id: 'loxonin-s',
-    name: 'Loxonin S',
-    brand: 'Santen',
-    pack: '12 tabs',
-    barcode: '4987188161027',
-    category: '鎮痛薬',
+    id: 'sundrug-4902162055576',
+    name: 'JP和の究み 腎臓ガード 2種の味アソート 200g箱',
+    brand: '日清ペットフード',
+    pack: '',
+    barcode: '4902162055576',
+    category: '',
     tone: 'sunset',
-    description: '日本の薬店でよく見かける定番OTC。',
+    description: '',
   };
 }
 
