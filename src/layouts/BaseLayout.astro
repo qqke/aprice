@@ -95,7 +95,8 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
             <span class="brand__tag">日本药店比价</span>
           </span>
         </a>
-        <nav class="nav" aria-label="Primary">
+        <button class="chip nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="mobile-nav">菜单</button>
+        <nav class="nav" aria-label="主导航">
           {nav.map((item) => (
             <a href={item.href} data-auth-nav={item.auth ? 'true' : undefined} aria-current={isCurrentNavItem(item) ? 'page' : undefined}>
               {item.label}
@@ -103,6 +104,15 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
           ))}
         </nav>
         <a class="chip session-chip" id="session-chip" href={loginHref}>{shellCopy.guestChip}</a>
+      </div>
+      <div class="shell mobile-nav" id="mobile-nav" hidden>
+        <nav class="mobile-nav__links" aria-label="移动导航">
+          {nav.map((item) => (
+            <a href={item.href} data-auth-nav-mobile={item.auth ? 'true' : undefined} aria-current={isCurrentNavItem(item) ? 'page' : undefined}>
+              {item.label}
+            </a>
+          ))}
+        </nav>
       </div>
     </header>
     <script is:inline define:vars={{ baseUrl: base, supabaseUrl: import.meta.env.PUBLIC_SUPABASE_URL || '', supabaseAnonKey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '', sessionHintKey: SESSION_HINT_KEY }}>
@@ -124,7 +134,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
           <div class="footer__name">搜比价</div>
           <div class="footer__kicker">继续使用</div>
         </div>
-        <nav class="footer__links" aria-label="Footer">
+        <nav class="footer__links" aria-label="页脚导航">
           {footerLinks.map((item) => (
             <a
               href={item.href}
@@ -157,7 +167,10 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
       }
       const chip = document.querySelector('#session-chip');
       const authNav = document.querySelector('[data-auth-nav]');
+      const authNavMobile = document.querySelector('[data-auth-nav-mobile]');
       const authFooter = document.querySelector('[data-auth-footer]');
+      const navToggle = document.querySelector('#nav-toggle');
+      const mobileNav = document.querySelector('#mobile-nav');
       let unsubscribeAuth = null;
       let authModulePromise = null;
       let sessionSyncStarted = false;
@@ -205,6 +218,16 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
                 authNav.removeAttribute('aria-current');
               }
             }
+            if (authNavMobile) {
+              authNavMobile.textContent = getPrivatePageStatusCopy('shell', 'guestNav');
+              authNavMobile.href = loginUrl;
+              authNavMobile.dataset.authState = 'guest';
+              if (window.location.pathname.endsWith('/login/')) {
+                authNavMobile.setAttribute('aria-current', 'page');
+              } else {
+                authNavMobile.removeAttribute('aria-current');
+              }
+            }
             if (authFooter) {
               authFooter.textContent = getPrivatePageStatusCopy('shell', 'guestFooter');
               authFooter.href = loginUrl;
@@ -232,6 +255,12 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
             authNav.dataset.authState = 'signed-in';
             authNav.removeAttribute('aria-current');
           }
+          if (authNavMobile) {
+            authNavMobile.textContent = getPrivatePageStatusCopy('shell', 'signedInNav');
+            authNavMobile.href = '#';
+            authNavMobile.dataset.authState = 'signed-in';
+            authNavMobile.removeAttribute('aria-current');
+          }
           if (authFooter) {
             authFooter.textContent = getPrivatePageStatusCopy('shell', 'signedInFooter');
             authFooter.href = '#';
@@ -251,6 +280,16 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
               authNav.setAttribute('aria-current', 'page');
             } else {
               authNav.removeAttribute('aria-current');
+            }
+          }
+          if (authNavMobile) {
+            authNavMobile.textContent = getPrivatePageStatusCopy('shell', 'guestNav');
+            authNavMobile.href = loginUrl;
+            authNavMobile.dataset.authState = 'guest';
+            if (window.location.pathname.endsWith('/login/')) {
+              authNavMobile.setAttribute('aria-current', 'page');
+            } else {
+              authNavMobile.removeAttribute('aria-current');
             }
           }
           if (authFooter) {
@@ -276,6 +315,12 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
       // 顶栏登录入口会根据登录状态在“登录”和“退出”之间切换，避免已登录时还看到登录按钮。
       authNav?.addEventListener('click', async (event) => {
         if (authNav.dataset.authState !== 'signed-in') return;
+        event.preventDefault();
+        await signOutAndReset();
+      });
+
+      authNavMobile?.addEventListener('click', async (event) => {
+        if (authNavMobile.dataset.authState !== 'signed-in') return;
         event.preventDefault();
         await signOutAndReset();
       });
@@ -321,6 +366,12 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
       }
 
       armSessionRefresh();
+      navToggle?.addEventListener('click', () => {
+        if (!mobileNav || !navToggle) return;
+        const nextExpanded = navToggle.getAttribute('aria-expanded') !== 'true';
+        navToggle.setAttribute('aria-expanded', nextExpanded ? 'true' : 'false');
+        mobileNav.hidden = !nextExpanded;
+      });
       window.addEventListener('beforeunload', () => {
         unsubscribeAuth?.();
         clearSessionRefreshTimer();
