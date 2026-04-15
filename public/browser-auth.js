@@ -165,6 +165,29 @@ export async function fetchPersonalLogs(userId) {
   });
 }
 
+function personalLogSortTime(entry) {
+  const time = new Date(entry?.created_at || entry?.purchased_at || 0).getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
+export function indexLatestPersonalPricesByStore(logs = [], productId = '') {
+  const selectedProductId = String(productId || '');
+  const latestByStore = new Map();
+
+  for (const entry of logs || []) {
+    if (!entry || (selectedProductId && String(entry.product_id || '') !== selectedProductId)) continue;
+    if (!entry.store_id || !entry.price_yen) continue;
+
+    const storeId = String(entry.store_id);
+    const existing = latestByStore.get(storeId);
+    if (!existing || personalLogSortTime(entry) >= personalLogSortTime(existing)) {
+      latestByStore.set(storeId, entry);
+    }
+  }
+
+  return latestByStore;
+}
+
 export async function savePersonalLog(entry) {
   if (!entry?.product_id || !entry?.price_yen) {
     throw new Error('product_id and price_yen are required');

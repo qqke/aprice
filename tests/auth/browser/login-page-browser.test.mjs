@@ -149,6 +149,7 @@ async function main() {
       '/aprice/',
       'login page home link should stay inside the app base path',
     );
+    await waitForHidden(page, '#logout-button');
 
     const desktopMenuDisplay = await page.evaluate(() => {
       const element = document.querySelector('#nav-toggle');
@@ -179,6 +180,7 @@ async function main() {
     await waitForText(page, '#session-state', 'name@example.com');
     await waitForHidden(page, '#auth-form-shell');
     await waitForVisible(page, '#signed-in-state');
+    await waitForVisible(page, '#logout-button');
     await waitForText(page, '#signed-in-action', '继续访问');
     await page.locator('#signed-in-action').waitFor({ state: 'attached' });
     assert.equal(await page.locator('#signed-in-action').getAttribute('href'), redirectTarget);
@@ -187,9 +189,7 @@ async function main() {
     await waitForVisible(page, '#auth-form-shell');
     await waitForHidden(page, '#signed-in-state');
     await waitForText(page, '[data-auth-nav]', '登录');
-
-    await page.locator('#logout-button').click();
-    await page.waitForURL('**/aprice/');
+    await waitForHidden(page, '#logout-button');
 
     await page.goto(`${baseUrl}/aprice/login/?redirect=${encodeURIComponent('https://evil.example/phish')}`, { waitUntil: 'domcontentloaded' });
     await page.locator('#auth-form').waitFor({ state: 'attached' });

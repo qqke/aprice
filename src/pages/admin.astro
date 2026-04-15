@@ -21,7 +21,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         </div>
         <div class="pillrow">
           <a class="button button--ghost" id="admin-switch-account" href={switchAccountHref}>{getPrivatePageStatusCopy('admin', 'actionLabel')}</a>
-          <button class="button button--ghost" id="admin-logout" type="button">退出登录</button>
+          <button class="button button--ghost" id="admin-logout" type="button" hidden>退出登录</button>
         </div>
       </div>
 
@@ -389,6 +389,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     async function loadData() {
       const [user, profile] = await Promise.all([getCurrentUser(), fetchCurrentProfile()]);
       if (!user) {
+        if (logoutButton) logoutButton.hidden = true;
         const copy = getPrivatePageGateCopy('admin', 'guest');
         syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
         applyPrivatePageGateCopy({ titleEl: gateTitle, descriptionEl: gateDescription, primaryButtonEl: loginLink, secondaryButtonEl: switchLink }, copy);
@@ -407,6 +408,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         return false;
       }
       if (profile?.role !== 'admin') {
+        if (logoutButton) logoutButton.hidden = true;
         const copy = getPrivatePageGateCopy('admin', 'forbidden');
         syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
         applyPrivatePageGateCopy({ titleEl: gateTitle, descriptionEl: gateDescription, primaryButtonEl: loginLink, secondaryButtonEl: switchLink }, copy);
@@ -431,6 +433,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         fetchRecentPrices(12),
       ]);
       syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: false });
+      if (logoutButton) logoutButton.hidden = false;
       products = productItems;
       stores = storeItems;
       prices = priceItems;

@@ -23,11 +23,11 @@ export function makeAspirinProductResponse() {
 
 export function makeProductDetailsResponse() {
   return {
-    id: 'sundrug-4902162055576',
-    name: 'JP和の究み 腎臓ガード 2種の味アソート 200g箱',
-    brand: '日清ペットフード',
-    pack: '',
-    barcode: '4902162055576',
+    id: '0019014614042',
+    name: 'アイムス 11歳以上用 毎日の健康ケア チキン 小粒 5kg',
+    brand: 'マースジャパンリミテッド',
+    pack: '5kg',
+    barcode: '0019014614042',
     category: '',
     tone: 'sunset',
     description: '',
@@ -108,6 +108,44 @@ export function makePriceFixtures() {
         pack: '12 tabs',
         tone: 'sunset',
       },
+    },
+  ];
+}
+
+export function makePersonalPriceLogs() {
+  return [
+    {
+      id: 'personal-log-1',
+      user_id: 'member-1',
+      product_id: 'sundrug-4902162055576',
+      store_id: 'sugi-hiroo',
+      price_yen: 698,
+      purchased_at: '2026-04-02',
+      note: 'older store visit',
+      created_at: '2026-04-02T09:00:00.000Z',
+      updated_at: '2026-04-02T09:00:00.000Z',
+    },
+    {
+      id: 'personal-log-2',
+      user_id: 'member-1',
+      product_id: 'sundrug-4902162055576',
+      store_id: 'sugi-hiroo',
+      price_yen: 688,
+      purchased_at: '2026-04-04',
+      note: 'latest store visit',
+      created_at: '2026-04-04T09:00:00.000Z',
+      updated_at: '2026-04-04T09:00:00.000Z',
+    },
+    {
+      id: 'personal-log-3',
+      user_id: 'member-1',
+      product_id: 'sundrug-4902162055576',
+      store_id: 'welcia-shibuya',
+      price_yen: 712,
+      purchased_at: '2026-04-03',
+      note: 'different store',
+      created_at: '2026-04-03T09:00:00.000Z',
+      updated_at: '2026-04-03T09:00:00.000Z',
     },
   ];
 }

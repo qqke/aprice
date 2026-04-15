@@ -237,6 +237,44 @@ async function main() {
       const loginUrl = new URL(page.url());
       assert.equal(loginUrl.searchParams.get('redirect'), '/aprice/admin/');
 
+      const guestContext = await browser.newContext();
+      try {
+        const guestPage = await guestContext.newPage();
+        await guestPage.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+          await route.fulfill({
+            status: 200,
+            contentType: 'text/javascript; charset=utf-8',
+            body: [
+              'export function createClient(){',
+              '  return {',
+              '    auth: {',
+              '      async getSession(){ return { data: { session: null }, error: null }; },',
+              '      async getUser(){ return { data: { user: null }, error: null }; },',
+              '      onAuthStateChange(){ return { data: { subscription: { unsubscribe(){} } } }; },',
+              '      async signOut(){ return { error: null }; },',
+              '    },',
+              '  };',
+              '}',
+            ].join('\n'),
+          });
+        });
+
+        await guestPage.route('**/rest/v1/**', async (route) => {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json; charset=utf-8',
+            body: '[]',
+          });
+        });
+
+        await guestPage.goto(`${baseUrl}/aprice/admin/`, { waitUntil: 'domcontentloaded' });
+        await guestPage.locator('#admin-auth-gate').waitFor({ state: 'visible' });
+        await guestPage.locator('#admin-logout').waitFor({ state: 'attached' });
+        assert.equal(await guestPage.locator('#admin-logout').isVisible(), false);
+      } finally {
+        await guestContext.close();
+      }
+
       console.log('admin-page browser test passed');
     } finally {
       await browser.close();
@@ -250,7 +288,6 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
 
 
 

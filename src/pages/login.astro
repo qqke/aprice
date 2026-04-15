@@ -89,7 +89,7 @@ function resolveBase(pathname = '') {
           </div>
 
           <div class="divider"></div>
-          <button class="button button--ghost" id="logout-button" type="button">退出登录</button>
+          <button class="button button--ghost" id="logout-button" type="button" hidden>退出登录</button>
         </section>
       </div>
     </div>
@@ -208,6 +208,7 @@ function resolveBase(pathname = '') {
       const showForm = !currentSession || mode === 'reset-password';
       if (authFormShell) authFormShell.hidden = !showForm;
       if (signedInState) signedInState.hidden = showForm || !currentSession;
+      if (logoutButton) logoutButton.hidden = !currentSession;
     }
 
     function showSignedInSkeleton() {

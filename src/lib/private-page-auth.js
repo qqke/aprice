@@ -100,7 +100,7 @@ const STATUS_COPY = {
     favoriteStoreRequired: '请登录后再添加门店收藏。',
     logRequired: '请登录后再记录。',
     logSelectionRequired: '选中商品后再保存。',
-    logPrompt: '登录后记录个人购买价。',
+    logPrompt: '登录后可查看并回填你的店铺最新价。',
     favoriteStoreUnavailable: '当前没有可添加收藏的门店。',
     loading: '同步价格数据。',
     favoriteProductSuccess: ({ action } = {}) => (action === 'added' ? '已添加商品收藏。' : '已取消商品收藏。'),
