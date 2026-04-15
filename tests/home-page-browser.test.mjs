@@ -42,6 +42,12 @@ async function main() {
       assert.ok(loaded, 'homepage did not load from static server');
       await page.locator('#home-search').waitFor({ state: 'attached', timeout: 5000 });
 
+      const desktopMenuDisplay = await page.evaluate(() => {
+        const element = document.querySelector('#nav-toggle');
+        return element ? getComputedStyle(element).display : null;
+      });
+      assert.equal(desktopMenuDisplay, 'none', 'desktop homepage should hide the menu toggle');
+
       assert.equal(requests.length, 0, 'homepage should not fetch REST data before interaction');
 
       await page.locator('#home-search').fill('ロキソ');
@@ -65,6 +71,13 @@ async function main() {
 
       const recentText = await page.locator('#recently-viewed').textContent();
       assert.match(recentText || '', /暂无采样/);
+
+      await page.setViewportSize({ width: 390, height: 844 });
+      const mobileMenuDisplay = await page.evaluate(() => {
+        const element = document.querySelector('#nav-toggle');
+        return element ? getComputedStyle(element).display : null;
+      });
+      assert.notEqual(mobileMenuDisplay, 'none', 'mobile homepage should keep the menu toggle');
 
       const ssrContext = await browser.newContext({ javaScriptEnabled: false });
       try {

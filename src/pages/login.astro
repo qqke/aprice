@@ -1,6 +1,14 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { resolveBase } from '../lib/browser.js';
+
+const appBase = new URL('../', Astro.url).pathname;
+
+function resolveBase(pathname = '') {
+  const normalizedBase = appBase.endsWith('/') ? appBase : `${appBase}/`;
+  const cleanPath = String(pathname || '').replace(/^\/+/, '');
+  if (!cleanPath) return normalizedBase;
+  return `${normalizedBase.replace(/\/$/, '')}/${cleanPath}`;
+}
 ---
 <BaseLayout title="登录 - 搜比价" description="邮箱密码登录、注册和重置密码。" bodyClass="login-page">
   <section class="section section--first-workspace">

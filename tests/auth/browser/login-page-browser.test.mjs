@@ -144,6 +144,25 @@ async function main() {
     await page.locator('#auth-form').waitFor({ state: 'attached' });
     await page.locator('#session-state').waitFor({ state: 'attached' });
     await page.locator('#auth-status').waitFor({ state: 'attached' });
+    assert.equal(
+      await page.getByRole('link', { name: '返回首页继续搜索' }).getAttribute('href'),
+      '/aprice/',
+      'login page home link should stay inside the app base path',
+    );
+
+    const desktopMenuDisplay = await page.evaluate(() => {
+      const element = document.querySelector('#nav-toggle');
+      return element ? getComputedStyle(element).display : null;
+    });
+    assert.equal(desktopMenuDisplay, 'none', 'desktop subpages should hide the menu toggle');
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileMenuDisplay = await page.evaluate(() => {
+      const element = document.querySelector('#nav-toggle');
+      return element ? getComputedStyle(element).display : null;
+    });
+    assert.notEqual(mobileMenuDisplay, 'none', 'mobile subpages should keep the menu toggle');
+    await page.setViewportSize({ width: 1280, height: 900 });
 
     await waitForText(page, '#session-state', '未登录');
 
