@@ -45,7 +45,6 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
           <div class="pillrow">
             <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>
             <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button>
-            <span class="pill" id="favorite-status">{getPrivatePageStatusCopy('product', 'favoriteStatus')}</span>
           </div>
         </div>
       </div>
@@ -153,7 +152,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
 
   <script type="module" is:inline define:vars={{ loginUrl }}>
     const { recordRecentView, resolveBase, fetchAllStores, fetchNearbyPrices, fetchPricesForProduct, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
-    const { getCurrentUser, savePersonalLog, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+    const { fetchFavorites, getCurrentUser, savePersonalLog, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
 
     const page = document.querySelector('#product-page');
@@ -180,7 +179,6 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
     const status = document.querySelector('#personal-status');
     const favoriteButton = document.querySelector('#favorite-product-button');
     const favoriteStoreButton = document.querySelector('#favorite-store-button');
-    const favoriteStatus = document.querySelector('#favorite-status');
     const authGate = document.querySelector('#product-auth-gate');
     const authGateLink = document.querySelector('#product-login-link');
     const geoButton = document.querySelector('#geo-sort');
@@ -193,6 +191,8 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
 
     let stores = [];
     let activeStoreId = '';
+    let favoriteProductIds = new Set();
+    let favoriteStoreIds = new Set();
 
     async function syncAuthGate() {
       const user = await getCurrentUser();
@@ -216,7 +216,40 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
     function syncFavoriteStoreButton() {
       if (favoriteStoreButton) {
         favoriteStoreButton.disabled = !activeStoreId;
+        favoriteStoreButton.textContent = activeStoreId && favoriteStoreIds.has(activeStoreId) ? '取消门店收藏' : '添加门店收藏';
       }
+    }
+
+    function syncFavoriteProductButton() {
+      if (!favoriteButton) return;
+      favoriteButton.textContent = favoriteProductIds.has(productId) ? '取消商品收藏' : '添加商品收藏';
+    }
+
+    function syncNearbyFavoriteButtons() {
+      nearbyStoreList?.querySelectorAll('[data-favorite-store]').forEach((button) => {
+        if (!(button instanceof HTMLButtonElement)) return;
+        const storeId = button.dataset.favoriteStore || '';
+        button.textContent = storeId && favoriteStoreIds.has(storeId) ? '取消收藏门店' : '收藏门店';
+      });
+    }
+
+    async function syncFavoriteStates() {
+      const user = await getCurrentUser();
+      if (!user) {
+        favoriteProductIds = new Set();
+        favoriteStoreIds = new Set();
+        syncFavoriteProductButton();
+        syncFavoriteStoreButton();
+        syncNearbyFavoriteButtons();
+        return;
+      }
+
+      const list = await fetchFavorites(user.id);
+      favoriteProductIds = new Set(list.filter((item) => item.entity_type === 'product').map((item) => String(item.entity_id)));
+      favoriteStoreIds = new Set(list.filter((item) => item.entity_type === 'store').map((item) => String(item.entity_id)));
+      syncFavoriteProductButton();
+      syncFavoriteStoreButton();
+      syncNearbyFavoriteButtons();
     }
 
     function renderPrices(rows) {
@@ -332,6 +365,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
             <span class="price">暂无</span>
           </div>
         `;
+      syncNearbyFavoriteButtons();
     }
 
     function renderInsights(rows) {
@@ -466,18 +500,17 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       const user = await getCurrentUser();
       if (!user) {
         syncPrivatePageGate({ gateEl: authGate, loginLinkEl: authGateLink, loginUrl, visible: true });
-        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteProductRequired');
         redirectToLogin(loginUrl, authGate);
         return;
       }
 
       try {
         const result = await toggleFavorite('product', productId);
-        if (favoriteStatus) {
-          favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteProductSuccess', result);
-        }
+        if (result?.action === 'added') favoriteProductIds.add(productId);
+        if (result?.action === 'removed') favoriteProductIds.delete(productId);
+        syncFavoriteProductButton();
       } catch (error) {
-        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteFailure', { message: error.message });
+        console.error(error);
       }
     });
 
@@ -485,23 +518,22 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       const user = await getCurrentUser();
       if (!user) {
         syncPrivatePageGate({ gateEl: authGate, loginLinkEl: authGateLink, loginUrl, visible: true });
-        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteStoreRequired');
         redirectToLogin(loginUrl, authGate);
         return;
       }
 
       if (!activeStoreId) {
-        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteStoreUnavailable');
         return;
       }
 
       try {
         const result = await toggleFavorite('store', activeStoreId);
-        if (favoriteStatus) {
-          favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteStoreSuccess', result);
-        }
+        if (result?.action === 'added') favoriteStoreIds.add(activeStoreId);
+        if (result?.action === 'removed') favoriteStoreIds.delete(activeStoreId);
+        syncFavoriteStoreButton();
+        syncNearbyFavoriteButtons();
       } catch (error) {
-        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteFailure', { message: error.message });
+        console.error(error);
       }
     });
 
@@ -514,18 +546,18 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       const user = await getCurrentUser();
       if (!user) {
         syncPrivatePageGate({ gateEl: authGate, loginLinkEl: authGateLink, loginUrl, visible: true });
-        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteStoreRequired');
         redirectToLogin(loginUrl, authGate);
         return;
       }
 
       try {
         const result = await toggleFavorite('store', storeId);
-        if (favoriteStatus) {
-          favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteStoreSuccess', result);
-        }
+        if (result?.action === 'added') favoriteStoreIds.add(storeId);
+        if (result?.action === 'removed') favoriteStoreIds.delete(storeId);
+        syncFavoriteStoreButton();
+        syncNearbyFavoriteButtons();
       } catch (error) {
-        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteFailure', { message: error.message });
+        console.error(error);
       }
     });
 
@@ -571,6 +603,8 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       }
     });
 
-    await Promise.all([loadStores(), loadPrices(), syncAuthGate()]);
+    await syncAuthGate();
+    await syncFavoriteStates();
+    await Promise.all([loadStores(), loadPrices()]);
   </script>
 </BaseLayout>
