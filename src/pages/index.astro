@@ -68,11 +68,12 @@ const base = import.meta.env.BASE_URL || '/';
       <div class="section__header section__header--tight">
         <div>
           <h2>附近比价</h2>
-          <p>先选中商品，再按当前位置排序。</p>
+          <p>已选中的商品会在这里显示门店价格，可再按当前位置排序。</p>
         </div>
         <span class="pill">附近</span>
       </div>
       <div class="home-panel">
+        <div class="notice notice--compact home-status home-status--selected" id="selected-product-status">当前比价商品：未选择</div>
         <div class="notice notice--compact home-status" id="nearby-status">先搜索商品，再查看附近价格。</div>
         <div class="list home-results" id="nearby-results">
           <div class="notice notice--compact">搜索后，附近门店价格会显示在这里。</div>
@@ -117,6 +118,7 @@ const base = import.meta.env.BASE_URL || '/';
     const status = document.querySelector('#search-status');
     const geolocateButton = document.querySelector('#geolocate-home');
     const nearbyStatus = document.querySelector('#nearby-status');
+    const selectedProductStatus = document.querySelector('#selected-product-status');
     const nearbyResults = document.querySelector('#nearby-results');
     const recentlyViewed = document.querySelector('#recently-viewed');
     const recentStatus = document.querySelector('#recent-status');
@@ -145,18 +147,20 @@ const base = import.meta.env.BASE_URL || '/';
       if (!results) return;
       if (!items.length) {
         activeProduct = null;
+        if (selectedProductStatus) selectedProductStatus.textContent = '当前比价商品：未选择';
         renderEmptyList(results, '暂无匹配商品', '换一个更短的关键词、品牌名或 JAN 码再试一次。', '空');
         return;
       }
 
       activeProduct = items[0];
+      if (selectedProductStatus) selectedProductStatus.textContent = `当前比价商品：${activeProduct.name}`;
       results.innerHTML = items.slice(0, 8).map((item) => `
-        <a class="list__item" href="${productHref(item.id)}">
+        <a class="list__item ${activeProduct?.id === item.id ? 'is-active' : ''}" href="${productHref(item.id)}">
           <div>
             <strong>${item.name}</strong>
             <small>${item.brand} · ${item.pack} · ${item.barcode}</small>
           </div>
-          <span class="price">查看</span>
+          <span class="price">${activeProduct?.id === item.id ? '比价中' : '查看'}</span>
         </a>
       `).join('');
     }
@@ -175,7 +179,7 @@ const base = import.meta.env.BASE_URL || '/';
         nearbyResults.innerHTML = prices.slice(0, 4).map((row) => `
           <a class="list__item" href="${productHref(product.id)}">
             <div>
-              <strong>${row.stores?.name || 'Unknown store'}</strong>
+              <strong>${row.stores?.name || '未知门店'}</strong>
               <small>${row.stores?.city || ''}${row.stores?.city ? ' · ' : ''}${row.stores?.pref || ''}${row.is_member_price ? ' · 会员价' : ' · 公开价'}</small>
             </div>
             <div class="home-results__meta">
@@ -198,6 +202,7 @@ const base = import.meta.env.BASE_URL || '/';
         status.textContent = '输入关键词后再搜索商品。';
         renderEmptyList(results, '等待搜索', '输入商品名、品牌名或 JAN 条码后再查价。', '空');
         renderEmptyList(nearbyResults, '等待搜索', '选中商品后，这里会显示附近价格。', '空');
+        if (selectedProductStatus) selectedProductStatus.textContent = '当前比价商品：未选择';
         nearbyStatus.textContent = '先搜索商品，再查看附近价格。';
         activeProduct = null;
         return;
@@ -247,7 +252,7 @@ const base = import.meta.env.BASE_URL || '/';
         nearbyResults.innerHTML = rows.slice(0, 4).map((row) => `
           <a class="list__item" href="${productHref(activeProduct.id)}">
             <div>
-              <strong>${row.stores?.name || 'Unknown store'}</strong>
+              <strong>${row.stores?.name || '未知门店'}</strong>
               <small>${row.stores?.city || ''}${row.stores?.city ? ' · ' : ''}${row.stores?.pref || ''}${row.distance_km !== null && row.distance_km !== undefined ? ` · ${formatDistance(row.distance_km)}` : ''}</small>
             </div>
             <div class="home-results__meta">
@@ -277,8 +282,8 @@ const base = import.meta.env.BASE_URL || '/';
         recentlyViewed.innerHTML = rows.slice(0, 6).map((row) => `
           <a class="list__item" href="${productHref(row.products?.id || row.product_id || '')}">
             <div>
-              <strong>${row.products?.name || 'Unknown product'}</strong>
-              <small>${row.stores?.name || 'Unknown store'}${row.stores?.city ? ` · ${row.stores.city}` : ''}${row.is_member_price ? ' · 会员价' : ' · 公开价'}</small>
+              <strong>${row.products?.name || '未知商品'}</strong>
+              <small>${row.stores?.name || '未知门店'}${row.stores?.city ? ` · ${row.stores.city}` : ''}${row.is_member_price ? ' · 会员价' : ' · 公开价'}</small>
             </div>
             <div class="home-results__meta">
               <div class="price">${formatYen(row.price_yen)}</div>
