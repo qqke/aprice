@@ -45,7 +45,6 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
           <div class="pillrow">
             <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>
             <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button>
-            <span class="pill" id="favorite-status">{getPrivatePageStatusCopy('product', 'favoriteStatus')}</span>
           </div>
         </div>
       </div>
@@ -180,7 +179,6 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
     const status = document.querySelector('#personal-status');
     const favoriteButton = document.querySelector('#favorite-product-button');
     const favoriteStoreButton = document.querySelector('#favorite-store-button');
-    const favoriteStatus = document.querySelector('#favorite-status');
     const authGate = document.querySelector('#product-auth-gate');
     const authGateLink = document.querySelector('#product-login-link');
     const geoButton = document.querySelector('#geo-sort');
@@ -502,7 +500,6 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       const user = await getCurrentUser();
       if (!user) {
         syncPrivatePageGate({ gateEl: authGate, loginLinkEl: authGateLink, loginUrl, visible: true });
-        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteProductRequired');
         redirectToLogin(loginUrl, authGate);
         return;
       }
@@ -512,11 +509,8 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
         if (result?.action === 'added') favoriteProductIds.add(productId);
         if (result?.action === 'removed') favoriteProductIds.delete(productId);
         syncFavoriteProductButton();
-        if (favoriteStatus) {
-          favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteProductSuccess', result);
-        }
       } catch (error) {
-        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteFailure', { message: error.message });
+        console.error(error);
       }
     });
 
@@ -524,13 +518,11 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       const user = await getCurrentUser();
       if (!user) {
         syncPrivatePageGate({ gateEl: authGate, loginLinkEl: authGateLink, loginUrl, visible: true });
-        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteStoreRequired');
         redirectToLogin(loginUrl, authGate);
         return;
       }
 
       if (!activeStoreId) {
-        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteStoreUnavailable');
         return;
       }
 
@@ -540,11 +532,8 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
         if (result?.action === 'removed') favoriteStoreIds.delete(activeStoreId);
         syncFavoriteStoreButton();
         syncNearbyFavoriteButtons();
-        if (favoriteStatus) {
-          favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteStoreSuccess', result);
-        }
       } catch (error) {
-        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteFailure', { message: error.message });
+        console.error(error);
       }
     });
 
@@ -557,7 +546,6 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       const user = await getCurrentUser();
       if (!user) {
         syncPrivatePageGate({ gateEl: authGate, loginLinkEl: authGateLink, loginUrl, visible: true });
-        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteStoreRequired');
         redirectToLogin(loginUrl, authGate);
         return;
       }
@@ -568,11 +556,8 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
         if (result?.action === 'removed') favoriteStoreIds.delete(storeId);
         syncFavoriteStoreButton();
         syncNearbyFavoriteButtons();
-        if (favoriteStatus) {
-          favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteStoreSuccess', result);
-        }
       } catch (error) {
-        if (favoriteStatus) favoriteStatus.textContent = getPrivatePageStatusCopy('product', 'favoriteFailure', { message: error.message });
+        console.error(error);
       }
     });
 
