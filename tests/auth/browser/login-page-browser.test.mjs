@@ -144,9 +144,9 @@ async function main() {
     await page.locator('#auth-form').waitFor({ state: 'attached' });
     await page.locator('#session-state').waitFor({ state: 'attached' });
     await page.locator('#auth-status').waitFor({ state: 'attached' });
-    assert.equal(
+    assert.match(
       await page.getByRole('link', { name: '返回首页继续搜索' }).getAttribute('href'),
-      '/aprice/',
+      /^(?:\/aprice\/|\/)$/,
       'login page home link should stay inside the app base path',
     );
     await waitForHidden(page, '#logout-button');

@@ -7,9 +7,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <div class="hero-banner">
         <div class="hero-banner__inner">
           <div class="hero-banner__eyebrow">扫码</div>
-          <h1 class="product-title">扫描 JAN 码，直接进入商品页。</h1>
+          <h1 class="product-title">打开页面就自动扫，识别到就停。</h1>
           <p class="product-sub">
-            相机、条码识别和手动输入统一在一个页面里。浏览器不支持时会自动回退到手动输入。
+            相机、条码识别和手动输入统一在一个页面里。找到商品会停下相机并显示结果，没找到也会保留条码直接补录。
           </p>
         </div>
       </div>
@@ -27,20 +27,20 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <button class="button button--ghost" id="stop-scan" type="button">停止</button>
               <button class="button button--ghost" id="snap-scan" type="button">尝试识别当前帧</button>
             </div>
-            <div class="notice notice--compact">先手动输入也可以，只有需要时再启动相机。相机模式需要 HTTPS。</div>
+            <div class="notice notice--compact">页面加载后会自动启动后置相机。相机模式需要 HTTPS。</div>
           </div>
         </section>
         <section class="tile">
           <div class="section__header">
             <h3>手动输入</h3>
-            <p>拍不到就直接输条码。</p>
+            <p>扫不到就直接输条码。</p>
           </div>
           <div class="form">
             <label class="field" for="barcode-input">
-              <input id="barcode-input" name="barcode-input" autofocus inputmode="numeric" placeholder="例如 4987188161027" spellcheck="false" />
+              <input id="barcode-input" name="barcode-input" inputmode="numeric" placeholder="例如 4987188161027" spellcheck="false" />
             </label>
             <button class="button" id="barcode-search" type="button">查找商品</button>
-            <div class="notice" id="scan-status">扫描条码，或直接输入 JAN 码。</div>
+            <div class="notice" id="scan-status">正在准备相机...</div>
           </div>
         </section>
       </div>
@@ -49,7 +49,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <div class="section__header">
           <div>
             <h2>扫描结果</h2>
-            <p>识别到条码后，会自动跳转到商品页。</p>
+            <p>识别成功后会停下相机。若商品不存在，会显示条码并展开补录表单。</p>
           </div>
         </div>
         <div class="tile tile--wide">
@@ -57,18 +57,54 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             <div class="list__item">
               <div>
                 <strong>尚未识别</strong>
-                <small>启动相机或输入条码后，结果会显示在这里。</small>
+                <small>相机启动后会自动寻找条码，也可以直接输入。</small>
               </div>
               <span class="meta">待识别</span>
             </div>
           </div>
         </div>
+
+        <section class="tile tile--wide" id="missing-product-panel" hidden>
+          <div class="section__header section__header--tight">
+            <div>
+              <h3>未找到商品</h3>
+              <p>条码已经保留下来，直接补录商品信息。</p>
+            </div>
+            <div class="pillrow">
+              <span class="pill" id="missing-product-code-pill"></span>
+            </div>
+          </div>
+          <div class="notice notice--warning" id="missing-product-summary">请填写商品信息后直接保存。</div>
+          <form class="form admin-form" id="missing-product-form">
+            <div class="admin-form__row admin-form__row--two">
+              <label class="field"><input id="missing-product-barcode" placeholder="条码" aria-label="条码" readonly /></label>
+              <label class="field"><input id="missing-product-name" placeholder="名称" aria-label="商品名称" /></label>
+            </div>
+            <div class="admin-form__row admin-form__row--two">
+              <label class="field"><input id="missing-product-brand" placeholder="品牌" aria-label="商品品牌" /></label>
+              <label class="field"><input id="missing-product-pack" placeholder="规格" aria-label="商品规格" /></label>
+            </div>
+            <div class="admin-form__row admin-form__row--two">
+              <label class="field"><input id="missing-product-category" placeholder="分类" aria-label="商品分类" /></label>
+              <label class="field">
+                <select id="missing-product-tone" aria-label="商品色调">
+                  <option value="sunset">sunset</option>
+                  <option value="mint">mint</option>
+                  <option value="azure">azure</option>
+                </select>
+              </label>
+            </div>
+            <label class="field"><input id="missing-product-description" placeholder="简短描述" aria-label="商品简短描述" /></label>
+            <button class="button admin-form__submit" id="missing-product-save" type="submit">保存商品</button>
+          </form>
+        </section>
       </section>
     </div>
   </section>
 
   <script type="module" is:inline>
     const { fetchProductByBarcode, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
+    const { adminUpsertProduct } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
 
     const video = document.querySelector('#camera');
     const capture = document.querySelector('#capture');
@@ -79,11 +115,25 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const searchButton = document.querySelector('#barcode-search');
     const status = document.querySelector('#scan-status');
     const resultList = document.querySelector('#scan-result-list');
+    const missingPanel = document.querySelector('#missing-product-panel');
+    const missingSummary = document.querySelector('#missing-product-summary');
+    const missingCodePill = document.querySelector('#missing-product-code-pill');
+    const missingForm = document.querySelector('#missing-product-form');
+    const missingFields = {
+      barcode: document.querySelector('#missing-product-barcode'),
+      name: document.querySelector('#missing-product-name'),
+      brand: document.querySelector('#missing-product-brand'),
+      pack: document.querySelector('#missing-product-pack'),
+      category: document.querySelector('#missing-product-category'),
+      tone: document.querySelector('#missing-product-tone'),
+      description: document.querySelector('#missing-product-description'),
+    };
 
     let stream = null;
     let rafId = null;
     let detector = null;
     let cameraReady = false;
+    let lookupToken = 0;
 
     function syncCameraControls() {
       const isActive = Boolean(stream);
@@ -95,17 +145,23 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       if (snapButton) snapButton.disabled = !isActive || !detector;
     }
 
-    function renderProduct(product) {
-      if (!product) {
-        resultList.innerHTML = `
-          <div class="list__item">
-            <div>
-              <strong>没有找到对应商品</strong>
-              <small>请确认条码是否正确，或者去首页做模糊搜索。</small>
-            </div>
-            <span class="meta">暂无</span>
+    function renderIdleResult() {
+      if (!resultList) return;
+      resultList.innerHTML = `
+        <div class="list__item">
+          <div>
+            <strong>尚未识别</strong>
+            <small>相机启动后会自动寻找条码，也可以直接输入。</small>
           </div>
-        `;
+          <span class="meta">待识别</span>
+        </div>
+      `;
+    }
+
+    function renderProduct(product) {
+      if (!resultList) return;
+      if (!product) {
+        renderIdleResult();
         return;
       }
 
@@ -113,33 +169,108 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <a class="list__item" href="${resolveBase(`product/${product.id}/`)}">
           <div>
             <strong>${product.name}</strong>
-            <small>${product.brand} · ${product.pack} · ${product.barcode}</small>
+            <small>${product.brand || '品牌未知'} · ${product.pack || '规格未知'} · ${product.barcode || ''}</small>
           </div>
-          <span class="price">打开</span>
+          <span class="price">查看商品页</span>
         </a>
       `;
     }
 
-    async function lookup(code) {
-      const product = await fetchProductByBarcode(code);
-      if (product) {
-        status.textContent = `识别成功：${product.name}`;
-        renderProduct(product);
-        window.location.assign(resolveBase(`product/${product.id}/`));
-        return;
+    function renderMissing(code) {
+      if (!resultList) return;
+      resultList.innerHTML = `
+        <div class="list__item">
+          <div>
+            <strong>没有找到对应商品</strong>
+            <small>条码 ${code} 已保留在下方补录表单中。</small>
+          </div>
+          <span class="meta">未命中</span>
+        </div>
+      `;
+    }
+
+    function setMissingFormValue(field, value = '') {
+      if (!field) return;
+      field.value = value ?? '';
+    }
+
+    function resetMissingForm(code = '') {
+      setMissingFormValue(missingFields.barcode, code);
+      setMissingFormValue(missingFields.name, '');
+      setMissingFormValue(missingFields.brand, '');
+      setMissingFormValue(missingFields.pack, '');
+      setMissingFormValue(missingFields.category, '');
+      setMissingFormValue(missingFields.tone, 'sunset');
+      setMissingFormValue(missingFields.description, '');
+    }
+
+    function showMissingPanel(code) {
+      if (!missingPanel) return;
+      resetMissingForm(code);
+      if (missingSummary) missingSummary.textContent = `条码 ${code} 没有匹配到商品，可以直接补录。`;
+      if (missingCodePill) missingCodePill.textContent = `JAN ${code}`;
+      missingPanel.hidden = false;
+      queueMicrotask(() => missingFields.name?.focus());
+    }
+
+    function hideMissingPanel() {
+      if (missingPanel) missingPanel.hidden = true;
+    }
+
+    async function stopCamera({ silent = false } = {}) {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+      stream?.getTracks().forEach((track) => track.stop());
+      stream = null;
+      if (video) video.srcObject = null;
+      cameraReady = false;
+      if (!silent && status) status.textContent = '已停止。';
+      syncCameraControls();
+    }
+
+    async function handleBarcode(code) {
+      const cleaned = String(code || '').trim();
+      if (!cleaned) {
+        if (status) status.textContent = '请输入条码。';
+        return null;
       }
 
-      status.textContent = `未找到条码 ${code}`;
-      renderProduct(null);
+      const token = ++lookupToken;
+      if (status) status.textContent = `正在查询条码 ${cleaned}...`;
+
+      try {
+        const product = await fetchProductByBarcode(cleaned);
+        if (token !== lookupToken) return null;
+
+        await stopCamera({ silent: true });
+
+        if (product) {
+          hideMissingPanel();
+          renderProduct(product);
+          if (status) status.textContent = `识别成功：${product.name}`;
+          return product;
+        }
+
+        renderMissing(cleaned);
+        showMissingPanel(cleaned);
+        if (status) status.textContent = `未找到条码 ${cleaned}，可以直接补录商品信息。`;
+        return null;
+      } catch (error) {
+        if (token !== lookupToken) return null;
+
+        await stopCamera({ silent: true });
+        if (status) status.textContent = `查询失败：${error.message}`;
+        return null;
+      }
     }
 
     async function detectFromFrame(source) {
       if (!detector) {
-        status.textContent = '当前浏览器没有 BarcodeDetector，请直接输入条码。';
+        if (status) status.textContent = '当前浏览器没有 BarcodeDetector，请直接输入条码。';
         return;
       }
       if (!source) {
-        status.textContent = '请先启动相机，再尝试识别。';
+        if (status) status.textContent = '请先启动相机，再尝试识别。';
         return;
       }
 
@@ -148,18 +279,19 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         if (barcodes?.length) {
           const code = barcodes[0].rawValue;
           if (code) {
-            await lookup(code);
+            await handleBarcode(code);
             return;
           }
         }
-        status.textContent = '当前画面没有识别到条码，请再靠近一点。';
+        if (status) status.textContent = '当前画面没有识别到条码，请再靠近一点。';
       } catch (error) {
-        status.textContent = `识别失败：${error.message}`;
+        if (status) status.textContent = `识别失败：${error.message}`;
       }
     }
 
     async function scanFrame() {
-      if (!detector || !video?.videoWidth) {
+      if (!detector || !stream) return;
+      if (!video?.videoWidth) {
         rafId = requestAnimationFrame(scanFrame);
         return;
       }
@@ -169,7 +301,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         if (barcodes?.length) {
           const code = barcodes[0].rawValue;
           if (code) {
-            await lookup(code);
+            await handleBarcode(code);
             return;
           }
         }
@@ -177,12 +309,18 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         // keep scanning
       }
 
-      rafId = requestAnimationFrame(scanFrame);
+      if (stream) {
+        rafId = requestAnimationFrame(scanFrame);
+      }
     }
 
     async function startCamera() {
+      if (stream) return;
+      renderIdleResult();
+      hideMissingPanel();
+
       if (!navigator.mediaDevices?.getUserMedia) {
-        status.textContent = '当前浏览器不支持相机访问。请使用手动输入。';
+        if (status) status.textContent = '当前浏览器不支持相机访问。请使用手动输入。';
         syncCameraControls();
         return;
       }
@@ -193,33 +331,28 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         await video.play();
         detector = 'BarcodeDetector' in window ? new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128'] }) : null;
         cameraReady = true;
-        status.textContent = detector ? '相机已启动，正在寻找条码...' : '相机已启动，但当前浏览器没有 BarcodeDetector。可以用“尝试识别当前帧”或手动输入。';
+        if (status) {
+          status.textContent = detector
+            ? '相机已启动，正在寻找条码...'
+            : '相机已启动，但当前浏览器没有 BarcodeDetector。可以继续手动输入。';
+        }
         syncCameraControls();
         if (rafId) cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(scanFrame);
+        if (detector) {
+          rafId = requestAnimationFrame(scanFrame);
+        }
       } catch (error) {
-        status.textContent = `相机启动失败：${error.message}。你仍然可以继续手动输入 JAN 码。`;
+        if (status) status.textContent = `相机启动失败：${error.message}。你仍然可以继续手动输入 JAN 码。`;
         cameraReady = false;
         syncCameraControls();
       }
     }
 
-    function stopCamera() {
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = null;
-      stream?.getTracks().forEach((track) => track.stop());
-      stream = null;
-      if (video) video.srcObject = null;
-      cameraReady = false;
-      status.textContent = '已停止。';
-      syncCameraControls();
-    }
-
     startButton?.addEventListener('click', startCamera);
-    stopButton?.addEventListener('click', stopCamera);
+    stopButton?.addEventListener('click', () => stopCamera());
     snapButton?.addEventListener('click', async () => {
       if (!cameraReady || !video?.videoWidth || !capture) {
-        status.textContent = '请先启动相机后再尝试识别。';
+        if (status) status.textContent = '请先启动相机后再尝试识别。';
         return;
       }
 
@@ -233,10 +366,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     searchButton?.addEventListener('click', async () => {
       const code = input?.value?.trim();
       if (!code) {
-        status.textContent = '请输入条码。';
+        if (status) status.textContent = '请输入条码。';
         return;
       }
-      await lookup(code);
+      await handleBarcode(code);
     });
 
     input?.addEventListener('keydown', async (event) => {
@@ -244,16 +377,48 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         event.preventDefault();
         const code = input.value?.trim();
         if (!code) {
-          status.textContent = '请输入条码。';
+          if (status) status.textContent = '请输入条码。';
           return;
         }
-        await lookup(code);
+        await handleBarcode(code);
       }
     });
 
-    window.addEventListener('beforeunload', stopCamera);
+    missingForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const barcode = missingFields.barcode?.value?.trim() || '';
+      if (!barcode) {
+        if (status) status.textContent = '缺少条码，无法保存。';
+        return;
+      }
+
+      try {
+        const saved = await adminUpsertProduct({
+          barcode,
+          name: missingFields.name?.value?.trim() || '',
+          brand: missingFields.brand?.value?.trim() || '',
+          pack: missingFields.pack?.value?.trim() || '',
+          category: missingFields.category?.value?.trim() || '',
+          tone: missingFields.tone?.value?.trim() || 'sunset',
+          description: missingFields.description?.value?.trim() || '',
+        });
+
+        const savedProduct = Array.isArray(saved) ? saved[0] : saved;
+        if (savedProduct) {
+          hideMissingPanel();
+          renderProduct(savedProduct);
+          if (status) status.textContent = `商品已保存：${savedProduct.name || barcode}`;
+          return;
+        }
+
+        if (status) status.textContent = `商品已保存：${barcode}`;
+      } catch (error) {
+        if (status) status.textContent = `保存失败：${error.message}`;
+      }
+    });
+
+    window.addEventListener('beforeunload', () => stopCamera({ silent: true }));
     syncCameraControls();
-    status.textContent = '等待手动输入，或点击“启动相机扫描”开始识别。';
+    startCamera();
   </script>
 </BaseLayout>
-
