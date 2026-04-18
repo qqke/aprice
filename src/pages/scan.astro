@@ -18,14 +18,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <section class="tile tile--wide">
           <div class="stack">
             <div class="scan-frame">
-              <video id="camera" class="scan-video" playsinline muted></video>
-              <canvas id="capture" hidden></canvas>
+              <div id="camera" class="scan-video"></div>
               <div class="scan-beam"></div>
             </div>
             <div class="pillrow">
               <button class="button" id="start-scan" type="button">启动相机扫描</button>
               <button class="button button--ghost" id="stop-scan" type="button">停止</button>
-              <button class="button button--ghost" id="snap-scan" type="button">尝试识别当前帧</button>
             </div>
             <div class="notice notice--compact">先手动输入也可以，只有需要时再启动相机。相机模式需要 HTTPS。</div>
           </div>
@@ -70,29 +68,46 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   <script type="module" is:inline>
     const { fetchProductByBarcode, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
 
-    const video = document.querySelector('#camera');
-    const capture = document.querySelector('#capture');
+    const camera = document.querySelector('#camera');
     const startButton = document.querySelector('#start-scan');
     const stopButton = document.querySelector('#stop-scan');
-    const snapButton = document.querySelector('#snap-scan');
     const input = document.querySelector('#barcode-input');
     const searchButton = document.querySelector('#barcode-search');
     const status = document.querySelector('#scan-status');
     const resultList = document.querySelector('#scan-result-list');
 
-    let stream = null;
-    let rafId = null;
-    let detector = null;
-    let cameraReady = false;
+    let scanner = null;
+    let scanning = false;
+    let lookupInFlight = false;
+    let html5QrcodeLoader = null;
+
+    const setStatus = (message) => {
+      if (status) status.textContent = message;
+    };
+
+    function loadHtml5Qrcode() {
+      if (window.Html5Qrcode && window.Html5QrcodeSupportedFormats) return Promise.resolve();
+      if (html5QrcodeLoader) return html5QrcodeLoader;
+
+      html5QrcodeLoader = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+        script.async = true;
+        script.dataset.html5Qrcode = '1';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('html5-qrcode 加载失败'));
+        document.head.appendChild(script);
+      });
+
+      return html5QrcodeLoader;
+    }
 
     function syncCameraControls() {
-      const isActive = Boolean(stream);
       if (startButton) {
-        startButton.disabled = isActive;
-        startButton.textContent = isActive ? '相机已启动' : '启动相机扫描';
+        startButton.disabled = scanning;
+        startButton.textContent = scanning ? '相机已启动' : '启动相机扫描';
       }
-      if (stopButton) stopButton.disabled = !isActive;
-      if (snapButton) snapButton.disabled = !isActive || !detector;
+      if (stopButton) stopButton.disabled = !scanning;
     }
 
     function renderProduct(product) {
@@ -121,139 +136,117 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     }
 
     async function lookup(code) {
-      const product = await fetchProductByBarcode(code);
-      if (product) {
-        status.textContent = `识别成功：${product.name}`;
-        renderProduct(product);
-        window.location.assign(resolveBase(`product/${product.id}/`));
-        return;
-      }
-
-      status.textContent = `未找到条码 ${code}`;
-      renderProduct(null);
-    }
-
-    async function detectFromFrame(source) {
-      if (!detector) {
-        status.textContent = '当前浏览器没有 BarcodeDetector，请直接输入条码。';
-        return;
-      }
-      if (!source) {
-        status.textContent = '请先启动相机，再尝试识别。';
-        return;
-      }
-
+      if (lookupInFlight) return;
+      lookupInFlight = true;
       try {
-        const barcodes = await detector.detect(source);
-        if (barcodes?.length) {
-          const code = barcodes[0].rawValue;
-          if (code) {
-            await lookup(code);
-            return;
-          }
+        const product = await fetchProductByBarcode(code);
+        if (product) {
+          setStatus(`识别成功：${product.name}`);
+          renderProduct(product);
+          window.location.assign(resolveBase(`product/${product.id}/`));
+          return;
         }
-        status.textContent = '当前画面没有识别到条码，请再靠近一点。';
-      } catch (error) {
-        status.textContent = `识别失败：${error.message}`;
-      }
-    }
 
-    async function scanFrame() {
-      if (!detector || !video?.videoWidth) {
-        rafId = requestAnimationFrame(scanFrame);
-        return;
+        setStatus(`未找到条码 ${code}`);
+        renderProduct(null);
+      } finally {
+        lookupInFlight = false;
       }
-
-      try {
-        const barcodes = await detector.detect(video);
-        if (barcodes?.length) {
-          const code = barcodes[0].rawValue;
-          if (code) {
-            await lookup(code);
-            return;
-          }
-        }
-      } catch {
-        // keep scanning
-      }
-
-      rafId = requestAnimationFrame(scanFrame);
     }
 
     async function startCamera() {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        status.textContent = '当前浏览器不支持相机访问。请使用手动输入。';
+      if (!camera) {
+        setStatus('相机容器加载失败，请刷新后重试。');
+        return;
+      }
+      if (!window.isSecureContext) {
+        setStatus('相机扫描需要 HTTPS 或 localhost。请改用手动输入。');
+        return;
+      }
+
+      try {
+        await loadHtml5Qrcode();
+        const { Html5Qrcode, Html5QrcodeSupportedFormats } = window;
+        if (!Html5Qrcode) {
+          throw new Error('html5-qrcode 未初始化');
+        }
+
+        scanner = scanner || new Html5Qrcode('camera');
+        await scanner.start(
+          { facingMode: 'environment' },
+          {
+            fps: 10,
+            rememberLastUsedCamera: true,
+            supportedScanTypes: [Html5Qrcode.SCAN_TYPE_CAMERA],
+            formatsToSupport: [
+              Html5QrcodeSupportedFormats.EAN_13,
+              Html5QrcodeSupportedFormats.EAN_8,
+              Html5QrcodeSupportedFormats.CODE_128,
+            ],
+          },
+          async (decodedText) => {
+            if (!decodedText || lookupInFlight) return;
+            const code = decodedText.trim();
+            if (!code) return;
+            setStatus(`识别到条码：${code}，正在查询...`);
+            await lookup(code);
+          },
+          () => {}
+        );
+
+        scanning = true;
+        setStatus('相机已启动，正在自动识别条码...');
+      } catch (error) {
+        setStatus(`相机启动失败：${error.message}。你仍然可以继续手动输入 JAN 码。`);
+        scanning = false;
+      } finally {
+        syncCameraControls();
+      }
+    }
+
+    async function stopCamera({ silent = false } = {}) {
+      if (!scanner || !scanning) {
+        scanning = false;
         syncCameraControls();
         return;
       }
 
       try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-        video.srcObject = stream;
-        await video.play();
-        detector = 'BarcodeDetector' in window ? new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128'] }) : null;
-        cameraReady = true;
-        status.textContent = detector ? '相机已启动，正在寻找条码...' : '相机已启动，但当前浏览器没有 BarcodeDetector。可以用“尝试识别当前帧”或手动输入。';
-        syncCameraControls();
-        if (rafId) cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(scanFrame);
-      } catch (error) {
-        status.textContent = `相机启动失败：${error.message}。你仍然可以继续手动输入 JAN 码。`;
-        cameraReady = false;
+        await scanner.stop();
+      } catch {
+        // ignore stop errors
+      } finally {
+        scanning = false;
+        if (!silent) setStatus('已停止。');
         syncCameraControls();
       }
-    }
-
-    function stopCamera() {
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = null;
-      stream?.getTracks().forEach((track) => track.stop());
-      stream = null;
-      if (video) video.srcObject = null;
-      cameraReady = false;
-      status.textContent = '已停止。';
-      syncCameraControls();
     }
 
     startButton?.addEventListener('click', startCamera);
     stopButton?.addEventListener('click', stopCamera);
-    snapButton?.addEventListener('click', async () => {
-      if (!cameraReady || !video?.videoWidth || !capture) {
-        status.textContent = '请先启动相机后再尝试识别。';
-        return;
-      }
 
-      capture.width = video.videoWidth;
-      capture.height = video.videoHeight;
-      const context = capture.getContext('2d');
-      context?.drawImage(video, 0, 0, capture.width, capture.height);
-      await detectFromFrame(capture);
-    });
-
-    searchButton?.addEventListener('click', async () => {
+    async function submitLookup() {
       const code = input?.value?.trim();
       if (!code) {
-        status.textContent = '请输入条码。';
+        setStatus('请输入条码。');
         return;
       }
       await lookup(code);
-    });
+    }
+
+    searchButton?.addEventListener('click', submitLookup);
 
     input?.addEventListener('keydown', async (event) => {
       if (event.key === 'Enter') {
         event.preventDefault();
-        const code = input.value?.trim();
-        if (!code) {
-          status.textContent = '请输入条码。';
-          return;
-        }
-        await lookup(code);
+        await submitLookup();
       }
     });
 
-    window.addEventListener('beforeunload', stopCamera);
+    window.addEventListener('beforeunload', () => {
+      stopCamera({ silent: true });
+    });
     syncCameraControls();
-    status.textContent = '等待手动输入，或点击“启动相机扫描”开始识别。';
+    setStatus('等待手动输入，或点击“启动相机扫描”开始识别。');
   </script>
 </BaseLayout>
-
