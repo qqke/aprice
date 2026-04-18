@@ -42,11 +42,58 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
           </div>
           <h1 class="product-title" >{product.name}</h1>
           <p class="product-sub" >{product.description}</p>
-          <div class="pillrow">
-            <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>
-            <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button>
-          </div>
+          <div class="notice notice--compact product-hero__hint">先看最低价，再记买价。</div>
         </div>
+      </div>
+
+      <section class="section">
+        <div class="grid">
+          <section class="tile tile--wide" id="product-summary">
+            <div class="section__header section__header--tight">
+              <h3>价格摘要</h3>
+              <p>最低价、门店数量和最近走势。</p>
+            </div>
+            <div class="feed">
+              <div class="feed__item feed__item--featured product-summary__item">
+                <div class="feed__copy">
+                  <div class="feed__kicker">价格结论</div>
+                  <div class="product-summary__lead">
+                    <span class="product-summary__lead-label">当前最低价</span>
+                    <strong id="summary-min-price">同步中</strong>
+                    <small id="summary-gain-label">等待价格数据</small>
+                  </div>
+                  <div class="product-summary__stats" aria-label="摘要数据">
+                    <div class="product-summary__stat">
+                      <small>门店数</small>
+                      <strong id="summary-store-count">同步中</strong>
+                    </div>
+                    <div class="product-summary__stat">
+                      <small>最新采样</small>
+                      <strong id="summary-latest-store">同步中</strong>
+                    </div>
+                    <div class="product-summary__stat">
+                      <small>近7天变化</small>
+                      <strong id="summary-trend-label">同步中</strong>
+                    </div>
+                  </div>
+                  <div class="pillrow" id="insight-pills">
+                    <span class="pill">摘要读取中...</span>
+                  </div>
+                </div>
+                <div class="product-summary__aside">
+                  <span class="price">价格摘要</span>
+                  <small>先看结论，再向下看价格流。</small>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <div class="product-quick-nav" aria-label="页面跳转">
+        <a class="button button--ghost" href="#product-price-flow">价格流</a>
+        <a class="button button--ghost" href="#product-personal-record">个人记录</a>
+        <a class="button button--ghost" href="#product-trend">近期变化</a>
       </div>
 
       <div class="notice notice--warning" id="product-auth-gate">
@@ -58,7 +105,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       </div>
 
       <div class="grid product-grid-top">
-        <section class="tile tile--wide tile--flow">
+        <section class="tile tile--wide tile--flow" id="product-price-flow">
           <div class="section__header section__header--tight">
             <div>
               <h2>价格流</h2>
@@ -66,20 +113,31 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
             </div>
             <button class="button button--ghost" id="geo-sort" type="button">按当前位置排序</button>
           </div>
+          <div class="product-price-flow__lead" aria-label="价格流摘要">
+            <div class="product-price-flow__lead-copy">
+              <span class="product-price-flow__lead-label">当前最低价</span>
+              <strong id="price-flow-min-price">同步中</strong>
+              <small id="price-flow-store">等待价格数据</small>
+            </div>
+            <div class="product-price-flow__lead-aside">
+              <span class="pill" id="price-flow-gap-pill">等待价格</span>
+              <small id="price-flow-gap-note">补上第一组门店价格后，会显示最低价和次低价差。</small>
+            </div>
+          </div>
           <div class="notice notice--compact" id="geo-status">{getPrivatePageStatusCopy('product', 'geoStatus')}</div>
           <div class="feed" id="price-list">
             <div class="notice notice--compact">价格结果。</div>
           </div>
         </section>
 
-        <section class="tile tile--flow">
+        <section class="tile tile--flow" id="product-nearby-stores">
           <div class="section__header section__header--tight">
             <div>
               <h3>附近门店</h3>
               <p>价格流之外，也能快速扫到门店分布。</p>
             </div>
           </div>
-          <div class="notice notice--compact" id="nearby-status">门店列表随价格更新。</div>
+          <div class="notice notice--compact" id="nearby-status">门店价格会显示在这里。</div>
           <div class="feed" id="nearby-store-list">
             <div class="notice notice--compact">随价格更新。</div>
           </div>
@@ -88,14 +146,18 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
 
       <section class="section">
         <div class="grid">
-          <section class="tile">
+          <section class="tile" id="product-personal-record">
             <div class="section__header section__header--tight">
               <h3>个人记录</h3>
               <p>把你真实买到的价格直接记下来。</p>
             </div>
+            <div class="pillrow product-secondary-actions" aria-label="收藏操作">
+              <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>
+              <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button>
+            </div>
             <div class="store-search">
               <label class="field store-search__input">
-                <input id="personal-store-search" type="search" inputmode="search" placeholder="搜索店名或连锁名" autocomplete="off" aria-label="搜索门店" />
+                <input id="personal-store-search" name="personal-store-search" type="search" inputmode="search" placeholder="搜索店名或连锁名" autocomplete="off" spellcheck="false" aria-label="搜索门店" />
               </label>
               <button class="button button--ghost store-search__clear" id="personal-store-search-clear" type="button" hidden>清空</button>
             </div>
@@ -107,49 +169,30 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
               <input id="personal-store" type="hidden" value="" />
               <div class="grid grid--two">
                 <label class="field">
-                  <input id="personal-price" type="number" inputmode="numeric" placeholder="你的购买价" />
+                  <input id="personal-price" name="personal-price" type="number" inputmode="numeric" placeholder="你的购买价" />
                 </label>
                 <label class="field">
-                  <input id="personal-note" placeholder="备注" />
+                  <input id="personal-note" name="personal-note" placeholder="备注" />
                 </label>
               </div>
               <button class="button" type="submit">记录个人价格</button>
               <div class="notice notice--compact" id="personal-status">{productLogPrompt}</div>
             </form>
           </section>
-
-          <section class="tile tile--wide">
-            <div class="section__header section__header--tight">
-              <h3>价格摘要</h3>
-              <p>最低价、门店数量和最新采样。</p>
-            </div>
-            <div class="feed">
-              <div class="feed__item feed__item--featured">
-                <div class="feed__copy">
-                  <div class="feed__kicker">价格摘要</div>
-                  <div class="pillrow" id="insight-pills">
-                    <span class="pill">同步中</span>
-                  </div>
-                  <small>摘要读取中...</small>
-                </div>
-                <span class="price">摘要</span>
-              </div>
-            </div>
-          </section>
         </div>
       </section>
 
       <section class="section">
         <div class="grid">
-          <section class="tile tile--wide tile--flow">
+          <section class="tile tile--wide tile--flow" id="product-trend">
             <div class="section__header section__header--tight">
               <div>
                 <h3>近期变化</h3>
-                <p>最近几条采样会按时间顺序显示，方便直接看涨跌。</p>
+                <p>最近几条采样按时间排。</p>
               </div>
             </div>
             <div class="feed" id="trend-list">
-              <div class="notice notice--compact">近期价格采样按时间线显示。</div>
+              <div class="notice notice--compact">最近变化会显示在这里。</div>
             </div>
           </section>
         </div>
@@ -195,8 +238,17 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
     const geoStatus = document.querySelector('#geo-status');
     const nearbyStatus = document.querySelector('#nearby-status');
     const priceList = document.querySelector('#price-list');
+    const priceFlowMinPrice = document.querySelector('#price-flow-min-price');
+    const priceFlowStore = document.querySelector('#price-flow-store');
+    const priceFlowGapPill = document.querySelector('#price-flow-gap-pill');
+    const priceFlowGapNote = document.querySelector('#price-flow-gap-note');
     const nearbyStoreList = document.querySelector('#nearby-store-list');
     const insightPills = document.querySelector('#insight-pills');
+    const summaryMinPrice = document.querySelector('#summary-min-price');
+    const summaryStoreCount = document.querySelector('#summary-store-count');
+    const summaryLatestStore = document.querySelector('#summary-latest-store');
+    const summaryTrendLabel = document.querySelector('#summary-trend-label');
+    const summaryGainLabel = document.querySelector('#summary-gain-label');
     const trendList = document.querySelector('#trend-list');
 
     let stores = [];
@@ -480,6 +532,10 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
     function renderPrices(rows) {
       if (!priceList) return;
       if (!rows.length) {
+        if (priceFlowMinPrice) priceFlowMinPrice.textContent = '暂无';
+        if (priceFlowStore) priceFlowStore.textContent = '当前还没有价格记录。';
+        if (priceFlowGapPill) priceFlowGapPill.textContent = '暂无差距';
+        if (priceFlowGapNote) priceFlowGapNote.textContent = '补充第一条价格后，这里会自动显示最低价摘要。';
         priceList.innerHTML = `
           <div class="feed__item">
             <div>
@@ -493,6 +549,23 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       }
 
       const minPrice = Math.min(...rows.map((row) => row.price_yen));
+      const lowestRow = rows[0] || null;
+      const nextLowestRow = rows[1] || null;
+      const nextLowestGap = nextLowestRow ? nextLowestRow.price_yen - minPrice : null;
+      const nextLowestGapLabel = nextLowestGap === null
+        ? '暂无次低价'
+        : nextLowestGap === 0
+          ? '与次低价持平'
+          : `比次低价低 ${formatYen(nextLowestGap)}`;
+      const lowestStoreLabel = lowestRow
+        ? `${lowestRow.stores?.name || 'Unknown store'}${lowestRow.stores?.city ? ` · ${lowestRow.stores.city}` : ''}${lowestRow.stores?.hours ? ` · ${lowestRow.stores.hours}` : ''}`
+        : '等待价格数据';
+      if (priceFlowMinPrice) priceFlowMinPrice.textContent = `¥${minPrice}`;
+      if (priceFlowStore) priceFlowStore.textContent = lowestStoreLabel;
+      if (priceFlowGapPill) priceFlowGapPill.textContent = nextLowestGap === null ? '单条价格' : nextLowestGap === 0 ? '最低价持平' : `次低价差 ${formatYen(nextLowestGap)}`;
+      if (priceFlowGapNote) priceFlowGapNote.textContent = nextLowestGap === null
+        ? `当前共有 ${rows.length} 条价格，最低价已置顶。`
+        : `当前共有 ${rows.length} 条价格，${nextLowestGapLabel}。`;
 
       priceList.innerHTML = rows.map((row, index) => {
         const gap = row.price_yen - minPrice;
@@ -512,16 +585,14 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
             <div class="feed__copy">
               <div class="feed__kicker">最低价 · ${row.is_member_price ? '会员价' : '公开价'}</div>
               <strong>${row.stores?.name || 'Unknown store'}</strong>
-              <small>${row.stores?.address || ''} · ${row.stores?.hours || ''}</small>
+              <small>${row.stores?.city || ''}${distanceLabel}${row.stores?.hours ? ` · ${row.stores.hours}` : ''}</small>
             </div>
             <div class="feed__meta">
               <div class="price">¥${row.price_yen}</div>
-              <small>${row.stores?.city || ''}${distanceLabel}</small>
-              <span class="pill ${gapTier.tone}">${gapTier.label}</span>
-              <small class="trend__delta ${gapTier.tone}">${gapTier.percent} · ${gapPercent}%</small>
+              <span class="pill ${gapTier.tone}">${gapTier.label} · ${gapTier.percent}</span>
               <div class="price-gap">
                 <span class="price-gap__label ${gapTier.bar}">${gapTier.label}</span>
-                <span class="price-gap__percent ${gapTier.tone}">${gapTier.percent}</span>
+                <span class="price-gap__percent ${gapTier.tone}">${gapPercent}%</span>
                 <span class="price-gap__track"><span class="price-gap__fill ${gapTier.bar}" data-bar-width="${barWidth}"></span></span>
               </div>
             </div>
@@ -530,12 +601,11 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
           <a class="feed__item" href="${priceHref}">
             <div>
               <strong>${row.stores?.name || 'Unknown store'}</strong>
-              <small>${row.stores?.address || ''} · ${row.stores?.hours || ''} · ${row.is_member_price ? '会员价' : '公开价'}${distanceLabel}</small>
+              <small>${row.stores?.city || ''}${distanceLabel}${row.is_member_price ? ' · 会员价' : ' · 公开价'}${row.stores?.hours ? ` · ${row.stores.hours}` : ''}</small>
             </div>
             <div class="feed__meta">
               <span class="price">¥${row.price_yen}</span>
-              <span class="pill ${gapTier.tone}">${gapTier.label}</span>
-              <small class="trend__delta ${gapTier.tone}">${gapTier.percent} · ${gapPercent}%</small>
+              <span class="pill ${gapTier.tone}">${gapTier.label} · ${gapTier.percent}</span>
               <div class="price-gap">
                 <span class="price-gap__track"><span class="price-gap__fill ${gapTier.bar}" data-bar-width="${barWidth}"></span></span>
               </div>
@@ -559,25 +629,26 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
         ? rows.map((row, index) => index === 0 ? `
           <div class="feed__item feed__item--featured">
             <div class="feed__copy">
-              <div class="feed__kicker">当前聚焦</div>
+              <div class="feed__kicker">最近门店</div>
               <strong>${row.stores?.name || 'Unknown store'}</strong>
-              <small>${row.stores?.city || ''} · ${row.stores?.pref || ''}</small>
+              <small>${row.stores?.city || ''}${row.stores?.pref ? ` · ${row.stores.pref}` : ''}${row.stores?.hours ? ` · ${row.stores.hours}` : ''}</small>
             </div>
             <div class="feed__meta">
               <div class="price">¥${row.price_yen}</div>
-              <small>${row.stores?.hours || ''}</small>
-              <button class="button button--ghost" type="button" data-favorite-store="${row.store_id}">收藏门店</button>
+              <span class="pill">${row.is_member_price ? '会员价' : '公开价'}</span>
+              <button class="button button--ghost product-nearby__favorite" type="button" data-favorite-store="${row.store_id}">收藏</button>
             </div>
           </div>
         ` : `
           <div class="feed__item">
             <div>
               <strong>${row.stores?.name || 'Unknown store'}</strong>
-              <small>${row.stores?.city || ''} · ${row.stores?.pref || ''}</small>
+              <small>${row.stores?.city || ''}${row.stores?.pref ? ` · ${row.stores.pref}` : ''}${row.stores?.hours ? ` · ${row.stores.hours}` : ''}</small>
             </div>
             <div class="feed__meta">
               <span class="price">¥${row.price_yen}</span>
-              <button class="button button--ghost" type="button" data-favorite-store="${row.store_id}">收藏门店</button>
+              <span class="pill">${row.is_member_price ? '会员价' : '公开价'}</span>
+              <button class="button button--ghost product-nearby__favorite" type="button" data-favorite-store="${row.store_id}">收藏</button>
             </div>
           </div>
         `).join('')
@@ -594,8 +665,13 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
     }
 
     function renderInsights(rows) {
-      if (!insightPills) return;
+      if (!insightPills || !summaryMinPrice || !summaryStoreCount || !summaryLatestStore || !summaryTrendLabel || !summaryGainLabel) return;
       if (!rows.length) {
+        summaryMinPrice.textContent = '暂无';
+        summaryStoreCount.textContent = '0 家';
+        summaryLatestStore.textContent = '暂无';
+        summaryTrendLabel.textContent = '暂无';
+        summaryGainLabel.textContent = '补一条价格后再看趋势';
         insightPills.innerHTML = '<span class="pill">暂无价格数据</span>';
         if (trendList) {
           trendList.innerHTML = `
@@ -613,9 +689,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
 
       const latest = rows[0];
       const minPrice = Math.min(...rows.map((row) => row.price_yen));
-      const maxPrice = Math.max(...rows.map((row) => row.price_yen));
       const storeCount = new Set(rows.map((row) => row.store_id)).size;
-      const gapToMin = latest ? latest.price_yen - minPrice : 0;
       const older = rows[1];
       const latestTime = toTime(latest?.collected_at);
       const sevenDaysAgo = latestTime ? latestTime - 7 * 24 * 60 * 60 * 1000 : 0;
@@ -635,12 +709,6 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       const priceDelta = older ? latest.price_yen - older.price_yen : null;
       const priceTrend = trendMeta(priceDelta);
       const summaryTrend = trendMeta(windowDelta);
-      const trend = gapToMin === 0 ? '当前就是最低价' : (gapToMin > 0 ? `比最低价高 ${formatYen(gapToMin)}` : `比最低价低 ${formatYen(Math.abs(gapToMin))}`);
-      const gapLabel = gapToMin === 0
-        ? '与最低价相同'
-        : gapToMin > 0
-          ? `比最低价高 ${formatYen(gapToMin)}`
-          : `比最低价低 ${formatYen(Math.abs(gapToMin))}`;
       const change = priceDelta === null
         ? '暂无上次采样'
         : priceDelta === 0
@@ -649,20 +717,22 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
             ? `较上次采样涨 ${formatYen(priceDelta)}`
             : `较上次采样降 ${formatYen(Math.abs(priceDelta))}`;
 
+      summaryMinPrice.textContent = `¥${minPrice}`;
+      summaryStoreCount.textContent = `${storeCount} 家`;
+      summaryLatestStore.textContent = latest?.stores?.name || '未知门店';
+      summaryTrendLabel.textContent = windowLabel;
+      summaryGainLabel.textContent = change;
+
       insightPills.innerHTML = `
         <span class="pill">最低价 ¥${minPrice}</span>
-        <span class="pill">最高价 ¥${maxPrice}</span>
         <span class="pill">${storeCount} 家门店</span>
-        <span class="pill ${priceTrend.tone}">${priceTrend.arrow} ${trend}</span>
-        <span class="pill ${priceTrend.tone}">${priceTrend.arrow} ${gapLabel}</span>
-        <span class="pill ${priceTrend.tone}">${priceTrend.arrow} ${change}</span>
-        <span class="pill ${priceTrend.tone}">${priceTrend.arrow} ${priceTrend.label}</span>
         <span class="pill ${summaryTrend.tone}">${summaryTrend.arrow} ${windowLabel}</span>
+        <span class="pill ${priceTrend.tone}">${priceTrend.arrow} ${change}</span>
         <span class="pill">最新采样：${latest?.stores?.name || 'unknown'}</span>
       `;
 
       if (trendList) {
-        trendList.innerHTML = rows.slice(0, 4).map((row, index) => {
+        trendList.innerHTML = rows.slice(0, 3).map((row, index) => {
           const nextRow = rows[index + 1];
           const delta = nextRow ? row.price_yen - nextRow.price_yen : null;
           const deltaLabel = delta === null
@@ -672,12 +742,13 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
               : delta > 0
                 ? `+${formatYen(delta)}`
                 : `-${formatYen(Math.abs(delta))}`;
+          const dateLabel = row.collected_at ? new Date(row.collected_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' }) : '未知时间';
           return index === 0 ? `
             <div class="feed__item feed__item--featured">
               <div class="feed__copy">
                 <div class="feed__kicker ${summaryTrend.tone}">${summaryTrend.arrow} ${windowLabel}</div>
                 <strong>${row.stores?.name || 'Unknown store'}</strong>
-                <small>${row.stores?.city || ''} · ${row.stores?.pref || ''} · ${row.is_member_price ? '会员价' : '公开价'}</small>
+                <small>${dateLabel} · ${row.is_member_price ? '会员价' : '公开价'}</small>
               </div>
               <div class="feed__meta">
                 <div class="price">${formatYen(row.price_yen)}</div>
@@ -688,7 +759,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
             <div class="feed__item">
               <div>
                 <strong>${row.stores?.name || 'Unknown store'}</strong>
-                <small>${row.stores?.city || ''} · ${row.stores?.pref || ''} · ${row.is_member_price ? '会员价' : '公开价'}</small>
+                <small>${dateLabel} · ${row.is_member_price ? '会员价' : '公开价'}</small>
               </div>
               <div class="feed__meta">
                 <span class="price">${formatYen(row.price_yen)}</span>
@@ -706,7 +777,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       renderNearbyStores(rows);
       renderInsights(rows);
       if (geoStatus) geoStatus.textContent = rows.length ? `已加载 ${rows.length} 条价格记录。` : `当前还没有 ${productName} 的价格记录。`;
-      if (nearbyStatus) nearbyStatus.textContent = rows.length ? `已显示 ${rows.length} 条门店价格。` : '补第一条价格后再看门店流。';
+      if (nearbyStatus) nearbyStatus.textContent = rows.length ? `已显示 ${rows.length} 条门店价格。` : '补第一条价格再看门店流。';
     }
 
     async function loadStores() {

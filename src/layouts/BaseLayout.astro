@@ -37,7 +37,6 @@ const footerLinks = [
   { href: `${base}`, label: '首页' },
   { href: `${base}scan/`, label: '扫码' },
   { href: `${base}me/`, label: '我的' },
-  { href: loginHref, label: shellCopy.guestNav, auth: true, activePath: loginPath },
 ];
 
 const currentYear = new Date().getFullYear();
@@ -79,6 +78,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
     </style>
   </head>
   <body class={bodyClass}>
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
     <header class="topbar">
       <div class="topbar__inner">
         <a class="brand" href={base} aria-label="搜比价 首页">
@@ -132,7 +132,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
       window.__APriceConfig.sessionHintKey = sessionHintKey;
     </script>
 
-    <main class="page">
+    <main class="page" id="main-content">
       <slot />
     </main>
     <footer class="footer" aria-label="站点页脚">
@@ -145,8 +145,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
           {footerLinks.map((item) => (
             <a
               href={item.href}
-              data-auth-footer={item.auth ? 'true' : undefined}
-              aria-current={current === item.activePath || current === item.href ? 'page' : undefined}
+              aria-current={current === item.href ? 'page' : undefined}
             >
               {item.label}
             </a>
@@ -154,7 +153,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
         </nav>
         <div class="footer__meta">
           <span>© {currentYear} 搜比价</span>
-          <span>搜索 · 扫码 · 比价 · 收藏</span>
+          <span>搜索 · 扫码 · 我的</span>
         </div>
       </div>
     </footer>

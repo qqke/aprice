@@ -22,10 +22,15 @@ const base = import.meta.env.BASE_URL || '/';
         <label class="field home-search__field" for="home-search">
           <input
             id="home-search"
+            name="home-search"
             type="search"
             inputmode="search"
             autocomplete="off"
+            spellcheck="false"
             placeholder="搜商品名、品牌或 JAN 码"
+            aria-controls="search-results"
+            aria-describedby="search-status"
+            aria-keyshortcuts="Ctrl+K /"
           />
         </label>
         <button class="button home-search__button" id="home-search-button" type="submit">搜索</button>
@@ -36,13 +41,46 @@ const base = import.meta.env.BASE_URL || '/';
         <a class="button button--ghost" href={`${base}me/`}>个人页</a>
       </div>
 
+      <div class="home-mobile-shortcuts" aria-label="手机快捷方式">
+        <button class="home-mobile-shortcut home-mobile-shortcut--primary" id="focus-search-shortcut" type="button">
+          <span class="home-mobile-shortcut__label">搜索</span>
+          <span class="home-mobile-shortcut__meta">直达输入框</span>
+        </button>
+        <a class="home-mobile-shortcut" href={`${base}scan/`}>
+          <span class="home-mobile-shortcut__label">扫码</span>
+          <span class="home-mobile-shortcut__meta">打开相机</span>
+        </a>
+        <button class="home-mobile-shortcut" id="more-shortcut" type="button" aria-expanded="false" aria-haspopup="dialog" aria-controls="home-mobile-shortcuts-tray">
+          <span class="home-mobile-shortcut__label">更多</span>
+          <span class="home-mobile-shortcut__meta">附近 / 采样</span>
+          <span class="home-mobile-shortcut__chev" aria-hidden="true">⌄</span>
+        </button>
+      </div>
+
+      <div class="home-mobile-shortcuts__tray" id="home-mobile-shortcuts-tray" hidden>
+        <div class="home-mobile-shortcuts__tray-head" aria-hidden="true">
+          <strong>次级动作</strong>
+          <small>按需打开</small>
+        </div>
+        <button class="home-mobile-shortcut home-mobile-shortcut--tray" id="geo-shortcut" type="button">
+          <span class="home-mobile-shortcut__label">附近</span>
+          <span class="home-mobile-shortcut__meta">按当前位置</span>
+        </button>
+        <button class="home-mobile-shortcut home-mobile-shortcut--tray" id="recent-shortcut" type="button">
+          <span class="home-mobile-shortcut__label">采样</span>
+          <span class="home-mobile-shortcut__meta">最近记录</span>
+        </button>
+      </div>
+
+      <button class="home-mobile-shortcuts__overlay" id="home-mobile-shortcuts-overlay" type="button" hidden aria-label="关闭快捷方式面板"></button>
+
       <div class="home-links" aria-label="辅助入口">
         <button class="home-link" id="geolocate-home" type="button">用当前位置找附近价格</button>
         <span class="home-links__dot" aria-hidden="true">·</span>
         <button class="home-link" id="load-recent-prices" type="button">查看最近采样</button>
       </div>
 
-      <p class="home-meta">支持商品名、品牌、假名片段和 JAN 条码。</p>
+      <p class="home-meta">支持商品名、品牌、假名片段和 JAN 条码。快捷键 <code>Ctrl+K</code> 或 <code>/</code> 可直达搜索框。</p>
     </div>
   </section>
 
@@ -56,7 +94,7 @@ const base = import.meta.env.BASE_URL || '/';
         <span class="pill">搜索</span>
       </div>
       <div class="home-panel">
-        <div class="list home-results" id="search-results">
+        <div class="list home-results" id="search-results" role="listbox" aria-live="polite" aria-label="搜索结果列表">
           <div class="notice notice--compact">搜索后显示商品列表。</div>
         </div>
       </div>
@@ -73,9 +111,12 @@ const base = import.meta.env.BASE_URL || '/';
         <span class="pill">附近</span>
       </div>
       <div class="home-panel">
-        <div class="notice notice--compact home-status home-status--selected" id="selected-product-status">当前比价商品：未选择</div>
+        <div class="home-selection" aria-live="polite">
+          <div class="notice notice--compact home-status home-status--selected" id="selected-product-status">当前比价商品：未选择</div>
+          <a class="button button--ghost home-selection__action" id="selected-product-action" href={`${base}scan/`} hidden>打开详情</a>
+        </div>
         <div class="notice notice--compact home-status" id="nearby-status">先搜索商品，再查看附近价格。</div>
-        <div class="list home-results" id="nearby-results">
+        <div class="list home-results" id="nearby-results" aria-live="polite" aria-label="附近价格结果">
           <div class="notice notice--compact">搜索后，附近门店价格会显示在这里。</div>
         </div>
       </div>
@@ -87,14 +128,14 @@ const base = import.meta.env.BASE_URL || '/';
       <div class="section__header section__header--tight">
         <div>
           <h2>最近采样</h2>
-          <p>最近录入或更新的价格。</p>
+          <p>最近更新的价格。</p>
         </div>
         <span class="pill">采样</span>
       </div>
       <div class="home-panel">
-        <div class="notice notice--compact home-status" id="recent-status">点击按钮后加载最近采样。</div>
-        <div class="list home-results" id="recently-viewed">
-          <div class="notice notice--compact">最近采样会按时间显示在这里。</div>
+        <div class="notice notice--compact home-status" id="recent-status">点一下加载最近更新。</div>
+        <div class="list home-results" id="recently-viewed" aria-live="polite" aria-label="最近采样结果">
+          <div class="notice notice--compact">最近更新会显示在这里。</div>
         </div>
       </div>
     </div>
@@ -117,14 +158,25 @@ const base = import.meta.env.BASE_URL || '/';
     const results = document.querySelector('#search-results');
     const status = document.querySelector('#search-status');
     const geolocateButton = document.querySelector('#geolocate-home');
+    const focusSearchShortcut = document.querySelector('#focus-search-shortcut');
+    const moreShortcut = document.querySelector('#more-shortcut');
+    const geoShortcut = document.querySelector('#geo-shortcut');
+    const recentShortcut = document.querySelector('#recent-shortcut');
+    const shortcutsTray = document.querySelector('#home-mobile-shortcuts-tray');
+    const shortcutsOverlay = document.querySelector('#home-mobile-shortcuts-overlay');
     const nearbyStatus = document.querySelector('#nearby-status');
     const selectedProductStatus = document.querySelector('#selected-product-status');
+    const selectedProductAction = document.querySelector('#selected-product-action');
     const nearbyResults = document.querySelector('#nearby-results');
     const recentlyViewed = document.querySelector('#recently-viewed');
     const recentStatus = document.querySelector('#recent-status');
     const loadRecentButton = document.querySelector('#load-recent-prices');
 
     let activeProduct = null;
+    let searchResults = [];
+    let focusedResultIndex = -1;
+    let shortcutsTrayCloseTimer = null;
+    let shortcutsTrayReturnFocus = null;
 
     function productHref(productId) {
       return resolveBase(productId ? `product/${productId}/` : '');
@@ -143,36 +195,173 @@ const base = import.meta.env.BASE_URL || '/';
       `;
     }
 
+    function syncSelectedProductCard() {
+      if (selectedProductStatus) {
+        selectedProductStatus.textContent = activeProduct ? `当前比价商品：${activeProduct.name}` : '当前比价商品：未选择';
+      }
+      if (!selectedProductAction) return;
+      if (activeProduct) {
+        selectedProductAction.hidden = false;
+        selectedProductAction.href = productHref(activeProduct.id);
+        selectedProductAction.textContent = '打开详情';
+      } else {
+        selectedProductAction.hidden = true;
+        selectedProductAction.href = `${productHref('')}`;
+      }
+    }
+
+    function syncSearchListboxA11y() {
+      if (!input) return;
+      const visibleResults = getVisibleResults();
+      const activeItem = visibleResults[focusedResultIndex] || activeProduct || null;
+      const activeId = activeItem ? `home-result-option-${activeItem.id}` : '';
+      if (activeId) {
+        input.setAttribute('aria-activedescendant', activeId);
+      } else {
+        input.removeAttribute('aria-activedescendant');
+      }
+    }
+
+    function clearNearbyState() {
+      renderEmptyList(nearbyResults, '等待选择商品', '点击上方任一商品后，这里会显示附近门店价格。', '待选');
+      if (nearbyStatus) nearbyStatus.textContent = '选中商品后显示附近门店价格。';
+    }
+
+    function clearSearchState() {
+      activeProduct = null;
+      searchResults = [];
+      focusedResultIndex = -1;
+      if (input) input.value = '';
+      syncSelectedProductCard();
+      renderEmptyList(results, '等待搜索', '输入商品名、品牌名或 JAN 条码后再查价。', '空');
+      clearNearbyState();
+    }
+
+    function getVisibleResults() {
+      return searchResults.slice(0, 8);
+    }
+
+    function normalizeSearchValue(value) {
+      return String(value || '').trim().toLocaleLowerCase('ja-JP').normalize('NFKC');
+    }
+
+    function isStrongMatch(query, product) {
+      const normalizedQuery = normalizeSearchValue(query);
+      if (!normalizedQuery || !product) return false;
+      const normalizedName = normalizeSearchValue(product.name);
+      const normalizedBrand = normalizeSearchValue(product.brand);
+      const normalizedPack = normalizeSearchValue(product.pack);
+      const normalizedBarcode = normalizeSearchValue(product.barcode);
+      return (
+        normalizedQuery === normalizedBarcode ||
+        normalizedQuery === normalizedName ||
+        normalizedQuery === normalizedBrand ||
+        normalizedQuery === `${normalizedBrand} ${normalizedName}`.trim() ||
+        normalizedQuery === `${normalizedName} ${normalizedPack}`.trim()
+      );
+    }
+
+    function findStrongMatch(query, items) {
+      return items.find((item) => isStrongMatch(query, item)) || null;
+    }
+
+    function setFocusedResultIndex(nextIndex) {
+      const visibleResults = getVisibleResults();
+      if (!visibleResults.length) {
+        focusedResultIndex = -1;
+        syncSearchListboxA11y();
+        return;
+      }
+      const maxIndex = visibleResults.length - 1;
+      focusedResultIndex = Math.min(Math.max(nextIndex, 0), maxIndex);
+      syncSearchListboxA11y();
+      renderSearchResults(searchResults);
+    }
+
+    function moveActiveResult(delta) {
+      const visibleResults = getVisibleResults();
+      if (!visibleResults.length) return;
+      const fallbackIndex = focusedResultIndex >= 0 ? focusedResultIndex : visibleResults.findIndex((item) => item.id === activeProduct?.id);
+      const currentIndex = fallbackIndex >= 0 ? fallbackIndex : 0;
+      setFocusedResultIndex(currentIndex + delta);
+    }
+
+    function scrollFocusedResultIntoView() {
+      if (!results || focusedResultIndex < 0) return;
+      const focusedItem = results.querySelector(`[data-result-index="${focusedResultIndex}"]`);
+      focusedItem?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+
+    async function selectProduct(product) {
+      if (!product) return;
+      activeProduct = product;
+      focusedResultIndex = getVisibleResults().findIndex((item) => item.id === product.id);
+      syncSelectedProductCard();
+      renderSearchResults(searchResults);
+      await renderNearbyForProduct(product);
+    }
+
     function renderSearchResults(items) {
       if (!results) return;
+      searchResults = items.slice();
       if (!items.length) {
         activeProduct = null;
-        if (selectedProductStatus) selectedProductStatus.textContent = '当前比价商品：未选择';
+        focusedResultIndex = -1;
+        syncSearchListboxA11y();
+        syncSelectedProductCard();
         renderEmptyList(results, '暂无匹配商品', '换一个更短的关键词、品牌名或 JAN 码再试一次。', '空');
+        clearNearbyState();
         return;
       }
 
-      activeProduct = items[0];
-      if (selectedProductStatus) selectedProductStatus.textContent = `当前比价商品：${activeProduct.name}`;
-      results.innerHTML = items.slice(0, 8).map((item) => `
-        <a class="list__item ${activeProduct?.id === item.id ? 'is-active' : ''}" href="${productHref(item.id)}">
-          <div>
-            <strong>${item.name}</strong>
-            <small>${item.brand} · ${item.pack} · ${item.barcode}</small>
+      const visibleResults = getVisibleResults();
+      if (activeProduct) {
+        focusedResultIndex = visibleResults.findIndex((item) => item.id === activeProduct.id);
+      } else if (focusedResultIndex >= visibleResults.length) {
+        focusedResultIndex = visibleResults.length - 1;
+      }
+      syncSearchListboxA11y();
+      syncSelectedProductCard();
+      results.innerHTML = visibleResults.map((item, index) => {
+        const selected = activeProduct?.id === item.id;
+        const focused = focusedResultIndex === index;
+        const statusLabel = selected ? '当前选中' : focused ? '当前焦点' : '';
+        return `
+          <div class="list__item home-result${selected ? ' is-active' : ''}${focused ? ' is-focused' : ''}" data-result-index="${index}">
+            <button class="home-result__main" id="home-result-option-${item.id}" type="button" data-select-product="${item.id}" role="option" aria-selected="${selected ? 'true' : 'false'}" aria-pressed="${selected ? 'true' : 'false'}" aria-label="选择 ${item.name}">
+              ${statusLabel ? `<span class="home-result__status">${statusLabel}</span>` : ''}
+              <strong>${item.name}</strong>
+              <div class="home-result__meta-row">
+                <small class="home-result__details">${item.brand} · ${item.pack}</small>
+                <span class="home-result__barcode">JAN ${item.barcode}</span>
+              </div>
+            </button>
+            <div class="home-result__actions">
+              <a class="button button--ghost home-result__action" href="${productHref(item.id)}">详情</a>
+            </div>
           </div>
-          <span class="price">${activeProduct?.id === item.id ? '比价中' : '查看'}</span>
-        </a>
-      `).join('');
+        `;
+      }).join('');
+
+      results.querySelectorAll('[data-select-product]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const product = items.find((entry) => entry.id === button.dataset.selectProduct);
+          if (product) {
+            await selectProduct(product);
+          }
+        });
+      });
+      requestAnimationFrame(scrollFocusedResultIntoView);
     }
 
     async function renderNearbyForProduct(product) {
       if (!product || !nearbyResults || !nearbyStatus) return;
-      nearbyStatus.textContent = `读取 ${product.name} 的门店价格...`;
+      nearbyStatus.textContent = `${product.name} 价格读取中...`;
       try {
         const prices = await fetchPricesForProduct(product.id);
         if (!prices.length) {
           renderEmptyList(nearbyResults, product.name, '当前还没有价格记录。', '暂无');
-          nearbyStatus.textContent = `${product.name} 暂无价格记录。`;
+          nearbyStatus.textContent = `${product.name} 暂无门店价格。`;
           return;
         }
 
@@ -189,10 +378,10 @@ const base = import.meta.env.BASE_URL || '/';
           </a>
         `).join('');
 
-        nearbyStatus.textContent = `${product.name} 已加载 ${prices.length} 条门店价格。`;
+        nearbyStatus.textContent = `${product.name} · ${prices.length} 条价格`;
       } catch (error) {
         renderEmptyList(nearbyResults, '价格读取失败', '请稍后再试，或换一个商品。', '错误');
-        nearbyStatus.textContent = `读取 ${product.name} 的价格失败：${error.message}`;
+        nearbyStatus.textContent = `${product.name} 价格读取失败：${error.message}`;
       }
     }
 
@@ -200,11 +389,7 @@ const base = import.meta.env.BASE_URL || '/';
       const query = term.trim();
       if (!query) {
         status.textContent = '输入关键词后再搜索商品。';
-        renderEmptyList(results, '等待搜索', '输入商品名、品牌名或 JAN 条码后再查价。', '空');
-        renderEmptyList(nearbyResults, '等待搜索', '选中商品后，这里会显示附近价格。', '空');
-        if (selectedProductStatus) selectedProductStatus.textContent = '当前比价商品：未选择';
-        nearbyStatus.textContent = '先搜索商品，再查看附近价格。';
-        activeProduct = null;
+        clearSearchState();
         return;
       }
 
@@ -213,12 +398,21 @@ const base = import.meta.env.BASE_URL || '/';
         const items = await searchProducts(query);
         renderSearchResults(items);
         if (items.length) {
-          status.textContent = `找到 ${items.length} 条匹配结果。默认选中第一项。`;
-          void renderNearbyForProduct(activeProduct);
+          const autoSelect = findStrongMatch(query, items) || (items.length === 1 ? items[0] : null);
+          if (autoSelect) {
+            await selectProduct(autoSelect);
+            status.textContent = `已匹配到 ${autoSelect.name}，正在显示附近价格。`;
+          } else if (!activeProduct) {
+            focusedResultIndex = 0;
+            renderSearchResults(items);
+            status.textContent = `找到 ${items.length} 条匹配结果。先选中一个商品，再查看附近价格。`;
+            clearNearbyState();
+          } else {
+            status.textContent = `找到 ${items.length} 条匹配结果。当前商品已保留，可继续切换。`;
+          }
         } else {
           status.textContent = `没有找到“${query}”，可以换个关键词。`;
-          nearbyStatus.textContent = '找到商品后才显示附近价格。';
-          renderEmptyList(nearbyResults, '没有可比价格', '先找到一个商品，再看附近门店。', '空');
+          clearNearbyState();
         }
       } catch (error) {
         status.textContent = `搜索失败：${error.message}`;
@@ -229,11 +423,11 @@ const base = import.meta.env.BASE_URL || '/';
 
     async function renderNearbyByLocation() {
       if (!activeProduct) {
-        nearbyStatus.textContent = '先搜索并选中一个商品，再按当前位置排序。';
+        nearbyStatus.textContent = '先选中商品，再按当前位置排序。';
         return;
       }
 
-      nearbyStatus.textContent = `定位中，正在为 ${activeProduct.name} 排序...`;
+      nearbyStatus.textContent = `${activeProduct.name} 定位排序中...`;
       try {
         const location = await geolocate();
         const rows = await fetchNearbyPrices({
@@ -245,7 +439,7 @@ const base = import.meta.env.BASE_URL || '/';
 
         if (!rows.length) {
           renderEmptyList(nearbyResults, activeProduct.name, '当前位置附近还没有可比价格。', '暂无');
-          nearbyStatus.textContent = `${activeProduct.name} 在当前位置附近还没有可比价格。`;
+          nearbyStatus.textContent = `${activeProduct.name} 附近暂无可比价格。`;
           return;
         }
 
@@ -262,7 +456,7 @@ const base = import.meta.env.BASE_URL || '/';
           </a>
         `).join('');
 
-        nearbyStatus.textContent = `已按当前位置排序 ${rows.length} 条价格。`;
+        nearbyStatus.textContent = `已按当前位置排序 ${rows.length} 条。`;
       } catch (error) {
         nearbyStatus.textContent = `定位失败：${error.message}`;
       }
@@ -270,12 +464,12 @@ const base = import.meta.env.BASE_URL || '/';
 
     async function loadRecentPrices() {
       if (!recentStatus || !recentlyViewed) return;
-      recentStatus.textContent = '最近价格采样加载中...';
+      recentStatus.textContent = '最近更新加载中...';
       try {
         const rows = await fetchRecentPrices(6);
         if (!rows.length) {
-          renderEmptyList(recentlyViewed, '暂无采样', '插入价格记录后这里会自动更新。', '空');
-          recentStatus.textContent = '暂无最近价格采样。';
+          renderEmptyList(recentlyViewed, '暂无更新', '写入价格记录后这里会自动更新。', '空');
+          recentStatus.textContent = '暂无最近更新。';
           return;
         }
 
@@ -291,11 +485,54 @@ const base = import.meta.env.BASE_URL || '/';
             </div>
           </a>
         `).join('');
-        recentStatus.textContent = `已读取 ${rows.length} 条最近价格采样。`;
+        recentStatus.textContent = `已读取 ${rows.length} 条最近更新。`;
       } catch (error) {
-        renderEmptyList(recentlyViewed, '价格读取失败', '请检查后端连接和表权限。', '错误');
-        recentStatus.textContent = `最近价格读取失败：${error.message}`;
+        renderEmptyList(recentlyViewed, '更新读取失败', '请检查后端连接和表权限。', '错误');
+        recentStatus.textContent = `最近更新失败：${error.message}`;
       }
+    }
+
+    function setMobileShortcutsTray(open) {
+      if (!moreShortcut || !shortcutsTray) return;
+      if (shortcutsTrayCloseTimer) {
+        window.clearTimeout(shortcutsTrayCloseTimer);
+        shortcutsTrayCloseTimer = null;
+      }
+      if (open) {
+        shortcutsTrayReturnFocus = moreShortcut;
+      }
+      moreShortcut.setAttribute('aria-expanded', open ? 'true' : 'false');
+      moreShortcut.dataset.state = open ? 'open' : 'closed';
+      if (open) {
+        shortcutsTray.hidden = false;
+        shortcutsTray.dataset.state = 'open';
+        shortcutsOverlay?.removeAttribute('hidden');
+        shortcutsOverlay?.setAttribute('data-state', 'open');
+        const firstShortcut = shortcutsTray.querySelector('button, [href]');
+        window.requestAnimationFrame(() => {
+          if (shortcutsTray.hidden || shortcutsTray.dataset.state !== 'open') return;
+          if (firstShortcut instanceof HTMLElement) {
+            firstShortcut.focus({ preventScroll: true });
+          }
+        });
+        return;
+      }
+      shortcutsTray.dataset.state = 'closing';
+      shortcutsOverlay?.setAttribute('data-state', 'closing');
+      shortcutsTrayCloseTimer = window.setTimeout(() => {
+        shortcutsTray.hidden = true;
+        delete shortcutsTray.dataset.state;
+        shortcutsOverlay?.setAttribute('hidden', '');
+        shortcutsOverlay?.removeAttribute('data-state');
+        const restoreTarget = shortcutsTrayReturnFocus;
+        shortcutsTrayReturnFocus = null;
+        if (restoreTarget instanceof HTMLElement) {
+          restoreTarget.focus({ preventScroll: true });
+        } else {
+          moreShortcut.focus({ preventScroll: true });
+        }
+        shortcutsTrayCloseTimer = null;
+      }, 160);
     }
 
     form?.addEventListener('submit', async (event) => {
@@ -303,12 +540,99 @@ const base = import.meta.env.BASE_URL || '/';
       await runSearch(input?.value || '');
     });
 
+    input?.addEventListener('keydown', async (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        clearSearchState();
+        input?.focus();
+        status.textContent = '已清空搜索，可以重新输入。';
+        return;
+      }
+      if (!searchResults.length) return;
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        moveActiveResult(1);
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        moveActiveResult(-1);
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        setFocusedResultIndex(0);
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        setFocusedResultIndex(getVisibleResults().length - 1);
+      } else if (event.key === 'Enter' && focusedResultIndex >= 0) {
+        event.preventDefault();
+        await selectProduct(getVisibleResults()[focusedResultIndex]);
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      const target = event.target;
+      const isTypingField =
+        target instanceof HTMLElement &&
+        (target.matches('input, textarea, select') || target.isContentEditable);
+      const shortcutKey = event.key === '/' || ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k');
+      if (!shortcutKey || isTypingField) return;
+      event.preventDefault();
+      input?.focus({ preventScroll: true });
+      input?.select();
+      status.textContent = '搜索框已聚焦，可以直接输入。';
+    });
+
+    syncSelectedProductCard();
     geolocateButton?.addEventListener('click', () => {
       void renderNearbyByLocation();
     });
 
+    focusSearchShortcut?.addEventListener('click', () => {
+      input?.focus({ preventScroll: true });
+      input?.select();
+      status.textContent = '搜索框已聚焦，可以直接输入。';
+    });
+
+    moreShortcut?.addEventListener('click', () => {
+      const nextOpen = shortcutsTray?.hidden ?? true;
+      setMobileShortcutsTray(nextOpen);
+    });
+
+    geoShortcut?.addEventListener('click', () => {
+      setMobileShortcutsTray(false);
+      geolocateButton?.click();
+    });
+
     loadRecentButton?.addEventListener('click', () => {
       void loadRecentPrices();
+    });
+
+    recentShortcut?.addEventListener('click', () => {
+      setMobileShortcutsTray(false);
+      loadRecentButton?.click();
+    });
+
+    shortcutsOverlay?.addEventListener('click', () => {
+      setMobileShortcutsTray(false);
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!shortcutsTray || !moreShortcut) return;
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (shortcutsTray.contains(target) || moreShortcut.contains(target) || shortcutsOverlay?.contains(target)) return;
+      setMobileShortcutsTray(false);
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && shortcutsTray && !shortcutsTray.hidden) {
+        event.preventDefault();
+        setMobileShortcutsTray(false);
+      }
+    });
+
+    window.matchMedia?.('(min-width: 541px)').addEventListener?.('change', (event) => {
+      if (event.matches) {
+        setMobileShortcutsTray(false);
+      }
     });
   </script>
 </BaseLayout>

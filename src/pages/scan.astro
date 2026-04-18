@@ -23,11 +23,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <div class="scan-beam"></div>
             </div>
             <div class="pillrow">
-              <button class="button" id="start-scan" type="button">启动相机</button>
+              <button class="button" id="start-scan" type="button">启动相机扫描</button>
               <button class="button button--ghost" id="stop-scan" type="button">停止</button>
               <button class="button button--ghost" id="snap-scan" type="button">尝试识别当前帧</button>
             </div>
-            <div class="notice notice--compact">需要 HTTPS 才能打开相机。若自动识别失败，可以直接手动输入 JAN 码。</div>
+            <div class="notice notice--compact">先手动输入也可以，只有需要时再启动相机。相机模式需要 HTTPS。</div>
           </div>
         </section>
         <section class="tile">
@@ -37,7 +37,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           </div>
           <div class="form">
             <label class="field" for="barcode-input">
-              <input id="barcode-input" autofocus inputmode="numeric" placeholder="例如 4987188161027" />
+              <input id="barcode-input" name="barcode-input" autofocus inputmode="numeric" placeholder="例如 4987188161027" spellcheck="false" />
             </label>
             <button class="button" id="barcode-search" type="button">查找商品</button>
             <div class="notice" id="scan-status">扫描条码，或直接输入 JAN 码。</div>
@@ -83,6 +83,17 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     let stream = null;
     let rafId = null;
     let detector = null;
+    let cameraReady = false;
+
+    function syncCameraControls() {
+      const isActive = Boolean(stream);
+      if (startButton) {
+        startButton.disabled = isActive;
+        startButton.textContent = isActive ? '相机已启动' : '启动相机扫描';
+      }
+      if (stopButton) stopButton.disabled = !isActive;
+      if (snapButton) snapButton.disabled = !isActive || !detector;
+    }
 
     function renderProduct(product) {
       if (!product) {
@@ -172,6 +183,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     async function startCamera() {
       if (!navigator.mediaDevices?.getUserMedia) {
         status.textContent = '当前浏览器不支持相机访问。请使用手动输入。';
+        syncCameraControls();
         return;
       }
 
@@ -180,11 +192,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         video.srcObject = stream;
         await video.play();
         detector = 'BarcodeDetector' in window ? new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128'] }) : null;
+        cameraReady = true;
         status.textContent = detector ? '相机已启动，正在寻找条码...' : '相机已启动，但当前浏览器没有 BarcodeDetector。可以用“尝试识别当前帧”或手动输入。';
+        syncCameraControls();
         if (rafId) cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(scanFrame);
       } catch (error) {
-        status.textContent = `相机启动失败：${error.message}`;
+        status.textContent = `相机启动失败：${error.message}。你仍然可以继续手动输入 JAN 码。`;
+        cameraReady = false;
+        syncCameraControls();
       }
     }
 
@@ -194,13 +210,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       stream?.getTracks().forEach((track) => track.stop());
       stream = null;
       if (video) video.srcObject = null;
+      cameraReady = false;
       status.textContent = '已停止。';
+      syncCameraControls();
     }
 
     startButton?.addEventListener('click', startCamera);
     stopButton?.addEventListener('click', stopCamera);
     snapButton?.addEventListener('click', async () => {
-      if (!video?.videoWidth || !capture) {
+      if (!cameraReady || !video?.videoWidth || !capture) {
         status.textContent = '请先启动相机后再尝试识别。';
         return;
       }
@@ -234,8 +252,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     });
 
     window.addEventListener('beforeunload', stopCamera);
-    status.textContent = '等待扫描或手动输入条码。';
-    startCamera();
+    syncCameraControls();
+    status.textContent = '等待手动输入，或点击“启动相机扫描”开始识别。';
   </script>
 </BaseLayout>
 
