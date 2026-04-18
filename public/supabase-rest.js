@@ -83,7 +83,7 @@ export function escapeIlike(value) {
     .replace(/'/g, "''");
 }
 
-export async function fetchPublicProducts({ limit = 20, offset = 0, order = 'updated_at.desc', select = '*' } = {}) {
+async function fetchPublicProducts({ limit = 20, offset = 0, order = 'updated_at.desc', select = '*' } = {}) {
   return restGet('products', {
     query: {
       select,
@@ -107,27 +107,6 @@ export async function fetchAllPublicProducts({ batchSize = 1000, order = 'id.asc
   }
 
   return allRows;
-}
-
-export async function fetchPublicStores({ limit = 20, order = 'updated_at.desc' } = {}) {
-  return restGet('stores', {
-    query: {
-      select: '*',
-      order,
-      limit,
-    },
-  });
-}
-
-export async function fetchPublicProductById(id) {
-  const rows = await restGet('products', {
-    query: {
-      select: '*',
-      id: `eq.${id}`,
-      limit: 1,
-    },
-  });
-  return rows?.[0] ?? null;
 }
 
 export async function fetchPublicProductByBarcode(barcode) {

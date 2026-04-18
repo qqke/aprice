@@ -163,12 +163,8 @@ const meGateCopy = getPrivatePageGateCopy('me');
       });
     }
 
-    function productName(id) {
-      return products.find((item) => item.id === id)?.name || id;
-    }
-
-    function storeName(id) {
-      return stores.find((item) => item.id === id)?.name || id;
+    function lookupName(items, id) {
+      return items.find((item) => item.id === id)?.name || id;
     }
 
     function compareFavoriteDates(a, b) {
@@ -217,9 +213,9 @@ const meGateCopy = getPrivatePageGateCopy('me');
       }
       favsEl.innerHTML = filtered.length
         ? filtered.map((fav) => `
-          <div class="feed__item me-favorites__item">
+            <div class="feed__item me-favorites__item">
             <div>
-              <strong>${fav.entity_type === 'product' ? productName(fav.entity_id) : storeName(fav.entity_id)}</strong>
+              <strong>${fav.entity_type === 'product' ? lookupName(products, fav.entity_id) : lookupName(stores, fav.entity_id)}</strong>
               <small>${fav.entity_type === 'product' ? '商品' : '门店'} · ${fav.entity_id}</small>
             </div>
             <div class="feed__meta me-favorites__meta">
@@ -266,8 +262,8 @@ const meGateCopy = getPrivatePageGateCopy('me');
         ? logs.map((log) => `
           <div class="list__item">
             <div>
-              <strong>${productName(log.product_id)}</strong>
-              <small>${formatDateTime(log.created_at || log.purchased_at || new Date())} · ${storeName(log.store_id)} · ${log.note || '无备注'}</small>
+              <strong>${lookupName(products, log.product_id)}</strong>
+              <small>${formatDateTime(log.created_at || log.purchased_at || new Date())} · ${lookupName(stores, log.store_id)} · ${log.note || '无备注'}</small>
             </div>
             <span class="price">${formatYen(log.price_yen)}</span>
           </div>

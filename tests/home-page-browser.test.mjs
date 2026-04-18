@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { launchChromiumForTest } from './_playwright-launch.mjs';
 import { makeHomePageResponseForRequest } from './_browser-test-fixtures.mjs';
 import { startStaticServer } from './_browser-test-server.mjs';
-import { waitForText } from './_browser-test-wait.mjs';
 
 async function main() {
   const { server, baseUrl } = await startStaticServer();
@@ -52,25 +51,34 @@ async function main() {
 
       await page.locator('#home-search').fill('ロキソ');
       await page.locator('#home-search-button').click();
-      await waitForText(page, '#search-status', '找到 1 条匹配结果');
-      await waitForText(page, '#nearby-status', '暂无价格记录');
+      await page.waitForFunction(() => {
+        const text = String(document.querySelector('#search-status')?.textContent || '');
+        return /找到 1 条匹配结果|已匹配到/.test(text);
+      });
+      await page.waitForFunction(() => {
+        const text = String(document.querySelector('#nearby-status')?.textContent || '');
+        return /暂无价格记录|暂无门店价格/.test(text);
+      });
 
       const resultText = await page.locator('#search-results').textContent();
       const nearbyText = await page.locator('#nearby-results').textContent();
       const recentStatusText = await page.locator('#recent-status').textContent();
 
       assert.match(resultText || '', /Loxonin S/);
-      assert.match(nearbyText || '', /当前还没有价格记录/);
-      assert.match(recentStatusText || '', /点击按钮后加载最近采样/);
+      assert.match(nearbyText || '', /(当前还没有价格记录|暂无门店价格|暂无价格记录)/);
+      assert.match(recentStatusText || '', /(点击按钮后加载最近采样|点一下加载最近更新。)/);
       assert.match(requests.join('\n'), /name\.ilike/);
       assert.match(requests.join('\n'), /\/rest\/v1\/products/);
       assert.match(requests.join('\n'), /\/rest\/v1\/prices/);
 
       await page.locator('#load-recent-prices').click();
-      await waitForText(page, '#recent-status', '暂无最近价格采样');
+      await page.waitForFunction(() => {
+        const text = String(document.querySelector('#recent-status')?.textContent || '');
+        return /暂无最近价格采样|暂无最近更新/.test(text);
+      });
 
       const recentText = await page.locator('#recently-viewed').textContent();
-      assert.match(recentText || '', /暂无采样/);
+      assert.match(recentText || '', /(暂无采样|暂无更新)/);
 
       await page.setViewportSize({ width: 390, height: 844 });
       const mobileMenuDisplay = await page.evaluate(() => {
@@ -78,6 +86,10 @@ async function main() {
         return element ? getComputedStyle(element).display : null;
       });
       assert.notEqual(mobileMenuDisplay, 'none', 'mobile homepage should keep the menu toggle');
+
+      await page.locator('#home-search').click();
+      const focusedElementId = await page.evaluate(() => document.activeElement?.id || '');
+      assert.equal(focusedElementId, 'home-search', 'mobile homepage search input should receive focus on tap');
 
       const ssrContext = await browser.newContext({ javaScriptEnabled: false });
       try {

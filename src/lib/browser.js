@@ -1,7 +1,6 @@
 import {
   escapeIlike,
   fetchPublicProductByBarcode,
-  fetchPublicProductById,
   restGet,
 } from './supabase-rest.js';
 
@@ -86,11 +85,6 @@ export async function fetchRecentPrices(limit = 10) {
   });
 }
 
-export async function fetchProductById(id) {
-  if (!id) return null;
-  return fetchPublicProductById(id);
-}
-
 export async function fetchProductByBarcode(barcode) {
   const cleaned = cleanBarcode(barcode);
   if (!cleaned) return null;
@@ -156,10 +150,6 @@ export function productToneClass(tone = 'sunset') {
     mint: 'tone-mint',
     azure: 'tone-azure',
   }[tone] || 'tone-sunset';
-}
-
-export function productLabel(product) {
-  return `${product.name} · ${product.pack}`;
 }
 
 export function formatYen(value) {

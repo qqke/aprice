@@ -1,14 +1,6 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-
-const appBase = new URL('../', Astro.url).pathname;
-
-function resolveBase(pathname = '') {
-  const normalizedBase = appBase.endsWith('/') ? appBase : `${appBase}/`;
-  const cleanPath = String(pathname || '').replace(/^\/+/, '');
-  if (!cleanPath) return normalizedBase;
-  return `${normalizedBase.replace(/\/$/, '')}/${cleanPath}`;
-}
+import { resolveBase } from '../lib/browser.js';
 ---
 <BaseLayout title="登录 - 搜比价" description="邮箱密码登录、注册和重置密码。" bodyClass="login-page">
   <section class="section section--first-workspace">
@@ -96,6 +88,7 @@ function resolveBase(pathname = '') {
   </section>
 
   <script type="module" is:inline>
+    const { resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
     const { normalizeInternalRedirectTarget } = await import(window.__APriceConfig?.authRedirectJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'auth-redirect.js');
     const loginStateUrl = window.__APriceConfig?.loginPageStateJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'login-page-state.js';
     const {
@@ -108,13 +101,6 @@ function resolveBase(pathname = '') {
       validateLoginInputs,
       writeSessionHint,
     } = await import(loginStateUrl);
-    const runtimeBase = window.__APriceConfig?.baseUrl || '/';
-    function resolveBase(pathname = '') {
-      const base = runtimeBase.endsWith('/') ? runtimeBase : runtimeBase + '/';
-      const cleanPath = String(pathname || '').replace(/^\/+/, '');
-      if (!cleanPath) return base;
-      return base + cleanPath;
-    }
     let authModulePromise = null;
     let unsubscribeAuth = null;
     let currentSession = null;

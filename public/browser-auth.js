@@ -58,6 +58,12 @@ export async function getCurrentUser() {
   return session?.user ?? null;
 }
 
+async function requireSession() {
+  const session = await getSession();
+  if (!session?.user) throw new Error('Please sign in first');
+  return session;
+}
+
 export async function signUpWithEmailPassword({ email, password, redirect = '' }) {
   const client = await getSupabaseClient();
   const { data, error } = await client.auth.signUp({
@@ -154,7 +160,7 @@ export async function signOut() {
 
 export async function fetchPersonalLogs(userId) {
   if (!userId) return [];
-  const session = await getSession();
+  const session = await requireSession();
   return restGet('user_price_logs', {
     query: {
       select: '*, products:product_id (*), stores:store_id (*)',
@@ -192,10 +198,7 @@ export async function savePersonalLog(entry) {
   if (!entry?.product_id || !entry?.price_yen) {
     throw new Error('product_id and price_yen are required');
   }
-  const session = await getSession();
-  if (!session?.user) {
-    throw new Error('Please sign in first');
-  }
+  const session = await requireSession();
   return restInsert(
     'user_price_logs',
     {
@@ -208,7 +211,7 @@ export async function savePersonalLog(entry) {
 
 export async function fetchFavorites(userId) {
   if (!userId) return [];
-  const session = await getSession();
+  const session = await requireSession();
   return restGet('favorites', {
     query: {
       select: '*',
@@ -220,8 +223,7 @@ export async function fetchFavorites(userId) {
 }
 
 export async function toggleFavorite(entityType, entityId) {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Please sign in first');
+  const session = await requireSession();
 
   const existing = await restGet('favorites', {
     query: {
@@ -256,38 +258,32 @@ export async function toggleFavorite(entityType, entityId) {
 }
 
 export async function adminUpsertProduct(payload) {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Please sign in first');
+  const session = await requireSession();
   return restRpc('admin_upsert_product', payload, { token: session.access_token });
 }
 
 export async function adminUpsertStore(payload) {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Please sign in first');
+  const session = await requireSession();
   return restRpc('admin_upsert_store', payload, { token: session.access_token });
 }
 
 export async function adminUpsertPrice(payload) {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Please sign in first');
+  const session = await requireSession();
   return restRpc('admin_upsert_price', payload, { token: session.access_token });
 }
 
 export async function adminDeleteProduct(targetId) {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Please sign in first');
+  const session = await requireSession();
   return restRpc('admin_delete_product', { target_id: targetId }, { token: session.access_token });
 }
 
 export async function adminDeleteStore(targetId) {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Please sign in first');
+  const session = await requireSession();
   return restRpc('admin_delete_store', { target_id: targetId }, { token: session.access_token });
 }
 
 export async function adminDeletePrice(targetId) {
-  const session = await getSession();
-  if (!session?.user) throw new Error('Please sign in first');
+  const session = await requireSession();
   return restRpc('admin_delete_price', { target_id: targetId }, { token: session.access_token });
 }
 

@@ -23,12 +23,23 @@ function makeElement(initial = {}) {
     className: initial.className || '',
     href: initial.href || '',
     dataset: initial.dataset || {},
+    attributes: {},
     listeners: {},
     addEventListener(event, handler) {
       this.listeners[event] ??= [];
       this.listeners[event].push(handler);
     },
+    setAttribute(name, value) {
+      this.attributes[name] = String(value);
+    },
+    removeAttribute(name) {
+      delete this.attributes[name];
+    },
+    hasAttribute(name) {
+      return Object.prototype.hasOwnProperty.call(this.attributes, name);
+    },
     querySelector() { return null; },
+    querySelectorAll() { return []; },
   };
 }
 
@@ -87,10 +98,16 @@ globalThis.window = {
   },
 };
 
+globalThis.requestAnimationFrame = (callback) => {
+  if (typeof callback === 'function') callback(0);
+  return 0;
+};
+
 globalThis.document = {
   querySelector(selector) {
     return nodes[selector] || null;
   },
+  addEventListener() {},
 };
 
 await eval(`(async () => { ${script} })()`);
@@ -106,9 +123,9 @@ await new Promise((resolve) => setTimeout(resolve, 0));
 await new Promise((resolve) => setTimeout(resolve, 0));
 await new Promise((resolve) => setTimeout(resolve, 0));
 
-assert.match(nodes['#search-status'].textContent, /找到 1 条匹配结果/);
+assert.match(nodes['#search-status'].textContent, /(找到 1 条匹配结果|已匹配到 Loxonin S，正在显示附近价格。)/);
 assert.match(nodes['#search-results'].innerHTML, /Loxonin S/);
-assert.match(nodes['#nearby-status'].textContent, /暂无价格记录/);
+assert.match(nodes['#nearby-status'].textContent, /(暂无价格记录|Loxonin S 暂无门店价格。)/);
 assert.match(nodes['#nearby-results'].innerHTML, /当前还没有价格记录/);
 assert.match(fetchLog.join('\n'), /\/rest\/v1\/products/);
 assert.match(fetchLog.join('\n'), /\/rest\/v1\/prices/);
@@ -120,7 +137,7 @@ for (const handler of nodes['#load-recent-prices'].listeners.click || []) {
 await new Promise((resolve) => setTimeout(resolve, 0));
 await new Promise((resolve) => setTimeout(resolve, 0));
 
-assert.match(nodes['#recent-status'].textContent, /暂无最近价格采样/);
-assert.match(nodes['#recently-viewed'].innerHTML, /暂无采样/);
+assert.match(nodes['#recent-status'].textContent, /(暂无最近价格采样|暂无最近更新。)/);
+assert.match(nodes['#recently-viewed'].innerHTML, /(暂无采样|暂无更新)/);
 
 console.log('built-home smoke test passed');

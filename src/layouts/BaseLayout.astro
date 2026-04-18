@@ -159,18 +159,13 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
     </footer>
     <script type="module" is:inline>
       const runtimeBase = window.__APriceConfig?.baseUrl || '/';
+      const { resolveBase } = await import(window.__APriceConfig?.browserJsUrl || `${runtimeBase}browser.js`);
       const authRedirectUrl = window.__APriceConfig?.authRedirectJsUrl || `${runtimeBase}auth-redirect.js`;
       const { buildLoginUrl } = await import(authRedirectUrl);
       const loginStateUrl = window.__APriceConfig?.loginPageStateJsUrl || `${runtimeBase}login-page-state.js`;
       const { readSessionHint } = await import(loginStateUrl);
       const privatePageAuthUrl = window.__APriceConfig?.privatePageAuthJsUrl || `${runtimeBase}private-page-auth.js`;
       const { getPrivatePageStatusCopy } = await import(privatePageAuthUrl);
-      function resolveBase(pathname = '') {
-        const base = runtimeBase.endsWith('/') ? runtimeBase : runtimeBase + '/';
-        const cleanPath = String(pathname || '').replace(/^\/+/, '');
-        if (!cleanPath) return base;
-        return base + cleanPath;
-      }
       const chip = document.querySelector('#session-chip');
       const authNav = document.querySelector('[data-auth-nav]');
       const authNavMobile = document.querySelector('[data-auth-nav-mobile]');

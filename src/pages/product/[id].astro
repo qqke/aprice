@@ -490,16 +490,22 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       return { label: `下跌 ${formatYen(Math.abs(delta))}`, tone: 'trend--down', arrow: '↓' };
     }
 
-    function syncFavoriteStoreButton() {
-      if (favoriteStoreButton) {
-        favoriteStoreButton.disabled = !activeStoreId;
-        favoriteStoreButton.textContent = activeStoreId && favoriteStoreIds.has(activeStoreId) ? '取消门店收藏' : '添加门店收藏';
-      }
+    function syncFavoriteButton(button, isActive, { activeLabel, inactiveLabel, disabled = false } = {}) {
+      if (!button) return;
+      button.disabled = disabled;
+      button.textContent = isActive ? activeLabel : inactiveLabel;
     }
 
-    function syncFavoriteProductButton() {
-      if (!favoriteButton) return;
-      favoriteButton.textContent = favoriteProductIds.has(productId) ? '取消商品收藏' : '添加商品收藏';
+    function syncFavoriteButtons() {
+      syncFavoriteButton(favoriteButton, favoriteProductIds.has(productId), {
+        activeLabel: '取消商品收藏',
+        inactiveLabel: '添加商品收藏',
+      });
+      syncFavoriteButton(favoriteStoreButton, activeStoreId && favoriteStoreIds.has(activeStoreId), {
+        activeLabel: '取消门店收藏',
+        inactiveLabel: '添加门店收藏',
+        disabled: !activeStoreId,
+      });
     }
 
     function syncNearbyFavoriteButtons() {
@@ -515,8 +521,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       if (!user) {
         favoriteProductIds = new Set();
         favoriteStoreIds = new Set();
-        syncFavoriteProductButton();
-        syncFavoriteStoreButton();
+        syncFavoriteButtons();
         syncNearbyFavoriteButtons();
         return;
       }
@@ -524,8 +529,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       const list = await fetchFavorites(user.id);
       favoriteProductIds = new Set(list.filter((item) => item.entity_type === 'product').map((item) => String(item.entity_id)));
       favoriteStoreIds = new Set(list.filter((item) => item.entity_type === 'store').map((item) => String(item.entity_id)));
-      syncFavoriteProductButton();
-      syncFavoriteStoreButton();
+      syncFavoriteButtons();
       syncNearbyFavoriteButtons();
     }
 
@@ -624,7 +628,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
     function renderNearbyStores(rows) {
       if (!nearbyStoreList) return;
       activeStoreId = rows[0]?.store_id || '';
-      syncFavoriteStoreButton();
+      syncFavoriteButtons();
       nearbyStoreList.innerHTML = rows.length
         ? rows.map((row, index) => index === 0 ? `
           <div class="feed__item feed__item--featured">
@@ -819,7 +823,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
         const result = await toggleFavorite('product', productId);
         if (result?.action === 'added') favoriteProductIds.add(productId);
         if (result?.action === 'removed') favoriteProductIds.delete(productId);
-        syncFavoriteProductButton();
+        syncFavoriteButtons();
       } catch (error) {
         console.error(error);
       }
@@ -841,7 +845,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
         const result = await toggleFavorite('store', activeStoreId);
         if (result?.action === 'added') favoriteStoreIds.add(activeStoreId);
         if (result?.action === 'removed') favoriteStoreIds.delete(activeStoreId);
-        syncFavoriteStoreButton();
+        syncFavoriteButtons();
         syncNearbyFavoriteButtons();
       } catch (error) {
         console.error(error);
@@ -865,7 +869,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
         const result = await toggleFavorite('store', storeId);
         if (result?.action === 'added') favoriteStoreIds.add(storeId);
         if (result?.action === 'removed') favoriteStoreIds.delete(storeId);
-        syncFavoriteStoreButton();
+        syncFavoriteButtons();
         syncNearbyFavoriteButtons();
       } catch (error) {
         console.error(error);

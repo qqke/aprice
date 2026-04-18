@@ -187,7 +187,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
   </section>
 
   <script type="module" is:inline define:vars={{ loginUrl }}>
-    const { fetchAllProducts, fetchAllStores, fetchRecentPrices, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
+    const { fetchAllProducts, fetchAllStores, fetchRecentPrices } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
     const { adminDeletePrice, adminDeleteProduct, adminDeleteStore, adminUpsertPrice, adminUpsertProduct, adminUpsertStore, fetchCurrentProfile, getCurrentUser, signOut } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { applyPrivatePageGateCopy, getPrivatePageGateCopy, getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
 
@@ -277,55 +277,53 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       if (storeSelect) storeSelect.innerHTML = optionHtml(stores);
     }
 
+    function fillFields(fields, values, transforms = {}) {
+      Object.entries(fields).forEach(([key, field]) => {
+        const value = transforms[key] ? transforms[key](values?.[key]) : values?.[key];
+        setValue(field, value ?? '');
+      });
+    }
+
+    function resetFields(fields, defaults = {}) {
+      Object.entries(fields).forEach(([key, field]) => {
+        const value = Object.prototype.hasOwnProperty.call(defaults, key) ? defaults[key] : '';
+        setValue(field, value);
+      });
+    }
+
     function populateProductForm(product) {
       if (!product) return;
-      setValue(productFields.id, product.id);
-      setValue(productFields.barcode, product.barcode);
-      setValue(productFields.name, product.name);
-      setValue(productFields.brand, product.brand);
-      setValue(productFields.pack, product.pack);
-      setValue(productFields.category, product.category);
-      setValue(productFields.tone, product.tone || 'sunset');
-      setValue(productFields.description, product.description);
+      fillFields(productFields, product, { tone: (value) => value || 'sunset' });
     }
 
     function populateStoreForm(store) {
       if (!store) return;
-      setValue(storeFields.id, store.id);
-      setValue(storeFields.name, store.name);
-      setValue(storeFields.chain_name, store.chain_name);
-      setValue(storeFields.address, store.address);
-      setValue(storeFields.city, store.city);
-      setValue(storeFields.pref, store.pref);
-      setValue(storeFields.lat, String(store.lat ?? ''));
-      setValue(storeFields.lng, String(store.lng ?? ''));
-      setValue(storeFields.hours, store.hours);
+      fillFields(storeFields, store, {
+        lat: (value) => String(value ?? ''),
+        lng: (value) => String(value ?? ''),
+      });
     }
 
     function populatePriceForm(price) {
       if (!price) return;
       selectedPriceId = price.id;
-      setValue(priceFields.product_id, price.product_id);
-      setValue(priceFields.store_id, price.store_id);
-      setValue(priceFields.price_yen, String(price.price_yen ?? ''));
-      setValue(priceFields.source, price.source);
-      setValue(priceFields.note, price.note);
-      setValue(priceFields.collected_at, price.collected_at ? price.collected_at.slice(0, 16) : '');
-      setValue(priceFields.is_member_price, price.is_member_price);
+      fillFields(priceFields, price, {
+        price_yen: (value) => String(value ?? ''),
+        collected_at: (value) => (value ? value.slice(0, 16) : ''),
+      });
     }
 
     function resetProductForm() {
-      Object.values(productFields).forEach((field) => setValue(field, ''));
-      setValue(productFields.tone, 'sunset');
+      resetFields(productFields, { tone: 'sunset' });
     }
 
     function resetStoreForm() {
-      Object.values(storeFields).forEach((field) => setValue(field, ''));
+      resetFields(storeFields);
     }
 
     function resetPriceForm() {
       selectedPriceId = '';
-      Object.values(priceFields).forEach((field) => setValue(field, ''));
+      resetFields(priceFields);
     }
 
     function renderProducts() {
