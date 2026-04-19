@@ -616,6 +616,7 @@ const base = import.meta.env.BASE_URL || '/';
 
     document.addEventListener('click', (event) => {
       if (!shortcutsTray || !moreShortcut) return;
+      if (shortcutsTray.hidden && shortcutsTray.dataset.state !== 'open' && !shortcutsTrayCloseTimer) return;
       const target = event.target;
       if (!(target instanceof Node)) return;
       if (shortcutsTray.contains(target) || moreShortcut.contains(target) || shortcutsOverlay?.contains(target)) return;

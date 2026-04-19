@@ -90,6 +90,9 @@ async function main() {
       await page.locator('#home-search').click();
       const focusedElementId = await page.evaluate(() => document.activeElement?.id || '');
       assert.equal(focusedElementId, 'home-search', 'mobile homepage search input should receive focus on tap');
+      await page.waitForTimeout(250);
+      const focusedElementAfterDelay = await page.evaluate(() => document.activeElement?.id || '');
+      assert.equal(focusedElementAfterDelay, 'home-search', 'mobile homepage search input should keep focus after tap');
 
       const ssrContext = await browser.newContext({ javaScriptEnabled: false });
       try {
