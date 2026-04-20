@@ -43,7 +43,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
           <div class="section__header section__header--tight">
             <div>
               <h2>商品</h2>
-              <p>新增、更新或删除产品基础信息。</p>
+              <p>新增或删除产品基础信息。</p>
             </div>
             <div class="pillrow admin-toolbar">
               <button class="button button--ghost" id="product-reset" type="button">清空</button>
@@ -73,7 +73,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
               </label>
               <label class="field"><input id="product-description" placeholder="简短描述" aria-label="商品简短描述" /></label>
             </div>
-            <button class="button admin-form__submit" type="submit">保存商品</button>
+            <button class="button admin-form__submit" type="submit">添加商品</button>
           </form>
         </section>
 
@@ -188,7 +188,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
 
   <script type="module" is:inline define:vars={{ loginUrl }}>
     const { fetchAllProducts, fetchAllStores, fetchRecentPrices } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
-    const { adminDeletePrice, adminDeleteProduct, adminDeleteStore, adminUpsertPrice, adminUpsertProduct, adminUpsertStore, fetchCurrentProfile, getCurrentUser, signOut } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+    const { adminDeletePrice, adminDeleteProduct, adminDeleteStore, adminUpsertPrice, adminUpsertStore, createProduct, fetchCurrentProfile, getCurrentUser, signOut } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { applyPrivatePageGateCopy, getPrivatePageGateCopy, getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
 
     const status = document.querySelector('#admin-status');
@@ -291,11 +291,6 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       });
     }
 
-    function populateProductForm(product) {
-      if (!product) return;
-      fillFields(productFields, product, { tone: (value) => value || 'sunset' });
-    }
-
     function populateStoreForm(store) {
       if (!store) return;
       fillFields(storeFields, store, {
@@ -336,12 +331,11 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
               <small>${item.barcode} · ${item.brand} · ${item.pack}</small>
             </div>
             <div class="pillrow admin-record-actions">
-              <button class="button button--ghost" data-edit-product="${item.id}" type="button">编辑</button>
               <button class="button button--ghost" data-delete-product="${item.id}" type="button">删除</button>
             </div>
           </div>
         `).join('')
-        : '<div class="list__item"><div><strong>暂无商品</strong><small>请保存一条商品。</small></div><span class="meta">暂无</span></div>';
+        : '<div class="list__item"><div><strong>暂无商品</strong><small>请添加一条商品。</small></div><span class="meta">暂无</span></div>';
     }
 
     function renderStores() {
@@ -458,7 +452,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     productForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
       try {
-        await adminUpsertProduct({
+        await createProduct({
           id: elValue(productFields.id),
           barcode: elValue(productFields.barcode),
           name: elValue(productFields.name),
@@ -566,11 +560,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       const target = event.target;
       const button = target instanceof Element ? target.closest('button') : null;
       if (!button) return;
-      const editId = button.dataset.editProduct;
       const deleteId = button.dataset.deleteProduct;
-      if (editId) {
-        populateProductForm(products.find((item) => item.id === editId));
-      }
       if (deleteId && window.confirm(`删除商品 ${deleteId} ?`)) {
         await adminDeleteProduct(deleteId);
         resetProductForm();

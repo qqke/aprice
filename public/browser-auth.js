@@ -257,9 +257,8 @@ export async function toggleFavorite(entityType, entityId) {
   return { action: 'added' };
 }
 
-export async function adminUpsertProduct(payload) {
-  const session = await requireSession();
-  return restRpc('admin_upsert_product', payload, { token: session.access_token });
+export async function createProduct(payload) {
+  return restRpc('create_product', payload);
 }
 
 export async function adminUpsertStore(payload) {

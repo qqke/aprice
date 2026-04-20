@@ -114,11 +114,6 @@ async function main() {
       assert.ok(productOptions.some((text) => text.includes('Loxonin S')));
       assert.ok(storeOptions.some((text) => text.includes('Sugi Pharmacy Hiroo')));
 
-      await page.locator('[data-edit-product="eve-a"]').click();
-      assert.equal(await page.locator('#product-id').inputValue(), 'eve-a');
-      assert.equal(await page.locator('#product-name').inputValue(), 'EVE A');
-      assert.equal(await page.locator('#product-brand').inputValue(), 'SS Pharmaceuticals');
-
       await page.locator('[data-edit-store="welcia-shibuya"]').click();
       assert.equal(await page.locator('#store-id').inputValue(), 'welcia-shibuya');
       assert.equal(await page.locator('#store-name').inputValue(), 'Welcia Shibuya');
@@ -146,15 +141,15 @@ async function main() {
       });
 
       assert.ok(
-        rpcCalls.some((call) => call.url.includes('/rpc/admin_upsert_product')),
-        `expected admin_upsert_product RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
+        rpcCalls.some((call) => call.url.includes('/rpc/create_product')),
+        `expected create_product RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
       );
       assert.ok(
-        rpcCalls.some((call) => call.url.includes('/rpc/admin_upsert_product') && call.bodyJson?.id === 'admin-fixture-product' && call.bodyJson?.name === 'Admin Fixture Product'),
-        `expected admin_upsert_product payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
+        rpcCalls.some((call) => call.url.includes('/rpc/create_product') && call.bodyJson?.id === 'admin-fixture-product' && call.bodyJson?.name === 'Admin Fixture Product'),
+        `expected create_product payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
       );
 
-      assert.ok(await page.locator('[data-edit-product="eve-a"]').count());
+      assert.equal(await page.locator('[data-edit-product="eve-a"]').count(), 0);
 
       await clickConfirmAndWait('#product-delete', '/rpc/admin_delete_product');
       assert.ok(rpcCalls.some((call) => call.url.includes('/rpc/admin_delete_product')),
@@ -288,7 +283,6 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
 
 
 

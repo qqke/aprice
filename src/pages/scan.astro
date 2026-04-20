@@ -74,7 +74,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <span class="pill" id="missing-product-code-pill"></span>
             </div>
           </div>
-          <div class="notice notice--warning" id="missing-product-summary">请填写商品信息后直接保存。</div>
+          <div class="notice notice--warning" id="missing-product-summary">请填写商品信息后直接添加。</div>
           <form class="form admin-form" id="missing-product-form">
             <div class="admin-form__row admin-form__row--two">
               <label class="field"><input id="missing-product-barcode" placeholder="条码" aria-label="条码" readonly /></label>
@@ -95,7 +95,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               </label>
             </div>
             <label class="field"><input id="missing-product-description" placeholder="简短描述" aria-label="商品简短描述" /></label>
-            <button class="button admin-form__submit" id="missing-product-save" type="submit">保存商品</button>
+            <button class="button admin-form__submit" id="missing-product-save" type="submit">添加商品</button>
           </form>
         </section>
       </section>
@@ -104,7 +104,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   <script type="module" is:inline>
     const { fetchProductByBarcode, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
-    const { adminUpsertProduct } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+    const { createProduct } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
 
     const video = document.querySelector('#camera');
     const capture = document.querySelector('#capture');
@@ -393,7 +393,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       }
 
       try {
-        const saved = await adminUpsertProduct({
+        const saved = await createProduct({
           barcode,
           name: missingFields.name?.value?.trim() || '',
           brand: missingFields.brand?.value?.trim() || '',
@@ -407,13 +407,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         if (savedProduct) {
           hideMissingPanel();
           renderProduct(savedProduct);
-          if (status) status.textContent = `商品已保存：${savedProduct.name || barcode}`;
+          if (status) status.textContent = `商品已添加：${savedProduct.name || barcode}`;
           return;
         }
 
-        if (status) status.textContent = `商品已保存：${barcode}`;
+        if (status) status.textContent = `商品已添加：${barcode}`;
       } catch (error) {
-        if (status) status.textContent = `保存失败：${error.message}`;
+        if (status) status.textContent = `添加失败：${error.message}`;
       }
     });
 

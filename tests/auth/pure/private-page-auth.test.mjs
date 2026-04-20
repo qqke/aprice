@@ -31,7 +31,7 @@ assert.equal(getPrivatePageStatusCopy('product', 'favoriteProductSuccess', { act
 assert.equal(getPrivatePageStatusCopy('product', 'favoriteStatus'), '登录后可添加收藏。');
 assert.equal(getPrivatePageStatusCopy('product', 'geoStatus'), '同步价格数据。');
 assert.equal(getPrivatePageStatusCopy('admin', 'loaded', { email: 'admin@example.com' }), '已登录为 admin@example.com，可以开始维护数据。');
-assert.equal(getPrivatePageStatusCopy('admin', 'pageSub'), '仅管理员账号可用。通过后端调用写入基础数据和价格采样。');
+assert.equal(getPrivatePageStatusCopy('admin', 'pageSub'), '仅管理员账号可用。通过后端调用新增基础数据和价格采样。');
 assert.equal(getPrivatePageStatusCopy('admin', 'actionLabel'), '切换账号');
 assert.equal(getPrivatePageStatusCopy('shell', 'guestChip'), '未登录');
 assert.equal(getPrivatePageStatusCopy('shell', 'guestNav'), '登录');

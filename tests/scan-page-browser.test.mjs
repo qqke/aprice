@@ -74,7 +74,7 @@ async function main() {
           }
         }
 
-        if (url.pathname.includes('/rpc/admin_upsert_product')) {
+        if (url.pathname.includes('/rpc/create_product')) {
           const body = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
           const savedProduct = {
             id: body.id || body.barcode,
@@ -151,7 +151,7 @@ async function main() {
           return;
         }
 
-        if (url.pathname.includes('/rpc/admin_upsert_product')) {
+        if (url.pathname.includes('/rpc/create_product')) {
           const body = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
           const savedProduct = {
             id: body.id || body.barcode,
@@ -196,16 +196,16 @@ async function main() {
       await foundPage.locator('#missing-product-tone').selectOption('mint');
       await foundPage.locator('#missing-product-description').fill('Created from scan page');
       await foundPage.locator('#missing-product-save').click();
-      await waitForText(foundPage, '#scan-status', '商品已保存');
+      await waitForRequestMatch(foundRequests, (call) => call.url.includes('/rpc/create_product'));
       await waitForHidden(foundPage, '#missing-product-panel');
 
       assert.ok(
-        foundRequests.some((call) => call.url.includes('/rpc/admin_upsert_product')),
-        `expected admin_upsert_product RPC, got ${foundRequests.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
+        foundRequests.some((call) => call.url.includes('/rpc/create_product')),
+        `expected create_product RPC, got ${foundRequests.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
       );
       assert.ok(
-        foundRequests.some((call) => call.url.includes('/rpc/admin_upsert_product') && call.body.includes('"barcode":"9999999999999"') && call.body.includes('"name":"Scan Fixture Product"')),
-        `expected admin_upsert_product payload, got ${foundRequests.map((call) => call.body).join(' | ')}`,
+        foundRequests.some((call) => call.url.includes('/rpc/create_product') && call.body.includes('"barcode":"9999999999999"') && call.body.includes('"name":"Scan Fixture Product"')),
+        `expected create_product payload, got ${foundRequests.map((call) => call.body).join(' | ')}`,
       );
       assert.match(await foundPage.locator('#scan-result-list').textContent(), /Scan Fixture Product/);
       assert.equal(await foundPage.locator('#scan-result-list a').getAttribute('href'), '/aprice/product/9999999999999/');

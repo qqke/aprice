@@ -126,6 +126,7 @@ create policy "profiles insert own" on profiles for insert with check (auth.uid(
 create policy "profiles update own" on profiles for update using (auth.uid() = id) with check (auth.uid() = id);
 
 create policy "products public read" on products for select using (true);
+create policy "products public insert" on products for insert with check (true);
 create policy "stores public read" on stores for select using (true);
 create policy "prices public read" on prices for select using (true);
 
@@ -170,7 +171,7 @@ begin
 end;
 $$;
 
-create or replace function admin_upsert_product(payload jsonb)
+create or replace function create_product(payload jsonb)
 returns products
 language plpgsql
 security definer
@@ -179,7 +180,13 @@ as $$
 declare
   result products;
 begin
-  perform require_admin_user();
+  if coalesce(payload->>'barcode', '') = '' then
+    raise exception 'barcode is required';
+  end if;
+
+  if coalesce(payload->>'name', '') = '' then
+    raise exception 'name is required';
+  end if;
 
   insert into public.products (
     id,
@@ -201,19 +208,22 @@ begin
     coalesce(nullif(payload->>'tone', ''), 'sunset'),
     coalesce(payload->>'description', '')
   )
-  on conflict (id) do update
-    set barcode = excluded.barcode,
-        name = excluded.name,
-        brand = excluded.brand,
-        pack = excluded.pack,
-        category = excluded.category,
-        tone = excluded.tone,
-        description = excluded.description,
-        updated_at = now()
   returning * into result;
 
   return result;
+exception
+  when unique_violation then
+    raise exception 'product already exists';
 end;
+$$;
+
+create or replace function admin_upsert_product(payload jsonb)
+returns products
+language sql
+security definer
+set search_path = public
+as $$
+  select * from create_product(payload);
 $$;
 
 create or replace function admin_upsert_store(payload jsonb)
