@@ -126,6 +126,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
       window.__APriceConfig = { baseUrl, supabaseUrl, supabaseAnonKey };
       window.__APriceConfig.browserJsUrl = `${baseUrl}browser.js`;
       window.__APriceConfig.browserAuthJsUrl = `${baseUrl}browser-auth.js`;
+      window.__APriceConfig.supabaseRestJsUrl = `${baseUrl}supabase-rest.js`;
       window.__APriceConfig.authRedirectJsUrl = `${baseUrl}auth-redirect.js`;
       window.__APriceConfig.loginPageStateJsUrl = `${baseUrl}login-page-state.js`;
       window.__APriceConfig.privatePageAuthJsUrl = `${baseUrl}private-page-auth.js`;

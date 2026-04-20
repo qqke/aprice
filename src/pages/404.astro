@@ -38,4 +38,19 @@ const base = import.meta.env.BASE_URL || '/';
       </div>
     </div>
   </section>
+  <script type="module" is:inline define:vars={{ base }}>
+    const current = new URL(window.location.href);
+    const basePath = new URL(base, window.location.origin).pathname.replace(/\/$/, '');
+    const pathname = current.pathname;
+
+    const escapedBase = basePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = new RegExp(`^${escapedBase ? `${escapedBase}\\/` : '/'}product\\/([^/]+)\\/?$`);
+    const matched = pathname.match(pattern);
+    if (matched?.[1]) {
+      const id = matched[1];
+      const target = new URL(`${base}product-runtime/`, window.location.origin);
+      target.searchParams.set('id', id);
+      window.location.replace(target.toString());
+    }
+  </script>
 </BaseLayout>

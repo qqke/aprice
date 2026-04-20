@@ -45,36 +45,10 @@ const base = import.meta.env.BASE_URL || '/';
 
       <div class="home-mobile-shortcuts" aria-label="手机快捷方式">
         <button class="home-mobile-shortcut home-mobile-shortcut--primary" id="focus-search-shortcut" type="button">
-          <span class="home-mobile-shortcut__label">搜索</span>
+          <span class="home-mobile-shortcut__label">搜索直达</span>
           <span class="home-mobile-shortcut__meta">直达输入框</span>
         </button>
-        <a class="home-mobile-shortcut" href={`${base}scan/`}>
-          <span class="home-mobile-shortcut__label">扫码</span>
-          <span class="home-mobile-shortcut__meta">打开相机</span>
-        </a>
-        <button class="home-mobile-shortcut" id="more-shortcut" type="button" aria-expanded="false" aria-haspopup="dialog" aria-controls="home-mobile-shortcuts-tray">
-          <span class="home-mobile-shortcut__label">更多</span>
-          <span class="home-mobile-shortcut__meta">附近 / 采样</span>
-          <span class="home-mobile-shortcut__chev" aria-hidden="true">⌄</span>
-        </button>
       </div>
-
-      <div class="home-mobile-shortcuts__tray" id="home-mobile-shortcuts-tray" hidden>
-        <div class="home-mobile-shortcuts__tray-head" aria-hidden="true">
-          <strong>次级动作</strong>
-          <small>按需打开</small>
-        </div>
-        <button class="home-mobile-shortcut home-mobile-shortcut--tray" id="geo-shortcut" type="button">
-          <span class="home-mobile-shortcut__label">附近</span>
-          <span class="home-mobile-shortcut__meta">按当前位置</span>
-        </button>
-        <button class="home-mobile-shortcut home-mobile-shortcut--tray" id="recent-shortcut" type="button">
-          <span class="home-mobile-shortcut__label">采样</span>
-          <span class="home-mobile-shortcut__meta">最近记录</span>
-        </button>
-      </div>
-
-      <button class="home-mobile-shortcuts__overlay" id="home-mobile-shortcuts-overlay" type="button" hidden aria-label="关闭快捷方式面板"></button>
 
       <div class="home-links" aria-label="辅助入口">
         <button class="home-link" id="geolocate-home" type="button">用当前位置找附近价格</button>
@@ -161,11 +135,6 @@ const base = import.meta.env.BASE_URL || '/';
     const status = document.querySelector('#search-status');
     const geolocateButton = document.querySelector('#geolocate-home');
     const focusSearchShortcut = document.querySelector('#focus-search-shortcut');
-    const moreShortcut = document.querySelector('#more-shortcut');
-    const geoShortcut = document.querySelector('#geo-shortcut');
-    const recentShortcut = document.querySelector('#recent-shortcut');
-    const shortcutsTray = document.querySelector('#home-mobile-shortcuts-tray');
-    const shortcutsOverlay = document.querySelector('#home-mobile-shortcuts-overlay');
     const nearbyStatus = document.querySelector('#nearby-status');
     const selectedProductStatus = document.querySelector('#selected-product-status');
     const selectedProductAction = document.querySelector('#selected-product-action');
@@ -177,8 +146,6 @@ const base = import.meta.env.BASE_URL || '/';
     let activeProduct = null;
     let searchResults = [];
     let focusedResultIndex = -1;
-    let shortcutsTrayCloseTimer = null;
-    let shortcutsTrayReturnFocus = null;
 
     function productHref(productId) {
       return resolveBase(productId ? `product/${productId}/` : '');
@@ -494,49 +461,6 @@ const base = import.meta.env.BASE_URL || '/';
       }
     }
 
-    function setMobileShortcutsTray(open) {
-      if (!moreShortcut || !shortcutsTray) return;
-      if (shortcutsTrayCloseTimer) {
-        window.clearTimeout(shortcutsTrayCloseTimer);
-        shortcutsTrayCloseTimer = null;
-      }
-      if (open) {
-        shortcutsTrayReturnFocus = moreShortcut;
-      }
-      moreShortcut.setAttribute('aria-expanded', open ? 'true' : 'false');
-      moreShortcut.dataset.state = open ? 'open' : 'closed';
-      if (open) {
-        shortcutsTray.hidden = false;
-        shortcutsTray.dataset.state = 'open';
-        shortcutsOverlay?.removeAttribute('hidden');
-        shortcutsOverlay?.setAttribute('data-state', 'open');
-        const firstShortcut = shortcutsTray.querySelector('button, [href]');
-        window.requestAnimationFrame(() => {
-          if (shortcutsTray.hidden || shortcutsTray.dataset.state !== 'open') return;
-          if (firstShortcut instanceof HTMLElement) {
-            firstShortcut.focus({ preventScroll: true });
-          }
-        });
-        return;
-      }
-      shortcutsTray.dataset.state = 'closing';
-      shortcutsOverlay?.setAttribute('data-state', 'closing');
-      shortcutsTrayCloseTimer = window.setTimeout(() => {
-        shortcutsTray.hidden = true;
-        delete shortcutsTray.dataset.state;
-        shortcutsOverlay?.setAttribute('hidden', '');
-        shortcutsOverlay?.removeAttribute('data-state');
-        const restoreTarget = shortcutsTrayReturnFocus;
-        shortcutsTrayReturnFocus = null;
-        if (restoreTarget instanceof HTMLElement) {
-          restoreTarget.focus({ preventScroll: true });
-        } else {
-          moreShortcut.focus({ preventScroll: true });
-        }
-        shortcutsTrayCloseTimer = null;
-      }, 160);
-    }
-
     form?.addEventListener('submit', async (event) => {
       event.preventDefault();
       await runSearch(input?.value || '');
@@ -593,49 +517,9 @@ const base = import.meta.env.BASE_URL || '/';
       status.textContent = '搜索框已聚焦，可以直接输入。';
     });
 
-    moreShortcut?.addEventListener('click', () => {
-      const nextOpen = shortcutsTray?.hidden ?? true;
-      setMobileShortcutsTray(nextOpen);
-    });
-
-    geoShortcut?.addEventListener('click', () => {
-      setMobileShortcutsTray(false);
-      geolocateButton?.click();
-    });
-
     loadRecentButton?.addEventListener('click', () => {
       void loadRecentPrices();
     });
 
-    recentShortcut?.addEventListener('click', () => {
-      setMobileShortcutsTray(false);
-      loadRecentButton?.click();
-    });
-
-    shortcutsOverlay?.addEventListener('click', () => {
-      setMobileShortcutsTray(false);
-    });
-
-    document.addEventListener('click', (event) => {
-      if (!shortcutsTray || !moreShortcut) return;
-      if (shortcutsTray.hidden && shortcutsTray.dataset.state !== 'open' && !shortcutsTrayCloseTimer) return;
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (shortcutsTray.contains(target) || moreShortcut.contains(target) || shortcutsOverlay?.contains(target)) return;
-      setMobileShortcutsTray(false);
-    });
-
-    document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape' && shortcutsTray && !shortcutsTray.hidden) {
-        event.preventDefault();
-        setMobileShortcutsTray(false);
-      }
-    });
-
-    window.matchMedia?.('(min-width: 541px)').addEventListener?.('change', (event) => {
-      if (event.matches) {
-        setMobileShortcutsTray(false);
-      }
-    });
   </script>
 </BaseLayout>

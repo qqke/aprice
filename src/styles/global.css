@@ -2767,49 +2767,24 @@ body:not(.home-page) .tone-azure {
   }
 
   body.home-page .home-mobile-shortcuts {
-    left: 6px;
-    right: 6px;
+    left: 50%;
+    right: auto;
+    width: min(300px, calc(100vw - 12px));
     bottom: calc(var(--mobile-footer-space, 68px) + env(safe-area-inset-bottom) + 6px);
-    gap: 4px;
-    padding: 7px;
-    border-radius: 18px;
+    transform: translateX(-50%);
+    gap: 0;
+    padding: 8px;
+    border-radius: 16px;
   }
 
   body.home-page .home-mobile-shortcut {
     min-height: 50px;
-    padding: 7px 4px;
+    padding: 7px 10px;
     border-radius: 14px;
   }
 
   body.home-page .home-mobile-shortcut--primary {
-    min-height: 54px;
-  }
-
-  body.home-page .home-mobile-shortcuts__tray {
-    position: fixed;
-    left: 6px;
-    right: 6px;
-    bottom: calc(var(--mobile-footer-space, 68px) + 74px + env(safe-area-inset-bottom) + 10px);
-    z-index: 38;
-    margin-top: 0;
-    padding: 8px;
-    border: 1px solid rgba(42, 109, 245, 0.12);
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.96);
-    box-shadow:
-      0 16px 32px rgba(15, 23, 42, 0.12),
-      0 1px 0 rgba(255, 255, 255, 0.92) inset;
-    backdrop-filter: blur(12px);
-  }
-
-  body.home-page .home-mobile-shortcuts__overlay {
-    inset: 0 0 calc(var(--mobile-footer-space, 68px) + env(safe-area-inset-bottom) + 78px) 0;
-  }
-
-  body.home-page .home-mobile-shortcut--tray {
-    min-height: 48px;
-    padding: 7px 8px;
-    border-radius: 14px;
+    min-height: 50px;
   }
 }
 body.error-page .hero {
@@ -3504,7 +3479,7 @@ body.admin-page .admin-record-actions--price {
 
 @media (max-width: 540px) {
   body.home-page .page {
-    padding-bottom: calc(var(--mobile-footer-space, 72px) + 168px + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--mobile-footer-space, 72px) + 112px + env(safe-area-inset-bottom));
   }
 
   body.home-page .home-links {
@@ -3513,18 +3488,19 @@ body.admin-page .admin-record-actions--price {
 
   body.home-page .home-mobile-shortcuts {
     position: fixed;
-    left: 8px;
-    right: 8px;
+    left: 50%;
+    right: auto;
+    width: min(320px, calc(100vw - 16px));
     bottom: calc(var(--mobile-footer-space, 72px) + env(safe-area-inset-bottom) + 8px);
+    transform: translateX(-50%);
     z-index: 39;
     display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.95fr);
-    gap: 6px;
-    width: auto;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
     margin: 0;
-    padding: 16px 8px 8px;
+    padding: 10px;
     border: 1px solid rgba(42, 109, 245, 0.14);
-    border-radius: 24px;
+    border-radius: 18px;
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.94)),
       rgba(255, 255, 255, 0.96);
@@ -3535,15 +3511,7 @@ body.admin-page .admin-record-actions--price {
   }
 
   body.home-page .home-mobile-shortcuts::before {
-    content: '';
-    position: absolute;
-    top: 7px;
-    left: 50%;
-    width: 46px;
-    height: 4px;
-    border-radius: 999px;
-    background: rgba(42, 109, 245, 0.18);
-    transform: translateX(-50%);
+    display: none;
   }
 
   body.home-page .home-mobile-shortcuts__overlay {
@@ -3570,11 +3538,11 @@ body.admin-page .admin-record-actions--price {
   }
 
   body.home-page .home-mobile-shortcut {
-    min-height: 50px;
-    padding: 7px 4px;
+    min-height: 54px;
+    padding: 8px 12px;
     border-radius: 14px;
-    justify-items: center;
-    text-align: center;
+    justify-items: start;
+    text-align: left;
   }
 
   body.home-page .home-mobile-shortcut--primary {
@@ -3586,36 +3554,8 @@ body.admin-page .admin-record-actions--price {
     font-size: 0.8rem;
   }
 
-  body.home-page .home-mobile-shortcuts > .home-mobile-shortcut:not(.home-mobile-shortcut--primary):not(#more-shortcut) .home-mobile-shortcut__meta {
-    display: none;
-  }
-
-  body.home-page .home-mobile-shortcuts__tray {
-    width: auto;
-    position: fixed;
-    left: 8px;
-    right: 8px;
-    bottom: calc(var(--mobile-footer-space, 72px) + 76px + env(safe-area-inset-bottom) + 10px);
-    z-index: 38;
-    margin-top: 0;
-    padding: 10px;
-    border-radius: 18px;
-    border: 1px solid rgba(42, 109, 245, 0.12);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.94));
-    box-shadow:
-      0 16px 32px rgba(15, 23, 42, 0.12),
-      0 1px 0 rgba(255, 255, 255, 0.94) inset;
-    backdrop-filter: blur(14px) saturate(130%);
-  }
-
-  body.home-page .home-mobile-shortcuts__tray-head {
-    padding: 0 4px 2px;
-  }
-
-  body.home-page .home-mobile-shortcut--tray {
-    min-height: 46px;
-    padding: 6px 8px;
-    border-radius: 12px;
+  body.home-page .home-mobile-shortcut__meta {
+    display: block;
   }
 }
 
