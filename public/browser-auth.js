@@ -259,7 +259,11 @@ export async function toggleFavorite(entityType, entityId) {
 
 export async function createProduct(payload) {
   const session = await requireSession();
-  return restInsert('products', payload, { token: session.access_token });
+  const normalizedPayload = {
+    ...payload,
+    id: payload?.id || payload?.barcode,
+  };
+  return restInsert('products', normalizedPayload, { token: session.access_token });
 }
 
 export async function adminUpsertStore(payload) {

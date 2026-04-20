@@ -224,7 +224,7 @@ async function main() {
         `expected products insert, got ${foundRequests.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
       );
       assert.ok(
-        foundRequests.some((call) => call.url.includes('/rest/v1/products') && call.method === 'POST' && call.body.includes('"barcode":"9999999999999"') && call.body.includes('"name":"Scan Fixture Product"')),
+        foundRequests.some((call) => call.url.includes('/rest/v1/products') && call.method === 'POST' && call.body.includes('"id":"9999999999999"') && call.body.includes('"barcode":"9999999999999"') && call.body.includes('"name":"Scan Fixture Product"')),
         `expected products insert payload, got ${foundRequests.map((call) => call.body).join(' | ')}`,
       );
       assert.match(await foundPage.locator('#scan-result-list').textContent(), /Scan Fixture Product/);
