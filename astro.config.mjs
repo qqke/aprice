@@ -1,4 +1,5 @@
 import { defineConfig } from 'astro/config';
+import node from '@astrojs/node';
 
 const publicSiteUrl = process.env.PUBLIC_SITE_URL || '';
 const usesCustomDomain = publicSiteUrl.length > 0 && !publicSiteUrl.includes('github.io');
@@ -51,7 +52,10 @@ export default defineConfig({
   site: process.env.PUBLIC_SITE_URL || 'https://example.github.io/aprice',
   base: repoBase,
   trailingSlash: 'always',
-  output: 'static',
+  output: 'server',
+  adapter: node({
+    mode: 'standalone',
+  }),
   vite: {
     resolve: {
       preserveSymlinks: true,

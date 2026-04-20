@@ -1,5 +1,7 @@
 import { createServer } from 'node:http';
+import { spawn } from 'node:child_process';
 import { readFile, stat } from 'node:fs/promises';
+import { createServer as createNetServer } from 'node:net';
 import { extname, normalize, resolve } from 'node:path';
 
 const mimeTypes = {
@@ -23,7 +25,7 @@ function toFilePath(distRoot, urlPath) {
   return joined;
 }
 
-export async function startStaticServer({ distRoot = resolve(process.cwd(), 'dist') } = {}) {
+export async function startStaticServer({ distRoot = resolve(process.cwd(), 'dist', 'client') } = {}) {
   const server = createServer(async (req, res) => {
     try {
       const url = new URL(req.url || '/', 'http://127.0.0.1');
@@ -67,4 +69,57 @@ export async function startStaticServer({ distRoot = resolve(process.cwd(), 'dis
   }
 
   return { server, baseUrl: `http://127.0.0.1:${address.port}` };
+}
+
+async function getFreePort() {
+  const server = createNetServer();
+  await new Promise((resolvePromise) => server.listen(0, '127.0.0.1', resolvePromise));
+  const address = server.address();
+  server.close();
+  if (!address || typeof address !== 'object') {
+    throw new Error('failed to acquire a free port');
+  }
+  return address.port;
+}
+
+export async function startBuiltServer({ distRoot = resolve(process.cwd(), 'dist') } = {}) {
+  const entryPath = resolve(distRoot, 'server', 'entry.mjs');
+  const port = await getFreePort();
+  const child = spawn(process.execPath, [entryPath], {
+    env: {
+      ...process.env,
+      HOST: '127.0.0.1',
+      PORT: String(port),
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+
+  const logs = [];
+  child.stdout.on('data', (chunk) => logs.push(String(chunk)));
+  child.stderr.on('data', (chunk) => logs.push(String(chunk)));
+
+  const baseUrl = `http://127.0.0.1:${port}`;
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < 30000) {
+    if (child.exitCode !== null) {
+      break;
+    }
+    try {
+      const response = await fetch(baseUrl, { method: 'GET' });
+      if (response.ok || response.status === 404) {
+        return {
+          server: {
+            close() {
+              child.kill();
+            },
+          },
+          baseUrl,
+        };
+      }
+    } catch {}
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 100));
+  }
+
+  child.kill();
+  throw new Error(`standalone server did not start: ${logs.join('\n') || 'no logs'}`);
 }

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 
 import { launchChromiumForTest } from '../../_playwright-launch.mjs';
 import { makePersonalPriceLogs, makeProductPageResponseForRequest } from '../../_browser-test-fixtures.mjs';
-import { startStaticServer } from '../../_browser-test-server.mjs';
+import { startBuiltServer } from '../../_browser-test-server.mjs';
 
 function makeEsmShimModuleBody() {
   return [
@@ -20,7 +20,7 @@ function makeEsmShimModuleBody() {
 }
 
 async function main() {
-  const { server, baseUrl } = await startStaticServer();
+  const { server, baseUrl } = await startBuiltServer();
   const browser = await launchChromiumForTest('product-page');
 
   try {
@@ -32,7 +32,7 @@ async function main() {
       const page = await browser.newPage();
       const requests = [];
       const pageErrors = [];
-      const productSlug = '0019014614042';
+      const productSlug = '9999999999999';
       const productPath = `/aprice/product/${productSlug}/`;
       const personalLogs = makePersonalPriceLogs();
 

@@ -21,13 +21,13 @@ export function makeAspirinProductResponse() {
   };
 }
 
-export function makeProductDetailsResponse() {
+export function makeProductDetailsResponse(id = '0019014614042') {
   return {
-    id: '0019014614042',
-    name: 'アイムス 11歳以上用 毎日の健康ケア チキン 小粒 5kg',
+    id,
+    name: id === '0019014614042' ? 'アイムス 11歳以上用 毎日の健康ケア チキン 小粒 5kg' : `Playwright Live Product ${id}`,
     brand: 'マースジャパンリミテッド',
     pack: '5kg',
-    barcode: '0019014614042',
+    barcode: id,
     category: '',
     tone: 'sunset',
     description: '',
@@ -285,7 +285,8 @@ export function makeScanPageResponseForRequest(requestUrl) {
 export function makeProductPageResponseForRequest(requestUrl) {
   const url = new URL(requestUrl);
   if (url.pathname.endsWith('/products')) {
-    return [makeProductDetailsResponse()];
+    const match = url.searchParams.get('id')?.match(/^eq\.(.+)$/) || url.searchParams.get('barcode')?.match(/^eq\.(.+)$/);
+    return [makeProductDetailsResponse(match?.[1] || '0019014614042')];
   }
 
   if (url.pathname.endsWith('/stores')) {

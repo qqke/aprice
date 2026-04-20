@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { buildPrivatePageLoginUrl, getPrivatePageGateCopy, getPrivatePageStatusCopy } from '../../lib/private-page-auth.js';
-import { fetchAllPublicProducts } from '../../lib/supabase-rest.js';
+import { restGet } from '../../lib/supabase-rest.js';
 
 type Product = {
   id: string;
@@ -14,12 +14,33 @@ type Product = {
   description: string;
 };
 
-export async function getStaticPaths() {
-  const products = ((await fetchAllPublicProducts({ batchSize: 1000, order: 'id.asc' })) ?? []) as Product[];
-  return products.map((product) => ({ params: { id: product.id }, props: { product } }));
+export const prerender = false;
+
+const productId = String(Astro.params.id || '').trim();
+const productRows = productId
+  ? (await restGet('products', {
+      query: {
+        select: '*',
+        id: `eq.${productId}`,
+        limit: 1,
+      },
+    })) as Product[]
+  : [];
+const product = productRows?.[0] ?? {
+  id: productId,
+  barcode: productId,
+  name: '商品不存在',
+  brand: '',
+  pack: '',
+  category: '',
+  tone: 'sunset',
+  description: '',
+};
+
+if (!productRows?.[0]) {
+  Astro.response.status = 404;
 }
 
-const { product } = Astro.props as { product: Product };
 const base = import.meta.env.BASE_URL || '/';
 const loginUrl = buildPrivatePageLoginUrl({
   origin: Astro.url.origin,

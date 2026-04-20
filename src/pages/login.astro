@@ -1,6 +1,8 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { resolveBase } from '../lib/browser.js';
+
+export const prerender = true;
 ---
 <BaseLayout title="登录 - 搜比价" description="邮箱密码登录、注册和重置密码。" bodyClass="login-page">
   <section class="section section--first-workspace">
