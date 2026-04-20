@@ -103,7 +103,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   </section>
 
   <script type="module" is:inline>
-    const { fetchProductByBarcode, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
+    const { fetchJancodeProductDraft, fetchProductByBarcode, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
     const { createProduct, getCurrentUser } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
 
     const video = document.querySelector('#camera');
@@ -219,6 +219,17 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       queueMicrotask(() => missingFields.name?.focus());
     }
 
+    function applyDraftToMissingForm(draft) {
+      if (!draft) return;
+      setMissingFormValue(missingFields.barcode, draft.barcode || '');
+      setMissingFormValue(missingFields.name, draft.name || '');
+      setMissingFormValue(missingFields.brand, draft.brand || '');
+      setMissingFormValue(missingFields.pack, draft.pack || '');
+      setMissingFormValue(missingFields.category, draft.category || '');
+      setMissingFormValue(missingFields.tone, draft.tone || 'sunset');
+      setMissingFormValue(missingFields.description, draft.description || '');
+    }
+
     function hideMissingPanel() {
       if (missingPanel) missingPanel.hidden = true;
     }
@@ -261,8 +272,37 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         showMissingPanel(cleaned);
         if (status) {
           status.textContent = canAddProduct
-            ? `未找到条码 ${cleaned}，可以直接补录商品信息。`
-            : `未找到条码 ${cleaned}，请先登录后再添加商品。`;
+            ? `未找到条码 ${cleaned}，正在从 JANCODE 获取商品信息...`
+            : `未找到条码 ${cleaned}，正在从 JANCODE 获取商品信息...`;
+        }
+        try {
+          const draft = await fetchJancodeProductDraft(cleaned);
+          if (token !== lookupToken) return null;
+
+          if (draft) {
+            applyDraftToMissingForm(draft);
+            if (missingSummary) {
+              missingSummary.textContent = canAddProduct
+                ? '已从 JANCODE 预填商品信息，确认后即可添加。'
+                : '已从 JANCODE 预填商品信息，请先登录后再添加商品。';
+            }
+            if (status) {
+              status.textContent = canAddProduct
+                ? `已从 JANCODE 预填 ${draft.name || cleaned}。`
+                : `已从 JANCODE 预填 ${draft.name || cleaned}，请先登录后再添加商品。`;
+            }
+          } else if (status) {
+            status.textContent = canAddProduct
+              ? `未找到条码 ${cleaned} 的 JANCODE 信息，可以手动填写后添加。`
+              : `未找到条码 ${cleaned} 的 JANCODE 信息，请先登录后再添加商品。`;
+          }
+        } catch (draftError) {
+          if (token !== lookupToken) return null;
+          if (status) {
+            status.textContent = canAddProduct
+              ? `JANCODE 预填失败：${draftError.message}，请手动填写后添加。`
+              : `JANCODE 预填失败：${draftError.message}，请先登录后再添加商品。`;
+          }
         }
         return null;
       } catch (error) {

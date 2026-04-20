@@ -128,6 +128,24 @@ async function main() {
           body: makeSupabaseShimModuleBody(),
         });
       });
+      await foundPage.route('https://r.jina.ai/**', async (route) => {
+        const body = [
+          'Title: JANコード 4987240210733 | 龍角散ダイレクトスティック ピーチ(16包) 株式会社龍角散 医薬品・コンタクト・介護',
+          '',
+          '## 龍角散ダイレクトスティック ピーチ(16包)',
+          '',
+          '### 商品基本情報',
+          '',
+          '| 商品名 | 龍角散ダイレクトスティック ピーチ(16包) |',
+          '| 会社名 | 株式会社龍角散 |',
+          '| 商品ジャンル | 医薬品・コンタクト・介護 > 医薬品・医薬部外品 > 医薬品 |',
+        ].join('\n');
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/plain; charset=utf-8',
+          body,
+        });
+      });
       await foundPage.route('**/rest/v1/**', async (route) => {
         const request = route.request();
         const requestUrl = request.url();
@@ -199,20 +217,20 @@ async function main() {
       });
 
       await foundPage.goto(scanUrl, { waitUntil: 'domcontentloaded' });
-      await foundPage.locator('#barcode-input').fill('9999999999999');
+      await foundPage.locator('#barcode-input').fill('4987240210733');
       await foundPage.locator('#barcode-search').click();
-      await waitForRequestMatch(foundRequests, (call) => call.url.includes('/rest/v1/products') && call.url.includes('barcode=eq.9999999999999'));
+      await waitForRequestMatch(foundRequests, (call) => call.url.includes('/rest/v1/products') && call.url.includes('barcode=eq.4987240210733'));
       await waitForVisible(foundPage, '#missing-product-panel');
-      await waitForText(foundPage, '#missing-product-summary', '条码 9999999999999 没有匹配到商品');
+      await waitForText(foundPage, '#missing-product-summary', '已从 JANCODE 预填商品信息');
 
-      assert.equal(await foundPage.locator('#barcode-input').inputValue(), '9999999999999');
-      assert.equal(await foundPage.locator('#missing-product-barcode').inputValue(), '9999999999999');
+      assert.equal(await foundPage.locator('#barcode-input').inputValue(), '4987240210733');
+      assert.equal(await foundPage.locator('#missing-product-barcode').inputValue(), '4987240210733');
+      assert.equal(await foundPage.locator('#missing-product-name').inputValue(), '龍角散ダイレクトスティック ピーチ(16包)');
+      assert.equal(await foundPage.locator('#missing-product-brand').inputValue(), '株式会社龍角散');
+      assert.equal(await foundPage.locator('#missing-product-category').inputValue(), '医薬品・コンタクト・介護 > 医薬品・医薬部外品 > 医薬品');
       assert.match(await foundPage.locator('#scan-result-list').textContent(), /没有找到对应商品/);
 
-      await foundPage.locator('#missing-product-name').fill('Scan Fixture Product');
-      await foundPage.locator('#missing-product-brand').fill('Aprice');
-      await foundPage.locator('#missing-product-pack').fill('12 tabs');
-      await foundPage.locator('#missing-product-category').fill('test-fixture');
+      await foundPage.locator('#missing-product-pack').fill('16包');
       await foundPage.locator('#missing-product-tone').selectOption('mint');
       await foundPage.locator('#missing-product-description').fill('Created from scan page');
       await foundPage.locator('#missing-product-save').click();
@@ -224,11 +242,11 @@ async function main() {
         `expected products insert, got ${foundRequests.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
       );
       assert.ok(
-        foundRequests.some((call) => call.url.includes('/rest/v1/products') && call.method === 'POST' && call.body.includes('"id":"9999999999999"') && call.body.includes('"barcode":"9999999999999"') && call.body.includes('"name":"Scan Fixture Product"')),
+        foundRequests.some((call) => call.url.includes('/rest/v1/products') && call.method === 'POST' && call.body.includes('"id":"4987240210733"') && call.body.includes('"barcode":"4987240210733"') && call.body.includes('"name":"龍角散ダイレクトスティック ピーチ(16包)"') && call.body.includes('"brand":"株式会社龍角散"')),
         `expected products insert payload, got ${foundRequests.map((call) => call.body).join(' | ')}`,
       );
-      assert.match(await foundPage.locator('#scan-result-list').textContent(), /Scan Fixture Product/);
-      assert.equal(await foundPage.locator('#scan-result-list a').getAttribute('href'), '/aprice/product/9999999999999/');
+      assert.match(await foundPage.locator('#scan-result-list').textContent(), /龍角散ダイレクトスティック ピーチ/);
+      assert.equal(await foundPage.locator('#scan-result-list a').getAttribute('href'), '/aprice/product/4987240210733/');
 
       const guestPage = await browser.newPage();
       const guestRequests = [];
@@ -254,6 +272,24 @@ async function main() {
           ].join('\n'),
         });
       });
+      await guestPage.route('https://r.jina.ai/**', async (route) => {
+        const body = [
+          'Title: JANコード 4987240210733 | 龍角散ダイレクトスティック ピーチ(16包) 株式会社龍角散 医薬品・コンタクト・介護',
+          '',
+          '## 龍角散ダイレクトスティック ピーチ(16包)',
+          '',
+          '### 商品基本情報',
+          '',
+          '| 商品名 | 龍角散ダイレクトスティック ピーチ(16包) |',
+          '| 会社名 | 株式会社龍角散 |',
+          '| 商品ジャンル | 医薬品・コンタクト・介護 > 医薬品・医薬部外品 > 医薬品 |',
+        ].join('\n');
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/plain; charset=utf-8',
+          body,
+        });
+      });
       await guestPage.route('**/rest/v1/**', async (route) => {
         const request = route.request();
         const requestUrl = request.url();
@@ -266,7 +302,7 @@ async function main() {
       });
 
       await guestPage.goto(scanUrl, { waitUntil: 'domcontentloaded' });
-      await guestPage.locator('#barcode-input').fill('9999999999999');
+      await guestPage.locator('#barcode-input').fill('4987240210733');
       await guestPage.locator('#barcode-search').click();
       await waitForVisible(guestPage, '#missing-product-panel');
       await waitForText(guestPage, '#scan-status', '请先登录后再添加商品。');

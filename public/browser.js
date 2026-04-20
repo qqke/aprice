@@ -91,6 +91,63 @@ export async function fetchProductByBarcode(barcode) {
   return fetchPublicProductByBarcode(cleaned);
 }
 
+function stripJancodeMarkup(value = '') {
+  return String(value || '')
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractJancodeTableValue(markdown, label) {
+  const pattern = new RegExp(`^\\|\\s*${label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\|\\s*(.*?)\\s*\\|$`, 'm');
+  const match = String(markdown || '').match(pattern);
+  return match?.[1] ? stripJancodeMarkup(match[1]) : '';
+}
+
+export function parseJancodeProductDraft(markdown, barcode) {
+  const cleanedBarcode = cleanBarcode(barcode);
+  const h2Match = String(markdown || '').match(/^##\s*(.+)$/m);
+  const titleMatch = String(markdown || '').match(/^Title:\s*(.+)$/m);
+  const name = stripJancodeMarkup(h2Match?.[1] || extractJancodeTableValue(markdown, '商品名'));
+  const brand = stripJancodeMarkup(extractJancodeTableValue(markdown, '会社名'));
+  const category = stripJancodeMarkup(extractJancodeTableValue(markdown, '商品ジャンル')).replace(/\s*>\s*/g, ' > ');
+  const title = stripJancodeMarkup(titleMatch?.[1] || '');
+
+  if (!cleanedBarcode) return null;
+  if (!name && !brand && !category && !title) return null;
+
+  return {
+    id: cleanedBarcode,
+    barcode: cleanedBarcode,
+    name: name || title || cleanedBarcode,
+    brand,
+    pack: '',
+    category,
+    tone: 'sunset',
+    description: '',
+  };
+}
+
+export async function fetchJancodeProductDraft(barcode) {
+  const cleaned = cleanBarcode(barcode);
+  if (!cleaned) return null;
+
+  const response = await fetch(`https://r.jina.ai/http://www.jancode.xyz/${cleaned}/`, {
+    headers: {
+      Accept: 'text/plain',
+    },
+  });
+
+  if (!response.ok) return null;
+
+  const markdown = await response.text();
+  return parseJancodeProductDraft(markdown, cleaned);
+}
+
 export async function fetchPricesForProduct(productId) {
   if (!productId) return [];
   return restGet('prices', {
