@@ -64,13 +64,11 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
           <h1 class="product-title" >{product.name}</h1>
           <p class="product-sub" >{product.description}</p>
           <div class="notice notice--compact product-hero__hint">先看最低价，再记买价。</div>
+          <div class="product-hero__actions" aria-label="商品页主要操作">
+            <button class="button" id="hero-geo-sort" type="button">按当前位置排序</button>
+            <a class="button button--ghost" href="#product-personal-record">记录买价</a>
+          </div>
         </div>
-      </div>
-
-      <div class="product-quick-nav" aria-label="页面跳转">
-        <a class="button button--ghost" href="#product-price-flow">价格流</a>
-        <a class="button button--ghost" href="#product-personal-record">个人记录</a>
-        <a class="button button--ghost" href="#product-trend">近期变化</a>
       </div>
 
       <div class="notice notice--warning" id="product-auth-gate">
@@ -255,6 +253,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
     const favoriteStoreButton = document.querySelector('#favorite-store-button');
     const authGate = document.querySelector('#product-auth-gate');
     const authGateLink = document.querySelector('#product-login-link');
+    const heroGeoButton = document.querySelector('#hero-geo-sort');
     const geoButton = document.querySelector('#geo-sort');
     const geoStatus = document.querySelector('#geo-status');
     const nearbyStatus = document.querySelector('#nearby-status');
@@ -913,6 +912,11 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       } catch (error) {
         geoStatus.textContent = `定位失败：${error.message}`;
       }
+    });
+
+    heroGeoButton?.addEventListener('click', () => {
+      document.querySelector('#product-price-flow')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      geoButton?.click();
     });
 
     form?.addEventListener('submit', async (event) => {

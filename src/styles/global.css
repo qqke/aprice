@@ -2964,6 +2964,19 @@ body.product-page .product-hero__hint {
   max-width: 100%;
 }
 
+body.product-page .product-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+body.product-page .product-hero__actions .button {
+  min-height: 34px;
+  padding: 7px 12px;
+  font-size: 0.8rem;
+}
+
 body.product-page .product-quick-nav {
   display: flex;
   flex-wrap: wrap;
@@ -3782,14 +3795,14 @@ body.admin-page .admin-record-actions--price {
     line-height: 1.6;
   }
 
-  body.product-page .product-hero .pillrow:last-of-type {
+  body.product-page .product-hero__actions {
     display: grid;
     grid-template-columns: 1fr;
     width: 100%;
     gap: 8px;
   }
 
-  body.product-page .product-hero .pillrow:last-of-type > .button {
+  body.product-page .product-hero__actions > .button {
     width: 100%;
   }
 
