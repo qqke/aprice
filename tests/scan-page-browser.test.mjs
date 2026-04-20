@@ -210,6 +210,50 @@ async function main() {
       assert.match(await foundPage.locator('#scan-result-list').textContent(), /Scan Fixture Product/);
       assert.equal(await foundPage.locator('#scan-result-list a').getAttribute('href'), '/aprice/product/9999999999999/');
 
+      const guestPage = await browser.newPage();
+      const guestRequests = [];
+      guestPage.on('pageerror', (error) => pageErrors.push(error.message));
+      guestPage.on('console', (message) => {
+        if (message.type() === 'error') pageErrors.push(message.text());
+      });
+      await guestPage.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/javascript; charset=utf-8',
+          body: [
+            'export function createClient(){',
+            '  return {',
+            '    auth: {',
+            '      async getSession(){ return { data: { session: null }, error: null }; },',
+            '      async getUser(){ return { data: { user: null }, error: null }; },',
+            '      onAuthStateChange(){ return { data: { subscription: { unsubscribe(){} } } }; },',
+            '      async signOut(){ return { error: null }; },',
+            '    },',
+            '  };',
+            '}',
+          ].join('\n'),
+        });
+      });
+      await guestPage.route('**/rest/v1/**', async (route) => {
+        const request = route.request();
+        const requestUrl = request.url();
+        guestRequests.push({ method: request.method(), url: requestUrl, body: request.postData() || '' });
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json; charset=utf-8',
+          body: '[]',
+        });
+      });
+
+      await guestPage.goto(scanUrl, { waitUntil: 'domcontentloaded' });
+      await guestPage.locator('#barcode-input').fill('9999999999999');
+      await guestPage.locator('#barcode-search').click();
+      await waitForVisible(guestPage, '#missing-product-panel');
+      await guestPage.locator('#missing-product-name').fill('Guest Product');
+      await guestPage.locator('#missing-product-save').click();
+      await waitForText(guestPage, '#scan-status', '请先登录后再添加商品。');
+      assert.equal(guestRequests.some((call) => call.url.includes('/rpc/create_product')), false);
+
       assert.equal(pageErrors.length, 0, `page errors: ${pageErrors.join(' | ')}`);
 
       console.log('scan-page browser test passed');

@@ -1,4 +1,17 @@
-create policy "products public insert" on public.products for insert with check (true);
+create policy "products authenticated insert" on public.products for insert with check (auth.uid() is not null);
+
+create or replace function public.require_authenticated_user()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'login required';
+  end if;
+end;
+$$;
 
 create or replace function public.create_product(payload jsonb)
 returns public.products
@@ -9,6 +22,8 @@ as $$
 declare
   result public.products;
 begin
+  perform public.require_authenticated_user();
+
   if coalesce(payload->>'barcode', '') = '' then
     raise exception 'barcode is required';
   end if;

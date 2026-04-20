@@ -413,7 +413,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
         if (status) status.textContent = `商品已添加：${barcode}`;
       } catch (error) {
-        if (status) status.textContent = `添加失败：${error.message}`;
+        if (status) {
+          status.textContent = String(error?.message || '').includes('Please sign in first')
+            ? '请先登录后再添加商品。'
+            : `添加失败：${error.message}`;
+        }
       }
     });
 

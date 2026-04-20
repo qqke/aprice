@@ -126,7 +126,7 @@ create policy "profiles insert own" on profiles for insert with check (auth.uid(
 create policy "profiles update own" on profiles for update using (auth.uid() = id) with check (auth.uid() = id);
 
 create policy "products public read" on products for select using (true);
-create policy "products public insert" on products for insert with check (true);
+create policy "products authenticated insert" on products for insert with check (auth.uid() is not null);
 create policy "stores public read" on stores for select using (true);
 create policy "prices public read" on prices for select using (true);
 
@@ -171,6 +171,19 @@ begin
 end;
 $$;
 
+create or replace function require_authenticated_user()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'login required';
+  end if;
+end;
+$$;
+
 create or replace function create_product(payload jsonb)
 returns products
 language plpgsql
@@ -180,6 +193,8 @@ as $$
 declare
   result products;
 begin
+  perform require_authenticated_user();
+
   if coalesce(payload->>'barcode', '') = '' then
     raise exception 'barcode is required';
   end if;
