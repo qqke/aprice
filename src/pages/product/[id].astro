@@ -67,50 +67,6 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
         </div>
       </div>
 
-      <section class="section">
-        <div class="grid">
-          <section class="tile tile--wide" id="product-summary">
-            <div class="section__header section__header--tight">
-              <h3>价格摘要</h3>
-              <p>最低价、门店数量和最近走势。</p>
-            </div>
-            <div class="feed">
-              <div class="feed__item feed__item--featured product-summary__item">
-                <div class="feed__copy">
-                  <div class="feed__kicker">价格结论</div>
-                  <div class="product-summary__lead">
-                    <span class="product-summary__lead-label">当前最低价</span>
-                    <strong id="summary-min-price">同步中</strong>
-                    <small id="summary-gain-label">等待价格数据</small>
-                  </div>
-                  <div class="product-summary__stats" aria-label="摘要数据">
-                    <div class="product-summary__stat">
-                      <small>门店数</small>
-                      <strong id="summary-store-count">同步中</strong>
-                    </div>
-                    <div class="product-summary__stat">
-                      <small>最新采样</small>
-                      <strong id="summary-latest-store">同步中</strong>
-                    </div>
-                    <div class="product-summary__stat">
-                      <small>近7天变化</small>
-                      <strong id="summary-trend-label">同步中</strong>
-                    </div>
-                  </div>
-                  <div class="pillrow" id="insight-pills">
-                    <span class="pill">摘要读取中...</span>
-                  </div>
-                </div>
-                <div class="product-summary__aside">
-                  <span class="price">价格摘要</span>
-                  <small>先看结论，再向下看价格流。</small>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
-      </section>
-
       <div class="product-quick-nav" aria-label="页面跳转">
         <a class="button button--ghost" href="#product-price-flow">价格流</a>
         <a class="button button--ghost" href="#product-personal-record">个人记录</a>
@@ -164,6 +120,50 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
           </div>
         </section>
       </div>
+
+      <section class="section">
+        <div class="grid">
+          <section class="tile tile--wide" id="product-summary">
+            <div class="section__header section__header--tight">
+              <h3>价格洞察</h3>
+              <p>自动汇总最低价、门店覆盖和近期变化。</p>
+            </div>
+            <div class="feed">
+              <div class="feed__item feed__item--featured product-summary__item">
+                <div class="feed__copy">
+                  <div class="feed__kicker">价格结论</div>
+                  <div class="product-summary__lead">
+                    <span class="product-summary__lead-label">当前最低价</span>
+                    <strong id="summary-min-price">同步中</strong>
+                    <small id="summary-gain-label">等待价格数据</small>
+                  </div>
+                  <div class="product-summary__stats" aria-label="摘要数据">
+                    <div class="product-summary__stat">
+                      <small>门店数</small>
+                      <strong id="summary-store-count">同步中</strong>
+                    </div>
+                    <div class="product-summary__stat">
+                      <small>最新采样</small>
+                      <strong id="summary-latest-store">同步中</strong>
+                    </div>
+                    <div class="product-summary__stat">
+                      <small>近7天变化</small>
+                      <strong id="summary-trend-label">同步中</strong>
+                    </div>
+                  </div>
+                  <div class="pillrow" id="insight-pills">
+                    <span class="pill">摘要读取中...</span>
+                  </div>
+                </div>
+                <div class="product-summary__aside">
+                  <span class="price">洞察</span>
+                  <small>价格流下方保留一份完整读数。</small>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
 
       <section class="section">
         <div class="grid">
