@@ -42,7 +42,7 @@ ASTRO_BASE_PATH=/
 
 ## GitHub Pages
 
-工作流位于 `.github/workflows/deploy.yml`，默认把 `main` 分支构建后的 `dist` 发布到 `gh-pages` 分支。
+工作流位于 `.github/workflows/deploy.yml`，默认把 `main` 分支构建后的 `dist/client` 作为 GitHub Pages artifact 发布。
 
 ## 备注
 
