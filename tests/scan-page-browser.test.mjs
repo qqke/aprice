@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { launchChromiumForTest } from './_playwright-launch.mjs';
 import { makeProductDetailsResponse } from './_browser-test-fixtures.mjs';
 import { startStaticServer } from './_browser-test-server.mjs';
-import { waitForHidden, waitForRequestMatch, waitForText, waitForVisible } from './_browser-test-wait.mjs';
+import { waitForHidden, waitForRequestMatch } from './_browser-test-wait.mjs';
 
 function makeSupabaseShimModuleBody() {
   return [
@@ -220,23 +220,13 @@ async function main() {
       await foundPage.locator('#barcode-input').fill('4987240210733');
       await foundPage.locator('#barcode-search').click();
       await waitForRequestMatch(foundRequests, (call) => call.url.includes('/rest/v1/products') && call.url.includes('barcode=eq.4987240210733'));
-      await waitForVisible(foundPage, '#missing-product-panel');
-      await waitForText(foundPage, '#missing-product-summary', '已从 JANCODE 预填商品信息');
+      await waitForHidden(foundPage, '#missing-product-panel');
+      await foundPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('商品已自动添加'));
 
       assert.equal(await foundPage.locator('#barcode-input').inputValue(), '4987240210733');
-      assert.equal(await foundPage.locator('#missing-product-barcode').inputValue(), '4987240210733');
-      assert.equal(await foundPage.locator('#missing-product-name').inputValue(), '龍角散ダイレクトスティック ピーチ(16包)');
-      assert.equal(await foundPage.locator('#missing-product-brand').inputValue(), '株式会社龍角散');
-      assert.equal(await foundPage.locator('#missing-product-category').inputValue(), '医薬品・コンタクト・介護 > 医薬品・医薬部外品 > 医薬品');
-      assert.match(await foundPage.locator('#scan-result-list').textContent(), /没有找到对应商品/);
-
-      await foundPage.locator('#missing-product-pack').fill('16包');
-      await foundPage.locator('#missing-product-tone').selectOption('mint');
-      await foundPage.locator('#missing-product-description').fill('Created from scan page');
-      await foundPage.locator('#missing-product-save').click();
+      assert.match(await foundPage.locator('#scan-result-list').textContent(), /龍角散ダイレクトスティック ピーチ/);
+      assert.equal(await foundPage.locator('#scan-result-list a').getAttribute('href'), '/aprice/product/4987240210733/');
       await waitForRequestMatch(foundRequests, (call) => call.url.includes('/rest/v1/products') && call.method === 'POST');
-      await waitForHidden(foundPage, '#missing-product-panel');
-
       assert.ok(
         foundRequests.some((call) => call.url.includes('/rest/v1/products') && call.method === 'POST'),
         `expected products insert, got ${foundRequests.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
@@ -245,8 +235,6 @@ async function main() {
         foundRequests.some((call) => call.url.includes('/rest/v1/products') && call.method === 'POST' && call.body.includes('"id":"4987240210733"') && call.body.includes('"barcode":"4987240210733"') && call.body.includes('"name":"龍角散ダイレクトスティック ピーチ(16包)"') && call.body.includes('"brand":"株式会社龍角散"')),
         `expected products insert payload, got ${foundRequests.map((call) => call.body).join(' | ')}`,
       );
-      assert.match(await foundPage.locator('#scan-result-list').textContent(), /龍角散ダイレクトスティック ピーチ/);
-      assert.equal(await foundPage.locator('#scan-result-list a').getAttribute('href'), '/aprice/product/4987240210733/');
 
       const guestPage = await browser.newPage();
       const guestRequests = [];
@@ -304,10 +292,9 @@ async function main() {
       await guestPage.goto(scanUrl, { waitUntil: 'domcontentloaded' });
       await guestPage.locator('#barcode-input').fill('4987240210733');
       await guestPage.locator('#barcode-search').click();
-      await waitForVisible(guestPage, '#missing-product-panel');
-      await waitForText(guestPage, '#scan-status', '请先登录后再添加商品。');
-      await waitForText(guestPage, '#missing-product-summary', '请先登录后再添加商品。');
-      assert.equal(await guestPage.locator('#missing-product-save').isDisabled(), true);
+      await guestPage.waitForURL('**/aprice/login/**', { timeout: 10000 });
+      assert.equal(new URL(guestPage.url()).pathname, '/aprice/login/');
+      assert.equal(new URL(guestPage.url()).searchParams.get('redirect'), '/aprice/scan/');
       assert.equal(guestRequests.some((call) => call.url.includes('/rest/v1/products') && call.method === 'POST'), false);
 
       assert.equal(pageErrors.length, 0, `page errors: ${pageErrors.join(' | ')}`);

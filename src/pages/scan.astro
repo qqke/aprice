@@ -107,6 +107,7 @@ export const prerender = true;
   <script type="module" is:inline>
     const { fetchJancodeProductDraft, fetchProductByBarcode, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
     const { createProduct, getCurrentUser } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+    const { buildPrivatePageLoginUrl } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
 
     const video = document.querySelector('#camera');
     const capture = document.querySelector('#capture');
@@ -131,6 +132,7 @@ export const prerender = true;
       tone: document.querySelector('#missing-product-tone'),
       description: document.querySelector('#missing-product-description'),
     };
+    const pendingMissingProductKey = 'aprice:pending-missing-product';
 
     let stream = null;
     let rafId = null;
@@ -138,6 +140,7 @@ export const prerender = true;
     let cameraReady = false;
     let lookupToken = 0;
     let canAddProduct = false;
+    let loginUrl = '';
 
     function syncCameraControls() {
       const isActive = Boolean(stream);
@@ -236,6 +239,32 @@ export const prerender = true;
       if (missingPanel) missingPanel.hidden = true;
     }
 
+    function readPendingMissingProduct() {
+      try {
+        const raw = window.sessionStorage.getItem(pendingMissingProductKey);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return null;
+        return typeof parsed.barcode === 'string' ? parsed : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function writePendingMissingProduct(payload) {
+      try {
+        window.sessionStorage.setItem(pendingMissingProductKey, JSON.stringify(payload));
+      } catch {
+        // Ignore storage failures in private browsing / strict privacy modes.
+      }
+    }
+
+    function clearPendingMissingProduct() {
+      try {
+        window.sessionStorage.removeItem(pendingMissingProductKey);
+      } catch {}
+    }
+
     async function stopCamera({ silent = false } = {}) {
       if (rafId) cancelAnimationFrame(rafId);
       rafId = null;
@@ -283,15 +312,31 @@ export const prerender = true;
 
           if (draft) {
             applyDraftToMissingForm(draft);
-            if (missingSummary) {
-              missingSummary.textContent = canAddProduct
-                ? '已从 JANCODE 预填商品信息，确认后即可添加。'
-                : '已从 JANCODE 预填商品信息，请先登录后再添加商品。';
+            writePendingMissingProduct({ barcode: cleaned });
+            if (canAddProduct) {
+              if (missingSummary) missingSummary.textContent = '已从 JANCODE 获取商品信息，正在自动添加到数据库。';
+              if (status) status.textContent = `已从 JANCODE 预填 ${draft.name || cleaned}，正在自动添加。`;
+              const saved = await createProduct(draft);
+              if (token !== lookupToken) return null;
+              const savedProduct = Array.isArray(saved) ? saved[0] : saved;
+              if (savedProduct) {
+                clearPendingMissingProduct();
+                hideMissingPanel();
+                renderProduct(savedProduct);
+                if (status) status.textContent = `商品已自动添加：${savedProduct.name || cleaned}`;
+                return savedProduct;
+              }
+              clearPendingMissingProduct();
+              hideMissingPanel();
+              renderProduct(draft);
+              if (status) status.textContent = `商品已自动添加：${draft.name || cleaned}`;
+              return draft;
             }
-            if (status) {
-              status.textContent = canAddProduct
-                ? `已从 JANCODE 预填 ${draft.name || cleaned}。`
-                : `已从 JANCODE 预填 ${draft.name || cleaned}，请先登录后再添加商品。`;
+
+            if (missingSummary) missingSummary.textContent = '已从 JANCODE 获取商品信息，正在跳转登录后自动添加。';
+            if (status) status.textContent = `已从 JANCODE 预填 ${draft.name || cleaned}，正在跳转登录。`;
+            if (loginUrl) {
+              window.location.assign(loginUrl);
             }
           } else if (status) {
             status.textContent = canAddProduct
@@ -441,8 +486,23 @@ export const prerender = true;
     } catch {
       canAddProduct = false;
     }
+    loginUrl = buildPrivatePageLoginUrl({
+      origin: window.location.origin,
+      baseUrl: window.__APriceConfig?.baseUrl || '/',
+      currentUrl: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+    });
     if (missingSaveButton) {
       missingSaveButton.disabled = !canAddProduct;
+    }
+
+    const pendingMissingProduct = readPendingMissingProduct();
+    if (pendingMissingProduct?.barcode) {
+      queueMicrotask(() => {
+        if (input && !input.value) {
+          input.value = pendingMissingProduct.barcode;
+        }
+        handleBarcode(pendingMissingProduct.barcode);
+      });
     }
 
     missingForm?.addEventListener('submit', async (event) => {
