@@ -141,12 +141,12 @@ async function main() {
       });
 
       assert.ok(
-        rpcCalls.some((call) => call.url.includes('/rpc/create_product')),
-        `expected create_product RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
+        rpcCalls.some((call) => call.url.includes('/rest/v1/products') && call.method === 'POST'),
+        `expected products insert, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
       );
       assert.ok(
-        rpcCalls.some((call) => call.url.includes('/rpc/create_product') && call.bodyJson?.id === 'admin-fixture-product' && call.bodyJson?.name === 'Admin Fixture Product'),
-        `expected create_product payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
+        rpcCalls.some((call) => call.url.includes('/rest/v1/products') && call.method === 'POST' && call.bodyJson?.id === 'admin-fixture-product' && call.bodyJson?.name === 'Admin Fixture Product'),
+        `expected products insert payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
       );
 
       assert.equal(await page.locator('[data-edit-product="eve-a"]').count(), 0);
@@ -283,7 +283,6 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
 
 
 

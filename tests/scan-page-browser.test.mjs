@@ -74,7 +74,7 @@ async function main() {
           }
         }
 
-        if (url.pathname.includes('/rpc/create_product')) {
+        if (url.pathname.endsWith('/products') && request.method() === 'POST') {
           const body = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
           const savedProduct = {
             id: body.id || body.barcode,
@@ -133,6 +133,26 @@ async function main() {
         const requestUrl = request.url();
         const url = new URL(requestUrl);
         foundRequests.push({ method: request.method(), url: requestUrl, body: request.postData() || '' });
+
+        if (url.pathname.endsWith('/products') && request.method() === 'POST') {
+          const body = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
+          const savedProduct = {
+            id: body.id || body.barcode,
+            barcode: body.barcode || '',
+            name: body.name || '',
+            brand: body.brand || '',
+            pack: body.pack || '',
+            category: body.category || '',
+            tone: body.tone || 'sunset',
+            description: body.description || '',
+          };
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json; charset=utf-8',
+            body: JSON.stringify([savedProduct]),
+          });
+          return;
+        }
 
         if (url.pathname.endsWith('/products')) {
           if ((url.searchParams.get('barcode') || '') === 'eq.9999999999999') {
@@ -196,16 +216,16 @@ async function main() {
       await foundPage.locator('#missing-product-tone').selectOption('mint');
       await foundPage.locator('#missing-product-description').fill('Created from scan page');
       await foundPage.locator('#missing-product-save').click();
-      await waitForRequestMatch(foundRequests, (call) => call.url.includes('/rpc/create_product'));
+      await waitForRequestMatch(foundRequests, (call) => call.url.includes('/rest/v1/products') && call.method === 'POST');
       await waitForHidden(foundPage, '#missing-product-panel');
 
       assert.ok(
-        foundRequests.some((call) => call.url.includes('/rpc/create_product')),
-        `expected create_product RPC, got ${foundRequests.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
+        foundRequests.some((call) => call.url.includes('/rest/v1/products') && call.method === 'POST'),
+        `expected products insert, got ${foundRequests.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
       );
       assert.ok(
-        foundRequests.some((call) => call.url.includes('/rpc/create_product') && call.body.includes('"barcode":"9999999999999"') && call.body.includes('"name":"Scan Fixture Product"')),
-        `expected create_product payload, got ${foundRequests.map((call) => call.body).join(' | ')}`,
+        foundRequests.some((call) => call.url.includes('/rest/v1/products') && call.method === 'POST' && call.body.includes('"barcode":"9999999999999"') && call.body.includes('"name":"Scan Fixture Product"')),
+        `expected products insert payload, got ${foundRequests.map((call) => call.body).join(' | ')}`,
       );
       assert.match(await foundPage.locator('#scan-result-list').textContent(), /Scan Fixture Product/);
       assert.equal(await foundPage.locator('#scan-result-list a').getAttribute('href'), '/aprice/product/9999999999999/');
@@ -252,7 +272,7 @@ async function main() {
       await waitForText(guestPage, '#scan-status', '请先登录后再添加商品。');
       await waitForText(guestPage, '#missing-product-summary', '请先登录后再添加商品。');
       assert.equal(await guestPage.locator('#missing-product-save').isDisabled(), true);
-      assert.equal(guestRequests.some((call) => call.url.includes('/rpc/create_product')), false);
+      assert.equal(guestRequests.some((call) => call.url.includes('/rest/v1/products') && call.method === 'POST'), false);
 
       assert.equal(pageErrors.length, 0, `page errors: ${pageErrors.join(' | ')}`);
 
