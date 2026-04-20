@@ -41,7 +41,6 @@ jobs:
         run: npm run build
 
       - name: Inject CNAME from secret
-        if: ${{ secrets.PUBLIC_SITE_URL != '' }}
         run: |
           node -e "const fs=require('node:fs');const u=process.env.PUBLIC_SITE_URL||'';let host='';try{host=new URL(u).hostname.trim();}catch{}if(host && !host.endsWith('github.io')){fs.writeFileSync('dist/client/CNAME',host+'\n');console.log('Injected CNAME for',host);}else{console.log('Skip CNAME injection');}"
 
