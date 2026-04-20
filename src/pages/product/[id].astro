@@ -56,10 +56,10 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       <div class="eyebrow">商品</div>
       <div class={`product-hero tone-${product.tone || 'sunset'}`} >
         <div class="product-hero__overlay" >
-          <div class="pillrow">
-            <span class="pill">{product.category}</span>
-            <span class="pill">JAN {product.barcode}</span>
-            <span class="pill">{product.brand}</span>
+          <div class="pillrow product-hero__meta">
+            {product.category && <span class="pill product-hero__category" title={product.category}>{product.category}</span>}
+            <span class="pill product-hero__barcode">JAN {product.barcode}</span>
+            {product.brand && <span class="pill product-hero__brand" title={product.brand}>{product.brand}</span>}
           </div>
           <h1 class="product-title" >{product.name}</h1>
           <p class="product-sub" >{product.description}</p>

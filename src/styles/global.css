@@ -2950,6 +2950,29 @@ body.product-page .product-hero__overlay {
   backdrop-filter: blur(10px);
 }
 
+body.product-page .product-hero__meta {
+  max-width: 100%;
+}
+
+body.product-page .product-hero__meta .pill {
+  max-width: min(100%, 28ch);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.product-page .product-hero__category {
+  max-width: min(100%, 34ch);
+}
+
+body.product-page .product-hero__barcode {
+  flex: none;
+}
+
+body.product-page .product-hero__brand {
+  max-width: min(100%, 24ch);
+}
+
 body.product-page .product-secondary-actions {
   margin-bottom: 8px;
 }
@@ -2975,19 +2998,6 @@ body.product-page .product-hero__actions .button {
   min-height: 34px;
   padding: 7px 12px;
   font-size: 0.8rem;
-}
-
-body.product-page .product-quick-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-body.product-page .product-quick-nav .button {
-  min-height: 30px;
-  padding: 5px 9px;
-  font-size: 0.73rem;
 }
 
 body.product-page .product-title {
@@ -3783,6 +3793,14 @@ body.admin-page .admin-record-actions--price {
 
   body.product-page .product-hero .pillrow:first-of-type > .pill {
     flex: 0 1 auto;
+  }
+
+  body.product-page .product-hero__category {
+    display: none;
+  }
+
+  body.product-page .product-hero__meta .pill {
+    max-width: 100%;
   }
 
   body.product-page .product-title {
