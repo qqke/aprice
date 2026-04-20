@@ -29,10 +29,10 @@ jobs:
       PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
@@ -48,10 +48,10 @@ jobs:
           node -e "const fs=require('node:fs');const u=process.env.PUBLIC_SITE_URL||'';let host='';try{host=new URL(u).hostname.trim();}catch{}if(host && !host.endsWith('github.io')){fs.writeFileSync('dist/client/CNAME',host+'\n');console.log('Injected CNAME for',host);}else{console.log('Skip CNAME injection');}"
 
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: ./dist/client
 
@@ -64,4 +64,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
