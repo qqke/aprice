@@ -249,9 +249,9 @@ async function main() {
       await guestPage.locator('#barcode-input').fill('9999999999999');
       await guestPage.locator('#barcode-search').click();
       await waitForVisible(guestPage, '#missing-product-panel');
-      await guestPage.locator('#missing-product-name').fill('Guest Product');
-      await guestPage.locator('#missing-product-save').click();
       await waitForText(guestPage, '#scan-status', '请先登录后再添加商品。');
+      await waitForText(guestPage, '#missing-product-summary', '请先登录后再添加商品。');
+      assert.equal(await guestPage.locator('#missing-product-save').isDisabled(), true);
       assert.equal(guestRequests.some((call) => call.url.includes('/rpc/create_product')), false);
 
       assert.equal(pageErrors.length, 0, `page errors: ${pageErrors.join(' | ')}`);

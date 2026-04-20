@@ -104,7 +104,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   <script type="module" is:inline>
     const { fetchProductByBarcode, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
-    const { createProduct } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+    const { createProduct, getCurrentUser } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
 
     const video = document.querySelector('#camera');
     const capture = document.querySelector('#capture');
@@ -119,6 +119,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const missingSummary = document.querySelector('#missing-product-summary');
     const missingCodePill = document.querySelector('#missing-product-code-pill');
     const missingForm = document.querySelector('#missing-product-form');
+    const missingSaveButton = document.querySelector('#missing-product-save');
     const missingFields = {
       barcode: document.querySelector('#missing-product-barcode'),
       name: document.querySelector('#missing-product-name'),
@@ -134,6 +135,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     let detector = null;
     let cameraReady = false;
     let lookupToken = 0;
+    let canAddProduct = false;
 
     function syncCameraControls() {
       const isActive = Boolean(stream);
@@ -207,7 +209,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     function showMissingPanel(code) {
       if (!missingPanel) return;
       resetMissingForm(code);
-      if (missingSummary) missingSummary.textContent = `条码 ${code} 没有匹配到商品，可以直接补录。`;
+      if (missingSummary) {
+        missingSummary.textContent = canAddProduct
+          ? `条码 ${code} 没有匹配到商品，可以直接补录。`
+          : '请先登录后再添加商品。';
+      }
       if (missingCodePill) missingCodePill.textContent = `JAN ${code}`;
       missingPanel.hidden = false;
       queueMicrotask(() => missingFields.name?.focus());
@@ -253,7 +259,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
         renderMissing(cleaned);
         showMissingPanel(cleaned);
-        if (status) status.textContent = `未找到条码 ${cleaned}，可以直接补录商品信息。`;
+        if (status) {
+          status.textContent = canAddProduct
+            ? `未找到条码 ${cleaned}，可以直接补录商品信息。`
+            : `未找到条码 ${cleaned}，请先登录后再添加商品。`;
+        }
         return null;
       } catch (error) {
         if (token !== lookupToken) return null;
@@ -383,6 +393,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         await handleBarcode(code);
       }
     });
+
+    try {
+      canAddProduct = Boolean(await getCurrentUser());
+    } catch {
+      canAddProduct = false;
+    }
+    if (missingSaveButton) {
+      missingSaveButton.disabled = !canAddProduct;
+    }
 
     missingForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
