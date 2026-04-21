@@ -144,6 +144,16 @@ const base = import.meta.env.BASE_URL || '/';
       return match?.[1] ? decodeURIComponent(match[1]) : '';
     }
 
+    function syncCanonicalProductUrl() {
+      if (!productId || !window.history?.replaceState) return;
+      const safeProductId = encodeURIComponent(productId).replaceAll('%2F', '');
+      const target = resolveBase(`product/${safeProductId}/`);
+      const targetUrl = new URL(target, window.location.origin);
+      if (window.location.pathname !== targetUrl.pathname) {
+        window.history.replaceState({}, '', `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`);
+      }
+    }
+
     function syncFavoriteButton(button, active, { activeLabel, inactiveLabel, disabled = false }) {
       if (!(button instanceof HTMLButtonElement)) return;
       button.disabled = Boolean(disabled);
@@ -256,13 +266,26 @@ const base = import.meta.env.BASE_URL || '/';
       storeList.innerHTML = visibleStores.map((item) => {
         const personalPrice = personalPriceIndex.get(String(item.id || ''));
         const selected = item.id === selectedStoreId;
+        const metaBits = [];
+        if (item.chain_name) metaBits.push(item.chain_name);
+        if (item.city || item.pref) metaBits.push([item.pref, item.city].filter(Boolean).join(' · '));
+        if (personalPrice) metaBits.push(`我的价 ${formatYen(personalPrice.price_yen)}`);
+        if (item.hours) metaBits.push(item.hours);
         return `
-          <button class="store-picker__item ${selected ? 'is-active' : ''}" type="button" data-store-id="${escapeHtml(item.id)}">
-            <span>
+          <button
+            class="feed__item store-picker__item${selected ? ' is-active' : ''}"
+            type="button"
+            data-store-id="${escapeHtml(item.id)}"
+            aria-pressed="${selected ? 'true' : 'false'}"
+          >
+            <div class="feed__copy">
               <strong>${escapeHtml(item.name || 'Unknown store')}</strong>
-              <small>${escapeHtml(item.chain_name || item.city || '')}${item.pref ? ` · ${escapeHtml(item.pref)}` : ''}</small>
-            </span>
-            <span class="pill">${personalPrice ? `我的价 ${formatYen(personalPrice.price_yen)}` : '选择'}</span>
+              <small>${escapeHtml(metaBits.filter(Boolean).join(' · '))}</small>
+            </div>
+            <div class="feed__meta">
+              <span class="pill">${selected ? '已选中' : personalPrice ? '可回填' : '选择'}</span>
+              <small>${personalPrice ? formatYen(personalPrice.price_yen) : '暂无我的价'}</small>
+            </div>
           </button>
         `;
       }).join('');
@@ -411,6 +434,7 @@ const base = import.meta.env.BASE_URL || '/';
     if (!productId) {
       renderMissingId();
     } else if (await loadProduct()) {
+      syncCanonicalProductUrl();
       const user = await syncAuthGate();
       await Promise.all([loadPrices(), loadStores(), syncFavoriteStates(user), refreshPersonalPriceState(user)]);
     }
