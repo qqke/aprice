@@ -75,6 +75,37 @@ export async function fetchAllStores() {
   });
 }
 
+export async function fetchStoresPage({ term = '', limit = 20, offset = 0 } = {}) {
+  const pageSize = Math.max(1, Number(limit) || 20);
+  const pageOffset = Math.max(0, Number(offset) || 0);
+  const q = String(term || '').trim();
+  const query = {
+    select: '*',
+    order: 'name.asc',
+    limit: pageSize + 1,
+    offset: pageOffset,
+  };
+
+  if (q) {
+    const pattern = `%${escapeIlike(q)}%`;
+    query.or = `(${[
+      `name.ilike.${pattern}`,
+      `chain_name.ilike.${pattern}`,
+      `pref.ilike.${pattern}`,
+      `city.ilike.${pattern}`,
+      `address.ilike.${pattern}`,
+    ].join(',')})`;
+  }
+
+  const rows = await restGet('stores', { query });
+  const visibleRows = rows?.slice(0, pageSize) || [];
+  return {
+    rows: visibleRows,
+    hasMore: Boolean(rows?.length > pageSize),
+    nextOffset: pageOffset + visibleRows.length,
+  };
+}
+
 export async function fetchRecentPrices(limit = 10) {
   return restGet('prices', {
     query: {

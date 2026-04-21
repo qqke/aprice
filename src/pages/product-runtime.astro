@@ -77,6 +77,7 @@ const base = import.meta.env.BASE_URL || '/';
           <div class="feed" id="personal-store-list">
             <div class="notice notice--compact">正在加载门店...</div>
           </div>
+          <button class="button button--ghost store-search__load-more" id="personal-store-load-more" type="button" hidden>加载更多</button>
           <form class="form" id="personal-log-form">
             <input id="personal-store" type="hidden" value="" />
             <div class="grid grid--two">
@@ -118,7 +119,7 @@ const base = import.meta.env.BASE_URL || '/';
 
     restoreProductUrlBeforeLoading();
 
-    const { recordRecentView, resolveBase, fetchAllStores, fetchNearbyPrices, fetchPricesForProduct, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
+    const { recordRecentView, resolveBase, fetchNearbyPrices, fetchPricesForProduct, fetchStoresPage, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
     const { fetchFavorites, fetchPersonalLogs, getCurrentUser, indexLatestPersonalPricesByStore, savePersonalLog, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { buildPrivatePageLoginUrl, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
     const { restGet } = await import(window.__APriceConfig?.supabaseRestJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'supabase-rest.js');
@@ -142,6 +143,7 @@ const base = import.meta.env.BASE_URL || '/';
     const storeList = document.querySelector('#personal-store-list');
     const storeSearch = document.querySelector('#personal-store-search');
     const storeSearchClear = document.querySelector('#personal-store-search-clear');
+    const storeLoadMore = document.querySelector('#personal-store-load-more');
     const form = document.querySelector('#personal-log-form');
     const store = document.querySelector('#personal-store');
     const price = document.querySelector('#personal-price');
@@ -150,9 +152,15 @@ const base = import.meta.env.BASE_URL || '/';
 
     let product = null;
     let productId = '';
-    let stores = [];
+    const STORE_PAGE_SIZE = 20;
+    let storeRows = [];
     let storeSearchTerm = '';
+    let storeOffset = 0;
+    let storeHasMore = false;
+    let storeLoading = false;
+    let storeRequestToken = 0;
     let selectedStoreId = '';
+    let selectedStoreSnapshot = null;
     let activeStoreId = '';
     let personalPriceIndex = new Map();
     let favoriteProductIds = new Set();
@@ -201,19 +209,15 @@ const base = import.meta.env.BASE_URL || '/';
       });
     }
 
-    function normalizeSearchTerm(value) {
-      return String(value || '').trim().toLocaleLowerCase('ja-JP').normalize('NFKC');
+    function getSelectedStore() {
+      return storeRows.find((item) => item.id === selectedStoreId) || selectedStoreSnapshot || null;
     }
 
-    function storeMatchesSearch(storeItem) {
-      const query = normalizeSearchTerm(storeSearchTerm);
-      if (!query) return true;
-      const fields = [storeItem.name, storeItem.chain_name, storeItem.pref, storeItem.city, storeItem.address]
-        .filter(Boolean)
-        .join(' ')
-        .toLocaleLowerCase('ja-JP')
-        .normalize('NFKC');
-      return fields.includes(query);
+    function syncStoreLoadMoreButton() {
+      if (!(storeLoadMore instanceof HTMLButtonElement)) return;
+      storeLoadMore.hidden = !storeHasMore && !storeLoading;
+      storeLoadMore.disabled = storeLoading;
+      storeLoadMore.textContent = storeLoading ? '加载中...' : '加载更多';
     }
 
     function renderMissingId() {
@@ -295,34 +299,42 @@ const base = import.meta.env.BASE_URL || '/';
 
     function renderStorePicker() {
       if (!storeList) return;
-      if (!stores.length) {
-        storeList.innerHTML = '<div class="notice notice--compact">暂无门店。</div>';
-        if (storeStatus) storeStatus.textContent = '暂无门店可选。';
+      if (storeLoading && !storeRows.length) {
+        storeList.innerHTML = '<div class="notice notice--compact">正在加载门店...</div>';
+        if (storeStatus) storeStatus.textContent = '正在加载门店...';
+        syncStoreLoadMoreButton();
         return;
       }
 
-      const filteredStores = stores
-        .filter((item) => storeMatchesSearch(item))
-        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ja-JP'));
-      const selectedStore = selectedStoreId ? stores.find((item) => item.id === selectedStoreId) || null : null;
-      const visibleStores = selectedStore && !filteredStores.some((item) => item.id === selectedStore.id)
-        ? [selectedStore, ...filteredStores].slice(0, 30)
-        : filteredStores.slice(0, 30);
-
-      if (!visibleStores.length) {
-        storeList.innerHTML = '<div class="notice notice--compact">没有匹配到门店，换个关键词试试。</div>';
-        if (storeStatus) storeStatus.textContent = selectedStore ? `没有匹配到搜索词，当前选择 ${selectedStore.name} 仍保留。` : '没有匹配到门店。';
+      const selectedStore = selectedStoreId ? getSelectedStore() : null;
+      if (!storeRows.length && !selectedStore) {
+        storeList.innerHTML = `<div class="notice notice--compact">${storeSearchTerm ? '没有匹配到门店，换个关键词试试。' : '暂无门店。'}</div>`;
+        if (storeStatus) storeStatus.textContent = storeSearchTerm ? '没有匹配到门店，换个关键词试试。' : '暂无门店可选。';
+        syncStoreLoadMoreButton();
         return;
       }
+
+      const visibleStores = selectedStore && !storeRows.some((item) => item.id === selectedStore.id)
+        ? [selectedStore, ...storeRows]
+        : storeRows;
 
       if (!selectedStoreId) selectedStoreId = activeStoreId || visibleStores[0]?.id || '';
       if (store) store.value = selectedStoreId;
       if (storeStatus) {
+        const selectedMatchesSearch = selectedStore ? storeRows.some((item) => item.id === selectedStore.id) : false;
         storeStatus.textContent = storeSearchTerm
-          ? `已筛出 ${filteredStores.length} 家门店。`
+          ? selectedStore && !selectedMatchesSearch
+            ? `没有匹配到搜索词，当前选择 ${selectedStore.name} 仍保留。`
+            : `已加载 ${storeRows.length} 家匹配门店。${storeHasMore ? '继续加载可查看更多。' : ''}`
           : selectedStoreId ? '点击门店即可回填你的最新价。' : '请选择门店后记录价格。';
       }
-      storeList.innerHTML = visibleStores.map((item) => {
+      const uniqueStores = Array.from(new Map(visibleStores.map((item) => [item.id, item])).values());
+      uniqueStores.sort((a, b) => {
+        if (a.id === selectedStoreId && b.id !== selectedStoreId) return -1;
+        if (b.id === selectedStoreId && a.id !== selectedStoreId) return 1;
+        return String(a.name || '').localeCompare(String(b.name || ''), 'ja-JP');
+      });
+      storeList.innerHTML = uniqueStores.map((item) => {
         const personalPrice = personalPriceIndex.get(String(item.id || ''));
         const selected = item.id === selectedStoreId;
         const metaBits = [];
@@ -348,6 +360,7 @@ const base = import.meta.env.BASE_URL || '/';
           </button>
         `;
       }).join('');
+      syncStoreLoadMoreButton();
     }
 
     async function syncAuthGate() {
@@ -410,9 +423,36 @@ const base = import.meta.env.BASE_URL || '/';
       if (geoStatus) geoStatus.textContent = rows.length ? `已加载 ${rows.length} 条价格记录。` : `当前还没有 ${product?.name || productId} 的价格记录。`;
     }
 
-    async function loadStores() {
-      stores = await fetchAllStores();
-      renderStorePicker();
+    async function loadStores({ reset = false } = {}) {
+      const requestToken = ++storeRequestToken;
+      storeLoading = true;
+      syncStoreLoadMoreButton();
+      if (reset) {
+        storeRows = [];
+        storeOffset = 0;
+        storeHasMore = false;
+        renderStorePicker();
+      }
+      try {
+        const page = await fetchStoresPage({
+          term: storeSearchTerm,
+          limit: STORE_PAGE_SIZE,
+          offset: storeOffset,
+        });
+        if (requestToken !== storeRequestToken) return;
+        const nextRows = reset ? page.rows : [...storeRows, ...page.rows];
+        storeRows = Array.from(new Map(nextRows.map((item) => [item.id, item])).values());
+        storeOffset = page.nextOffset;
+        storeHasMore = page.hasMore;
+        renderStorePicker();
+      } catch (error) {
+        if (requestToken !== storeRequestToken) return;
+        if (storeStatus) storeStatus.textContent = `门店加载失败：${error.message}`;
+      } finally {
+        if (requestToken !== storeRequestToken) return;
+        storeLoading = false;
+        renderStorePicker();
+      }
     }
 
     storeList?.addEventListener('click', (event) => {
@@ -420,6 +460,7 @@ const base = import.meta.env.BASE_URL || '/';
       if (!(target instanceof HTMLElement)) return;
       selectedStoreId = target.dataset.storeId || '';
       activeStoreId = selectedStoreId;
+      selectedStoreSnapshot = storeRows.find((item) => item.id === selectedStoreId) || selectedStoreSnapshot;
       if (store) store.value = selectedStoreId;
       const personalPrice = personalPriceIndex.get(selectedStoreId);
       if (price) price.value = personalPrice ? String(personalPrice.price_yen) : '';
@@ -431,15 +472,19 @@ const base = import.meta.env.BASE_URL || '/';
     storeSearch?.addEventListener('input', () => {
       storeSearchTerm = storeSearch.value || '';
       if (storeSearchClear) storeSearchClear.hidden = !storeSearchTerm;
-      renderStorePicker();
+      void loadStores({ reset: true });
     });
 
     storeSearchClear?.addEventListener('click', () => {
       if (storeSearch) storeSearch.value = '';
       storeSearchTerm = '';
       storeSearchClear.hidden = true;
-      renderStorePicker();
+      void loadStores({ reset: true });
       storeSearch?.focus();
+    });
+
+    storeLoadMore?.addEventListener('click', () => {
+      void loadStores();
     });
 
     favoriteButton?.addEventListener('click', async () => {
@@ -509,7 +554,7 @@ const base = import.meta.env.BASE_URL || '/';
     } else if (await loadProduct()) {
       syncCanonicalProductUrl();
       const user = await syncAuthGate();
-      await Promise.all([loadPrices(), loadStores(), syncFavoriteStates(user), refreshPersonalPriceState(user)]);
+      await Promise.all([loadPrices(), loadStores({ reset: true }), syncFavoriteStates(user), refreshPersonalPriceState(user)]);
     }
   </script>
 </BaseLayout>

@@ -112,6 +112,49 @@ export function makePriceFixtures() {
   ];
 }
 
+export function makeProductPageStoreFixtures() {
+  const fillerStores = Array.from({ length: 20 }, (_, index) => {
+    const number = String(index + 1).padStart(2, '0');
+    return {
+      id: `care-${number}`,
+      name: `Care Drug ${number}`,
+      chain_name: 'Care',
+      address: `Tokyo, Test ${number}`,
+      city: 'Tokyo',
+      pref: 'Tokyo',
+      lat: 35.62 + index / 1000,
+      lng: 139.7 + index / 1000,
+      hours: '09:00-21:00',
+    };
+  });
+
+  return [
+    {
+      id: 'sugi-hiroo',
+      name: 'Sugi Pharmacy Hiroo',
+      chain_name: 'Sugi',
+      address: 'Tokyo, Shibuya-ku Hiroo 1-1-1',
+      city: 'Tokyo',
+      pref: 'Tokyo',
+      lat: 35.648,
+      lng: 139.722,
+      hours: '09:00-22:00',
+    },
+    {
+      id: 'welcia-shibuya',
+      name: 'Welcia Shibuya',
+      chain_name: 'Welcia',
+      address: 'Tokyo, Shibuya-ku 2-2-2',
+      city: 'Tokyo',
+      pref: 'Tokyo',
+      lat: 35.661,
+      lng: 139.698,
+      hours: '10:00-23:00',
+    },
+    ...fillerStores,
+  ];
+}
+
 export function makePersonalPriceLogs() {
   return [
     {
@@ -290,7 +333,20 @@ export function makeProductPageResponseForRequest(requestUrl) {
   }
 
   if (url.pathname.endsWith('/stores')) {
-    return makeStoreFixtures();
+    const limit = Number(url.searchParams.get('limit') || 100);
+    const offset = Number(url.searchParams.get('offset') || 0);
+    const search = String(url.searchParams.get('or') || '').toLocaleLowerCase('ja-JP');
+    const termMatch = search.match(/ilike\.%([^%,)]+)%/);
+    const term = termMatch?.[1] ? decodeURIComponent(termMatch[1]).replace(/\\/g, '') : '';
+    const rows = makeProductPageStoreFixtures();
+    const filteredRows = term
+      ? rows.filter((store) => [store.name, store.chain_name, store.pref, store.city, store.address]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase('ja-JP')
+        .includes(term))
+      : rows;
+    return filteredRows.slice(offset, offset + limit);
   }
 
   if (url.pathname.endsWith('/prices')) {

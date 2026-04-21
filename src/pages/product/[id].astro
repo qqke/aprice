@@ -184,6 +184,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
             <div class="feed" id="personal-store-list">
               <div class="notice notice--compact">正在加载门店...</div>
             </div>
+            <button class="button button--ghost store-search__load-more" id="personal-store-load-more" type="button" hidden>加载更多</button>
             <form class="form" id="personal-log-form">
               <input id="personal-store" type="hidden" value="" />
               <div class="grid grid--two">
@@ -219,7 +220,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
 
 
   <script type="module" is:inline define:vars={{ loginUrl }}>
-    const { recordRecentView, resolveBase, fetchAllStores, fetchNearbyPrices, fetchPricesForProduct, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
+    const { recordRecentView, resolveBase, fetchNearbyPrices, fetchPricesForProduct, fetchStoresPage, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
     const { fetchFavorites, fetchPersonalLogs, getCurrentUser, indexLatestPersonalPricesByStore, savePersonalLog, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
 
@@ -244,6 +245,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
     const storeSearchClear = document.querySelector('#personal-store-search-clear');
     const storeStatus = document.querySelector('#personal-store-status');
     const storeList = document.querySelector('#personal-store-list');
+    const storeLoadMore = document.querySelector('#personal-store-load-more');
     const form = document.querySelector('#personal-log-form');
     const store = document.querySelector('#personal-store');
     const price = document.querySelector('#personal-price');
@@ -271,9 +273,15 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
     const summaryGainLabel = document.querySelector('#summary-gain-label');
     const trendList = document.querySelector('#trend-list');
 
-    let stores = [];
+    const STORE_PAGE_SIZE = 20;
+    let storeRows = [];
     let storeSearchTerm = '';
+    let storeOffset = 0;
+    let storeHasMore = false;
+    let storeLoading = false;
+    let storeRequestToken = 0;
     let selectedStoreId = '';
+    let selectedStoreSnapshot = null;
     let personalPriceLogs = [];
     let personalPriceIndex = new Map();
     let storeLocation = null;
@@ -303,10 +311,6 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       return 2 * r * Math.asin(Math.sqrt(a));
     }
 
-    function normalizeSearchTerm(value) {
-      return String(value || '').trim().toLocaleLowerCase('ja-JP').normalize('NFKC');
-    }
-
     function storeDistance(storeItem) {
       if (!storeLocation || typeof storeItem?.lat !== 'number' || typeof storeItem?.lng !== 'number') {
         return null;
@@ -332,24 +336,35 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       return personalPriceIndex.get(String(storeId || '')) || null;
     }
 
+    function getSelectedStore() {
+      return storeRows.find((item) => item.id === selectedStoreId) || selectedStoreSnapshot || null;
+    }
+
+    function syncStoreLoadMoreButton() {
+      if (!(storeLoadMore instanceof HTMLButtonElement)) return;
+      storeLoadMore.hidden = !storeHasMore && !storeLoading;
+      storeLoadMore.disabled = storeLoading;
+      storeLoadMore.textContent = storeLoading ? '加载中...' : '加载更多';
+    }
+
     function renderStoreSelectionStatus(filteredCount) {
       if (!storeStatus) return;
-      const total = stores.length;
-      const selectedStore = stores.find((item) => item.id === selectedStoreId) || null;
+      const total = storeRows.length;
+      const selectedStore = getSelectedStore();
       const selectedPersonalPrice = selectedStore ? getStorePersonalPrice(selectedStore.id) : null;
       const queryActive = Boolean(storeSearchTerm);
 
-      if (!total) {
+      if (storeLoading && !total) {
         storeStatus.textContent = '正在加载门店...';
         return;
       }
 
       if (queryActive) {
-        const selectedMatchesSearch = selectedStore ? storeMatchesSearch(selectedStore) : false;
+        const selectedMatchesSearch = selectedStore ? storeRows.some((item) => item.id === selectedStore.id) : false;
         if (filteredCount) {
           storeStatus.textContent = selectedStore && !selectedMatchesSearch
-            ? `已筛出 ${filteredCount} 家门店，当前选择已保留在顶部。${selectedPersonalPrice ? ` 你的最新价是 ¥${selectedPersonalPrice.price_yen}。` : ''}`
-            : `已筛出 ${filteredCount} 家门店。${selectedPersonalPrice ? ` 你的最新价是 ¥${selectedPersonalPrice.price_yen}。` : ''}`;
+            ? `已加载 ${filteredCount} 家匹配门店，当前选择已保留在顶部。${storeHasMore ? '继续加载可查看更多。' : ''}${selectedPersonalPrice ? ` 你的最新价是 ¥${selectedPersonalPrice.price_yen}。` : ''}`
+            : `已加载 ${filteredCount} 家匹配门店。${storeHasMore ? '继续加载可查看更多。' : ''}${selectedPersonalPrice ? ` 你的最新价是 ¥${selectedPersonalPrice.price_yen}。` : ''}`;
         } else {
           storeStatus.textContent = selectedStore
             ? `没有匹配到搜索词，当前选择 ${selectedStore.name} 仍保留在顶部。`
@@ -374,13 +389,14 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       const personalPrice = getStorePersonalPrice(storeId);
       if (store) store.value = String(storeId || '');
       selectedStoreId = String(storeId || '');
+      selectedStoreSnapshot = storeRows.find((item) => item.id === selectedStoreId) || selectedStoreSnapshot;
       if (personalPrice && price) {
         price.value = String(personalPrice.price_yen);
       } else if (price) {
         price.value = '';
       }
       renderStorePicker();
-      renderStoreSelectionStatus(stores.filter((item) => storeMatchesSearch(item)).length);
+      renderStoreSelectionStatus(storeRows.length);
       if (status) {
         status.textContent = personalPrice
           ? `已回填你在该店的最新价 ¥${personalPrice.price_yen}，可直接修改后保存。`
@@ -388,27 +404,24 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       }
     }
 
-    function storeMatchesSearch(storeItem) {
-      const query = normalizeSearchTerm(storeSearchTerm);
-      if (!query) return true;
-      const fields = [storeItem.name, storeItem.chain_name, storeItem.pref, storeItem.city, storeItem.address]
-        .filter(Boolean)
-        .join(' ')
-        .toLocaleLowerCase('ja-JP')
-        .normalize('NFKC');
-      return fields.includes(query);
-    }
-
     function renderStorePicker() {
       if (!storeList) return;
-      const filteredStores = stores
-        .filter((item) => storeMatchesSearch(item))
-        .slice()
-        .sort(compareStores);
-      const selectedStore = selectedStoreId ? stores.find((item) => item.id === selectedStoreId) || null : null;
-      const visibleStores = selectedStore && !filteredStores.some((item) => item.id === selectedStore.id)
-        ? [selectedStore, ...filteredStores]
-        : filteredStores;
+      if (storeLoading && !storeRows.length) {
+        storeList.innerHTML = `
+          <div class="notice notice--compact">
+            <strong>正在加载门店</strong>
+            <small>请稍候，正在读取第一页结果。</small>
+          </div>
+        `;
+        renderStoreSelectionStatus(0);
+        syncStoreLoadMoreButton();
+        return;
+      }
+
+      const selectedStore = selectedStoreId ? getSelectedStore() : null;
+      const visibleStores = selectedStore && !storeRows.some((item) => item.id === selectedStore.id)
+        ? [selectedStore, ...storeRows]
+        : storeRows;
       const uniqueStores = Array.from(new Map(visibleStores.map((item) => [item.id, item])).values()).slice();
       uniqueStores.sort((a, b) => {
         if (a.id === selectedStoreId && b.id !== selectedStoreId) return -1;
@@ -424,6 +437,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
           </div>
         `;
         renderStoreSelectionStatus(0);
+        syncStoreLoadMoreButton();
         return;
       }
 
@@ -456,7 +470,8 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
         `;
       }).join('');
 
-      renderStoreSelectionStatus(filteredStores.length);
+      renderStoreSelectionStatus(storeRows.length);
+      syncStoreLoadMoreButton();
     }
 
     async function refreshPersonalPriceState({ preserveSelection = true } = {}) {
@@ -466,6 +481,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
         personalPriceIndex = new Map();
         if (!preserveSelection) {
           selectedStoreId = '';
+          selectedStoreSnapshot = null;
           if (store) store.value = '';
         }
         renderStorePicker();
@@ -804,23 +820,53 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       if (nearbyStatus) nearbyStatus.textContent = rows.length ? `已显示 ${rows.length} 条门店价格。` : '补第一条价格再看门店流。';
     }
 
-    async function loadStores() {
-      stores = await fetchAllStores();
-      renderStorePicker();
-      void syncStoreLocation();
+    async function loadStores({ reset = false } = {}) {
+      const requestToken = ++storeRequestToken;
+      storeLoading = true;
+      syncStoreLoadMoreButton();
+      if (reset) {
+        storeRows = [];
+        storeOffset = 0;
+        storeHasMore = false;
+        renderStorePicker();
+      }
+      try {
+        const page = await fetchStoresPage({
+          term: storeSearchTerm,
+          limit: STORE_PAGE_SIZE,
+          offset: storeOffset,
+        });
+        if (requestToken !== storeRequestToken) return;
+        const nextRows = reset ? page.rows : [...storeRows, ...page.rows];
+        storeRows = Array.from(new Map(nextRows.map((item) => [item.id, item])).values());
+        storeOffset = page.nextOffset;
+        storeHasMore = page.hasMore;
+        renderStorePicker();
+      } catch (error) {
+        if (requestToken !== storeRequestToken) return;
+        if (storeStatus) storeStatus.textContent = `门店加载失败：${error.message}`;
+      } finally {
+        if (requestToken !== storeRequestToken) return;
+        storeLoading = false;
+        renderStorePicker();
+      }
     }
 
     storeSearch?.addEventListener('input', () => {
       storeSearchTerm = storeSearch.value || '';
       if (storeSearchClear) storeSearchClear.hidden = !storeSearchTerm;
-      renderStorePicker();
+      void loadStores({ reset: true });
     });
     storeSearchClear?.addEventListener('click', () => {
       if (storeSearch) storeSearch.value = '';
       storeSearchTerm = '';
       storeSearchClear.hidden = true;
-      renderStorePicker();
+      void loadStores({ reset: true });
       storeSearch?.focus();
+    });
+
+    storeLoadMore?.addEventListener('click', () => {
+      void loadStores();
     });
 
     storeList?.addEventListener('click', (event) => {
@@ -907,7 +953,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
         renderNearbyStores(rows);
         renderInsights(rows);
         geoStatus.textContent = `已按当前位置排序，定位点：${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}。`;
-        renderStoreSelectionStatus(stores.filter((item) => storeMatchesSearch(item)).length);
+        renderStoreSelectionStatus(storeRows.length);
         if (nearbyStatus) nearbyStatus.textContent = rows.length ? `已按当前位置筛出 ${rows.length} 条门店价格。` : '当前位置附近暂无可比价格。';
       } catch (error) {
         geoStatus.textContent = `定位失败：${error.message}`;
@@ -948,6 +994,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
 
     await syncAuthGate();
     await syncFavoriteStates();
-    await Promise.all([loadStores(), loadPrices(), refreshPersonalPriceState()]);
+    await Promise.all([loadStores({ reset: true }), loadPrices(), refreshPersonalPriceState()]);
+    void syncStoreLocation();
   </script>
 </BaseLayout>

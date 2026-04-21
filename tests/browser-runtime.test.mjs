@@ -45,6 +45,28 @@ globalThis.fetch = async (input) => {
     );
   }
 
+  if (url.includes('/rest/v1/stores')) {
+    return new Response(
+      JSON.stringify([
+        {
+          id: 'welcia-shibuya',
+          name: 'Welcia Shibuya',
+          chain_name: 'Welcia',
+          city: 'Tokyo',
+          pref: 'Tokyo',
+        },
+        {
+          id: 'welcia-ebisu',
+          name: 'Welcia Ebisu',
+          chain_name: 'Welcia',
+          city: 'Tokyo',
+          pref: 'Tokyo',
+        },
+      ]),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
 
 
   return new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } });
@@ -57,6 +79,15 @@ assert.equal(rows.length, 1);
 assert.match(requests[0], /\/rest\/v1\/products/);
 assert.match(requests[0], /name\.ilike/);
 assert.equal(browser.resolveBase('product/loxonin-s/'), '/aprice/product/loxonin-s/');
+
+const storesPage = await browser.fetchStoresPage({ term: 'welcia', limit: 1 });
+assert.equal(storesPage.rows.length, 1);
+assert.equal(storesPage.hasMore, true);
+assert.equal(storesPage.nextOffset, 1);
+assert.match(requests.at(-1), /\/rest\/v1\/stores/);
+assert.match(requests.at(-1), /limit=2/);
+assert.match(requests.at(-1), /offset=0/);
+assert.match(requests.at(-1), /chain_name\.ilike/);
 
 const draft = browser.parseJancodeProductDraft(
   [
