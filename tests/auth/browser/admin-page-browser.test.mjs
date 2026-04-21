@@ -327,6 +327,81 @@ async function main() {
         await guestContext.close();
       }
 
+      const memberContext = await browser.newContext();
+      try {
+        const memberPage = await memberContext.newPage();
+        const memberCalls = [];
+        memberPage.on('pageerror', (error) => pageErrors.push(error.message));
+        memberPage.on('console', (message) => {
+          if (message.type() === 'error') pageErrors.push(message.text());
+        });
+        await memberPage.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+          await route.fulfill({
+            status: 200,
+            contentType: 'text/javascript; charset=utf-8',
+            body: [
+              'export function createClient(){',
+              '  return {',
+              '    auth: {',
+              '      async getSession(){ return { data: { session: { user: { id: "member-1", email: "member@example.com" }, access_token: "member-access-token" } }, error: null }; },',
+              '      async getUser(){ return { data: { user: { id: "member-1", email: "member@example.com" } }, error: null }; },',
+              '      onAuthStateChange(){ return { data: { subscription: { unsubscribe(){} } } }; },',
+              '      async signOut(){ return { error: null }; },',
+              '    },',
+              '  };',
+              '}',
+            ].join('\n'),
+          });
+        });
+        await memberPage.route('**/rest/v1/**', async (route) => {
+          const request = route.request();
+          const requestUrl = request.url();
+          memberCalls.push({ method: request.method(), url: requestUrl, body: request.postData() || '' });
+          const url = new URL(requestUrl);
+          if (url.pathname.endsWith('/profiles')) {
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json; charset=utf-8',
+              body: JSON.stringify([
+                {
+                  id: 'member-1',
+                  email: 'member@example.com',
+                  full_name: 'Member User',
+                  role: 'member',
+                  created_at: '2026-04-01T00:00:00.000Z',
+                  updated_at: '2026-04-04T00:00:00.000Z',
+                },
+              ]),
+            });
+            return;
+          }
+
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json; charset=utf-8',
+            body: '[]',
+          });
+        });
+
+        await memberPage.goto(`${baseUrl}/aprice/admin/`, { waitUntil: 'domcontentloaded' });
+        await memberPage.locator('#admin-auth-gate').waitFor({ state: 'visible' });
+        await waitForText(memberPage, '#admin-status', '当前账号不是管理员');
+        await waitForText(memberPage, '#admin-access', '当前角色不足以访问管理功能');
+
+        const memberGateText = await memberPage.locator('#admin-auth-gate').textContent();
+        const memberAccessText = await memberPage.locator('#admin-access').textContent();
+        assert.match(memberGateText || '', /当前账号不是管理员/);
+        assert.match(memberGateText || '', /切换账号/);
+        assert.match(memberAccessText || '', /member@example\.com/);
+        assert.match(memberAccessText || '', /member/);
+        assert.equal(memberCalls.some((call) => call.url.includes('/rpc/')), false);
+        assert.equal(memberCalls.some((call) => call.url.includes('/rest/v1/products')), false);
+        assert.equal(memberCalls.some((call) => call.url.includes('/rest/v1/stores')), false);
+        assert.equal(memberCalls.some((call) => call.url.includes('/rest/v1/prices')), false);
+      } finally {
+        await memberContext.close();
+      }
+
       console.log('admin-page browser test passed');
     } finally {
       await browser.close();
@@ -340,7 +415,6 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
 
 
 

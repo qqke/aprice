@@ -2,7 +2,26 @@ import assert from 'node:assert/strict';
 
 import { launchChromiumForTest } from './_playwright-launch.mjs';
 import { startStaticServer } from './_browser-test-server.mjs';
-import { waitForVisible } from './_browser-test-wait.mjs';
+import { waitForHidden, waitForRequestMatch, waitForVisible } from './_browser-test-wait.mjs';
+
+function makeSupabaseShimModuleBody({ signedIn }) {
+  return [
+    'export function createClient(){',
+    '  return {',
+    '    auth: {',
+    signedIn
+      ? '      async getSession(){ return { data: { session: { user: { id: "member-1", email: "member@example.com" }, access_token: "test-access-token" } }, error: null }; },'
+      : '      async getSession(){ return { data: { session: null }, error: null }; },',
+    signedIn
+      ? '      async getUser(){ return { data: { user: { id: "member-1", email: "member@example.com" } }, error: null }; },'
+      : '      async getUser(){ return { data: { user: null }, error: null }; },',
+    '      onAuthStateChange(){ return { data: { subscription: { unsubscribe(){} } } }; },',
+    '      async signOut(){ return { error: null }; },',
+    '    }',
+    '  };',
+    '}',
+  ].join('\n');
+}
 
 async function main() {
   const { server, baseUrl } = await startStaticServer();
@@ -16,23 +35,11 @@ async function main() {
     try {
       const page = await browser.newPage();
 
-      // The /me page checks auth state via supabase-js. Stub the module so we deterministically stay logged out.
       await page.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'text/javascript; charset=utf-8',
-          body: [
-            'export function createClient(){',
-            '  return {',
-            '    auth: {',
-            '      async getSession(){ return { data: { session: null }, error: null }; },',
-            '      async getUser(){ return { data: { user: null }, error: null }; },',
-            '      onAuthStateChange(){ return { data: { subscription: { unsubscribe(){} } } }; },',
-            '      async signOut(){ return { error: null }; },',
-            '    }',
-            '  };',
-            '}',
-          ].join('\n'),
+          body: makeSupabaseShimModuleBody({ signedIn: false }),
         });
       });
 
@@ -66,6 +73,205 @@ async function main() {
       assert.match(recentText || '', /暂无浏览记录/);
       assert.match(statusText || '', /登录后/);
 
+      const signedPage = await browser.newPage();
+      const restCalls = [];
+      const products = [
+        { id: 'loxonin-s', name: 'Loxonin S', brand: 'Santen', pack: '12 tabs', barcode: '4987188161027' },
+        { id: 'eve-a', name: 'EVE A', brand: 'SS Pharmaceuticals', pack: '20 tabs', barcode: '4987300051234' },
+      ];
+      const stores = [
+        { id: 'sugi-hiroo', name: 'Sugi Pharmacy Hiroo', city: 'Tokyo', pref: 'Tokyo' },
+        { id: 'welcia-shibuya', name: 'Welcia Shibuya', city: 'Tokyo', pref: 'Tokyo' },
+      ];
+      const logs = [
+        {
+          id: 'log-1',
+          user_id: 'member-1',
+          product_id: 'loxonin-s',
+          store_id: 'sugi-hiroo',
+          price_yen: 698,
+          note: 'latest store visit',
+          purchased_at: '2026-04-04',
+          created_at: '2026-04-04T09:00:00.000Z',
+        },
+      ];
+      const favorites = [
+        { id: 'fav-product-1', user_id: 'member-1', entity_type: 'product', entity_id: 'loxonin-s', created_at: '2026-04-04T09:00:00.000Z' },
+        { id: 'fav-store-1', user_id: 'member-1', entity_type: 'store', entity_id: 'welcia-shibuya', created_at: '2026-04-03T09:00:00.000Z' },
+      ];
+
+      signedPage.on('pageerror', (error) => {
+        throw error;
+      });
+      await signedPage.addInitScript(() => {
+        window.localStorage.setItem('aprice:recent-views', JSON.stringify([
+          {
+            id: 'loxonin-s',
+            name: 'Loxonin S',
+            brand: 'Santen',
+            pack: '12 tabs',
+            barcode: '4987188161027',
+            tone: 'sunset',
+            viewed_at: '2026-04-04T09:00:00.000Z',
+          },
+        ]));
+      });
+      await signedPage.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/javascript; charset=utf-8',
+          body: makeSupabaseShimModuleBody({ signedIn: true }),
+        });
+      });
+      await signedPage.route('**/rest/v1/**', async (route) => {
+        const request = route.request();
+        const requestUrl = request.url();
+        const url = new URL(requestUrl);
+        const method = request.method();
+        const bodyText = request.postData() || '';
+        const bodyJson = bodyText ? JSON.parse(bodyText) : null;
+        restCalls.push({ method, url: requestUrl, bodyText, bodyJson });
+
+        if (url.pathname.endsWith('/products')) {
+          if (method === 'GET') {
+            await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(products) });
+            return;
+          }
+        }
+
+        if (url.pathname.endsWith('/stores')) {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(stores) });
+          return;
+        }
+
+        if (url.pathname.endsWith('/user_price_logs')) {
+          if (method === 'POST') {
+            const nextLog = {
+              id: `log-${logs.length + 1}`,
+              user_id: bodyJson.user_id,
+              product_id: bodyJson.product_id,
+              store_id: bodyJson.store_id,
+              price_yen: bodyJson.price_yen,
+              note: bodyJson.note || '',
+              purchased_at: bodyJson.purchased_at,
+              created_at: `${bodyJson.purchased_at}T09:00:00.000Z`,
+            };
+            logs.unshift(nextLog);
+            await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([nextLog]) });
+            return;
+          }
+          await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(logs) });
+          return;
+        }
+
+        if (url.pathname.endsWith('/favorites')) {
+          if (method === 'GET') {
+            const entityType = url.searchParams.get('entity_type')?.replace(/^eq\./, '') || '';
+            const entityId = url.searchParams.get('entity_id')?.replace(/^eq\./, '') || '';
+            const filtered = favorites.filter((favorite) => {
+              if (entityType && favorite.entity_type !== entityType) return false;
+              if (entityId && favorite.entity_id !== entityId) return false;
+              return true;
+            });
+            await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(filtered) });
+            return;
+          }
+
+          if (method === 'POST') {
+            const nextFavorite = {
+              id: `fav-${favorites.length + 1}`,
+              user_id: bodyJson.user_id,
+              entity_type: bodyJson.entity_type,
+              entity_id: bodyJson.entity_id,
+              created_at: '2026-04-05T09:00:00.000Z',
+            };
+            favorites.unshift(nextFavorite);
+            await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([nextFavorite]) });
+            return;
+          }
+
+          if (method === 'DELETE') {
+            const id = url.searchParams.get('id')?.replace(/^eq\./, '') || '';
+            const index = favorites.findIndex((favorite) => favorite.id === id);
+            const deleted = index >= 0 ? favorites.splice(index, 1) : [];
+            await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(deleted) });
+            return;
+          }
+        }
+
+        await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+      });
+
+      await signedPage.goto(`${baseUrl}/aprice/me/`, { waitUntil: 'domcontentloaded' });
+      await signedPage.locator('#me-auth-gate').waitFor({ state: 'attached' });
+      await waitForHidden(signedPage, '#me-auth-gate');
+      await signedPage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('已同步 1 条价格记录和 2 条收藏。'));
+
+      assert.equal(await signedPage.locator('#log-product').isEnabled(), true);
+      assert.equal(await signedPage.locator('#log-store').isEnabled(), true);
+      assert.match(await signedPage.locator('#my-logs').textContent(), /Loxonin S/);
+      assert.match(await signedPage.locator('#my-logs').textContent(), /[¥￥]698/);
+      assert.match(await signedPage.locator('#my-favorites').textContent(), /Loxonin S/);
+      assert.match(await signedPage.locator('#my-favorites').textContent(), /Welcia Shibuya/);
+      assert.match(await signedPage.locator('#favorites-summary').textContent(), /共 2 项收藏，当前显示 2 项/);
+      assert.match(await signedPage.locator('#recent-views').textContent(), /Loxonin S/);
+
+      await signedPage.locator('[data-favorite-filter="product"]').click();
+      assert.equal(await signedPage.locator('[data-favorite-filter="product"]').getAttribute('aria-pressed'), 'true');
+      assert.match(await signedPage.locator('#my-favorites').textContent(), /Loxonin S/);
+      assert.doesNotMatch(await signedPage.locator('#my-favorites').textContent(), /Welcia Shibuya/);
+
+      await signedPage.locator('[data-favorite-filter="store"]').click();
+      assert.equal(await signedPage.locator('[data-favorite-filter="store"]').getAttribute('aria-pressed'), 'true');
+      assert.match(await signedPage.locator('#my-favorites').textContent(), /Welcia Shibuya/);
+
+      await signedPage.locator('[data-favorite-filter="all"]').click();
+      await signedPage.locator('[data-favorite-sort="oldest"]').click();
+      assert.equal(await signedPage.locator('[data-favorite-sort="oldest"]').getAttribute('aria-pressed'), 'true');
+      const sortedFavoriteText = await signedPage.locator('#my-favorites .me-favorites__item strong').allTextContents();
+      assert.equal(sortedFavoriteText[0], 'Welcia Shibuya');
+
+      const logPostCountBeforeInvalid = restCalls.filter((call) => call.method === 'POST' && call.url.includes('/rest/v1/user_price_logs')).length;
+      await signedPage.locator('#log-price').fill('0');
+      await signedPage.locator('#log-form button[type="submit"]').click();
+      await signedPage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('请输入有效的价格。'));
+      assert.equal(restCalls.filter((call) => call.method === 'POST' && call.url.includes('/rest/v1/user_price_logs')).length, logPostCountBeforeInvalid);
+
+      await signedPage.locator('#log-product').selectOption('eve-a');
+      await signedPage.locator('#log-store').selectOption('welcia-shibuya');
+      await signedPage.locator('#log-price').fill('818');
+      await signedPage.locator('#log-note').fill('me browser regression');
+      await signedPage.locator('#log-form button[type="submit"]').click();
+      await signedPage.waitForFunction(() => String(document.querySelector('#my-logs')?.textContent || '').includes('EVE A'));
+      assert.ok(
+        restCalls.some((call) =>
+          call.method === 'POST' &&
+          call.url.includes('/rest/v1/user_price_logs') &&
+          call.bodyJson?.product_id === 'eve-a' &&
+          call.bodyJson?.store_id === 'welcia-shibuya' &&
+          String(call.bodyJson?.price_yen) === '818' &&
+          call.bodyJson?.note === 'me browser regression'
+        ),
+        `expected personal log insert, got ${restCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
+      );
+
+      await signedPage.locator('#log-product').selectOption('eve-a');
+      await signedPage.locator('#log-store').selectOption('welcia-shibuya');
+      await signedPage.locator('#favorite-product-button').click();
+      await signedPage.waitForFunction(() => String(document.querySelector('#favorites-summary')?.textContent || '').includes('共 3 项收藏'));
+      await signedPage.locator('#log-store').selectOption('welcia-shibuya');
+      await signedPage.locator('#favorite-store-button').click();
+      await waitForRequestMatch(restCalls, (call) => call.method === 'DELETE' && call.url.includes('/rest/v1/favorites'));
+      assert.ok(restCalls.some((call) => call.method === 'POST' && call.url.includes('/rest/v1/favorites') && call.bodyJson?.entity_type === 'product' && call.bodyJson?.entity_id === 'eve-a'));
+      assert.ok(
+        restCalls.some((call) => call.method === 'DELETE' && call.url.includes('/rest/v1/favorites') && call.url.includes('id=eq.fav-store-1')),
+        `expected existing store favorite delete, got ${restCalls.map((call) => `${call.method} ${call.url} ${call.bodyText}`).join(' | ')}`,
+      );
+
+      await signedPage.locator('#clear-recent-views').click();
+      await signedPage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('已清空最近浏览。'));
+      assert.match(await signedPage.locator('#recent-views').textContent(), /暂无浏览记录/);
+
       console.log('me-page browser test passed');
     } finally {
       await browser.close();
@@ -79,4 +285,3 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-

@@ -104,6 +104,12 @@ async function main() {
       const scanUrl = `${baseUrl}/aprice/scan/`;
 
       await page.goto(scanUrl, { waitUntil: 'domcontentloaded' });
+      await page.locator('#barcode-search').click();
+      await page.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('请输入条码。'));
+      await page.locator('#barcode-input').press('Enter');
+      await page.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('请输入条码。'));
+      assert.equal(requests.some((call) => call.url.includes('/rest/v1/products')), false);
+
       await page.locator('#barcode-input').fill('0019014614042');
       await page.locator('#barcode-search').click();
       await waitForRequestMatch(requests, (call) => call.url.includes('/rest/v1/products') && call.url.includes('barcode=eq.0019014614042'));
@@ -296,6 +302,80 @@ async function main() {
       assert.equal(new URL(guestPage.url()).pathname, '/aprice/login/');
       assert.equal(new URL(guestPage.url()).searchParams.get('redirect'), '/aprice/scan/');
       assert.equal(guestRequests.some((call) => call.url.includes('/rest/v1/products') && call.method === 'POST'), false);
+
+      const manualPage = await browser.newPage();
+      const manualRequests = [];
+      manualPage.on('pageerror', (error) => pageErrors.push(error.message));
+      manualPage.on('console', (message) => {
+        if (message.type() === 'error') pageErrors.push(message.text());
+      });
+      await manualPage.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/javascript; charset=utf-8',
+          body: makeSupabaseShimModuleBody(),
+        });
+      });
+      await manualPage.route('https://r.jina.ai/**', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/plain; charset=utf-8',
+          body: '',
+        });
+      });
+      await manualPage.route('**/rest/v1/**', async (route) => {
+        const request = route.request();
+        const requestUrl = request.url();
+        const url = new URL(requestUrl);
+        manualRequests.push({ method: request.method(), url: requestUrl, body: request.postData() || '' });
+
+        if (url.pathname.endsWith('/products') && request.method() === 'POST') {
+          const body = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json; charset=utf-8',
+            body: JSON.stringify([{ ...body, id: body.id || body.barcode }]),
+          });
+          return;
+        }
+
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json; charset=utf-8',
+          body: '[]',
+        });
+      });
+
+      await manualPage.goto(scanUrl, { waitUntil: 'domcontentloaded' });
+      await manualPage.locator('#barcode-input').fill('4900000000000');
+      await manualPage.locator('#barcode-search').click();
+      await manualPage.locator('#missing-product-panel').waitFor({ state: 'visible', timeout: 10000 });
+      await manualPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('可以手动填写后添加。'));
+      assert.equal(await manualPage.locator('#missing-product-save').isEnabled(), true);
+      assert.equal(await manualPage.locator('#missing-product-barcode').inputValue(), '4900000000000');
+
+      await manualPage.locator('#missing-product-name').fill('Manual Missing Product');
+      await manualPage.locator('#missing-product-brand').fill('Manual Brand');
+      await manualPage.locator('#missing-product-pack').fill('24 tabs');
+      await manualPage.locator('#missing-product-category').fill('manual-category');
+      await manualPage.locator('#missing-product-tone').selectOption('azure');
+      await manualPage.locator('#missing-product-description').fill('Added by browser test');
+      await manualPage.locator('#missing-product-form button[type="submit"]').click();
+      await manualPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('商品已添加：Manual Missing Product'));
+      assert.ok(
+        manualRequests.some((call) =>
+          call.method === 'POST' &&
+          call.url.includes('/rest/v1/products') &&
+          call.body.includes('"barcode":"4900000000000"') &&
+          call.body.includes('"name":"Manual Missing Product"') &&
+          call.body.includes('"brand":"Manual Brand"') &&
+          call.body.includes('"pack":"24 tabs"') &&
+          call.body.includes('"category":"manual-category"') &&
+          call.body.includes('"tone":"azure"') &&
+          call.body.includes('"description":"Added by browser test"')
+        ),
+        `expected manual product insert payload, got ${manualRequests.map((call) => call.body).join(' | ')}`,
+      );
 
       assert.equal(pageErrors.length, 0, `page errors: ${pageErrors.join(' | ')}`);
 
