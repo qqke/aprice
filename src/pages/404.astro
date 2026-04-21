@@ -7,6 +7,11 @@ Astro.response.status = 404;
 const base = import.meta.env.BASE_URL || '/';
 ---
 <BaseLayout title="404 - 搜比价" description="页面不存在。返回首页、扫码或打开个人页继续操作。" bodyClass="error-page">
+  <style is:inline>
+    html[data-product-fallback-loading='true'] body {
+      visibility: hidden;
+    }
+  </style>
   <script is:inline define:vars={{ base }}>
     const current = new URL(window.location.href);
     const basePath = new URL(base, window.location.origin).pathname.replace(/\/$/, '');
@@ -16,11 +21,23 @@ const base = import.meta.env.BASE_URL || '/';
     const pattern = new RegExp(`^${escapedBase ? `${escapedBase}\\/` : '/'}product\\/([^/]+)\\/?$`);
     const matched = pathname.match(pattern);
     if (matched?.[1]) {
-      const id = matched[1];
+      document.documentElement.dataset.productFallbackLoading = 'true';
       const target = new URL(`${base}product-runtime/`, window.location.origin);
-      target.searchParams.set('id', id);
-      target.searchParams.set('fallback', '1');
-      window.location.replace(target.toString());
+      fetch(target.toString(), { credentials: 'same-origin' })
+        .then((response) => {
+          if (!response.ok) throw new Error(`商品页加载失败: ${response.status}`);
+          return response.text();
+        })
+        .then((html) => {
+          const writeDocument = Reflect.get(document, 'write');
+          document.open();
+          writeDocument.call(document, html);
+          document.close();
+        })
+        .catch((error) => {
+          delete document.documentElement.dataset.productFallbackLoading;
+          console.error(error);
+        });
     }
   </script>
   <section class="hero hero--tight">

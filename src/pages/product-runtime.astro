@@ -67,6 +67,12 @@ const base = import.meta.env.BASE_URL || '/';
           <div class="pillrow product-secondary-actions" aria-label="收藏操作">
             <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button>
           </div>
+          <div class="store-search">
+            <label class="field store-search__input">
+              <input id="personal-store-search" name="personal-store-search" type="search" inputmode="search" placeholder="搜索店名或连锁名" autocomplete="off" spellcheck="false" aria-label="搜索门店" />
+            </label>
+            <button class="button button--ghost store-search__clear" id="personal-store-search-clear" type="button" hidden>清空</button>
+          </div>
           <div class="notice notice--compact" id="personal-store-status">正在加载门店...</div>
           <div class="feed" id="personal-store-list">
             <div class="notice notice--compact">正在加载门店...</div>
@@ -134,6 +140,8 @@ const base = import.meta.env.BASE_URL || '/';
     const priceFlowGapNote = document.querySelector('#price-flow-gap-note');
     const storeStatus = document.querySelector('#personal-store-status');
     const storeList = document.querySelector('#personal-store-list');
+    const storeSearch = document.querySelector('#personal-store-search');
+    const storeSearchClear = document.querySelector('#personal-store-search-clear');
     const form = document.querySelector('#personal-log-form');
     const store = document.querySelector('#personal-store');
     const price = document.querySelector('#personal-price');
@@ -143,6 +151,7 @@ const base = import.meta.env.BASE_URL || '/';
     let product = null;
     let productId = '';
     let stores = [];
+    let storeSearchTerm = '';
     let selectedStoreId = '';
     let activeStoreId = '';
     let personalPriceIndex = new Map();
@@ -190,6 +199,21 @@ const base = import.meta.env.BASE_URL || '/';
         inactiveLabel: '添加门店收藏',
         disabled: !activeStoreId,
       });
+    }
+
+    function normalizeSearchTerm(value) {
+      return String(value || '').trim().toLocaleLowerCase('ja-JP').normalize('NFKC');
+    }
+
+    function storeMatchesSearch(storeItem) {
+      const query = normalizeSearchTerm(storeSearchTerm);
+      if (!query) return true;
+      const fields = [storeItem.name, storeItem.chain_name, storeItem.pref, storeItem.city, storeItem.address]
+        .filter(Boolean)
+        .join(' ')
+        .toLocaleLowerCase('ja-JP')
+        .normalize('NFKC');
+      return fields.includes(query);
     }
 
     function renderMissingId() {
@@ -277,10 +301,27 @@ const base = import.meta.env.BASE_URL || '/';
         return;
       }
 
-      const visibleStores = stores.slice().sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ja-JP')).slice(0, 30);
+      const filteredStores = stores
+        .filter((item) => storeMatchesSearch(item))
+        .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ja-JP'));
+      const selectedStore = selectedStoreId ? stores.find((item) => item.id === selectedStoreId) || null : null;
+      const visibleStores = selectedStore && !filteredStores.some((item) => item.id === selectedStore.id)
+        ? [selectedStore, ...filteredStores].slice(0, 30)
+        : filteredStores.slice(0, 30);
+
+      if (!visibleStores.length) {
+        storeList.innerHTML = '<div class="notice notice--compact">没有匹配到门店，换个关键词试试。</div>';
+        if (storeStatus) storeStatus.textContent = selectedStore ? `没有匹配到搜索词，当前选择 ${selectedStore.name} 仍保留。` : '没有匹配到门店。';
+        return;
+      }
+
       if (!selectedStoreId) selectedStoreId = activeStoreId || visibleStores[0]?.id || '';
       if (store) store.value = selectedStoreId;
-      if (storeStatus) storeStatus.textContent = selectedStoreId ? '点击门店即可回填你的最新价。' : '请选择门店后记录价格。';
+      if (storeStatus) {
+        storeStatus.textContent = storeSearchTerm
+          ? `已筛出 ${filteredStores.length} 家门店。`
+          : selectedStoreId ? '点击门店即可回填你的最新价。' : '请选择门店后记录价格。';
+      }
       storeList.innerHTML = visibleStores.map((item) => {
         const personalPrice = personalPriceIndex.get(String(item.id || ''));
         const selected = item.id === selectedStoreId;
@@ -385,6 +426,20 @@ const base = import.meta.env.BASE_URL || '/';
       if (status) status.textContent = personalPrice ? `已回填你的最新价 ${formatYen(personalPrice.price_yen)}。` : '这家门店还没有你的个人价，输入后就能保存。';
       renderStorePicker();
       syncFavoriteButtons();
+    });
+
+    storeSearch?.addEventListener('input', () => {
+      storeSearchTerm = storeSearch.value || '';
+      if (storeSearchClear) storeSearchClear.hidden = !storeSearchTerm;
+      renderStorePicker();
+    });
+
+    storeSearchClear?.addEventListener('click', () => {
+      if (storeSearch) storeSearch.value = '';
+      storeSearchTerm = '';
+      storeSearchClear.hidden = true;
+      renderStorePicker();
+      storeSearch?.focus();
     });
 
     favoriteButton?.addEventListener('click', async () => {
