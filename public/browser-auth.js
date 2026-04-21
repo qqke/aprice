@@ -209,6 +209,33 @@ export async function savePersonalLog(entry) {
   );
 }
 
+export async function submitStorePrice(entry) {
+  if (!entry?.product_id || !entry?.store_id || !entry?.price_yen) {
+    throw new Error('product_id, store_id and price_yen are required');
+  }
+  const session = await requireSession();
+  return restRpc('submit_store_price', entry, { token: session.access_token });
+}
+
+export async function fetchPendingPriceSubmissions(limit = 20) {
+  const session = await requireSession();
+  return restGet('user_price_logs', {
+    query: {
+      select: '*, products:product_id (*), stores:store_id (*)',
+      share_to_public: 'eq.true',
+      review_status: 'eq.pending',
+      order: 'created_at.desc',
+      limit,
+    },
+    token: session.access_token,
+  });
+}
+
+export async function adminReviewPriceSubmission(payload) {
+  const session = await requireSession();
+  return restRpc('admin_review_price_submission', payload, { token: session.access_token });
+}
+
 export async function fetchFavorites(userId) {
   if (!userId) return [];
   const session = await requireSession();

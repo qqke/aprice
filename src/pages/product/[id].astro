@@ -167,8 +167,8 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
         <div class="grid">
           <section class="tile" id="product-personal-record">
             <div class="section__header section__header--tight">
-              <h3>个人记录</h3>
-              <p>把你真实买到的价格直接记下来。</p>
+              <h3>记录店头价格</h3>
+              <p>把实体店货架价记下来，也可以提交给公共比价审核。</p>
             </div>
             <div class="pillrow product-secondary-actions" aria-label="收藏操作">
               <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>
@@ -195,7 +195,14 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
                   <input id="personal-note" name="personal-note" placeholder="备注" />
                 </label>
               </div>
-              <button class="button" type="submit">记录个人价格</button>
+              <label class="field">
+                <input id="personal-evidence-url" name="personal-evidence-url" type="url" placeholder="价签或小票图片链接（可选）" />
+              </label>
+              <label class="field field--inline">
+                <input id="personal-share-public" type="checkbox" checked />
+                <span>参与公共比价（提交后由管理员审核）</span>
+              </label>
+              <button class="button" type="submit">提交店头价格</button>
               <div class="notice notice--compact" id="personal-status">{productLogPrompt}</div>
             </form>
           </section>
@@ -221,7 +228,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
 
   <script type="module" is:inline define:vars={{ loginUrl }}>
     const { recordRecentView, resolveBase, fetchNearbyPrices, fetchPricesForProduct, fetchStoresPage, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
-    const { fetchFavorites, fetchPersonalLogs, getCurrentUser, indexLatestPersonalPricesByStore, savePersonalLog, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+    const { fetchFavorites, fetchPersonalLogs, getCurrentUser, indexLatestPersonalPricesByStore, submitStorePrice, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
 
     const page = document.querySelector('#product-page');
@@ -250,6 +257,8 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
     const store = document.querySelector('#personal-store');
     const price = document.querySelector('#personal-price');
     const note = document.querySelector('#personal-note');
+    const evidenceUrl = document.querySelector('#personal-evidence-url');
+    const sharePublic = document.querySelector('#personal-share-public');
     const status = document.querySelector('#personal-status');
     const favoriteButton = document.querySelector('#favorite-product-button');
     const favoriteStoreButton = document.querySelector('#favorite-store-button');
@@ -976,17 +985,22 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       }
 
       try {
-        await savePersonalLog({
+        const submittedPrice = Number(price.value);
+        const shouldShare = sharePublic instanceof HTMLInputElement ? sharePublic.checked : false;
+        await submitStorePrice({
           product_id: productId,
           store_id: store?.value || selectedStoreId || null,
-          price_yen: Number(price.value),
+          price_yen: submittedPrice,
           note: note.value.trim(),
+          evidence_url: evidenceUrl?.value?.trim?.() || '',
+          share_to_public: shouldShare,
           purchased_at: new Date().toISOString().slice(0, 10),
         });
-        status.textContent = getPrivatePageStatusCopy('product', 'logSuccess', { price: formatYen(Number(price.value)) });
         price.value = '';
         note.value = '';
+        if (evidenceUrl) evidenceUrl.value = '';
         await refreshPersonalPriceState({ preserveSelection: true });
+        status.textContent = getPrivatePageStatusCopy('product', shouldShare ? 'sharedLogSuccess' : 'logSuccess', { price: formatYen(submittedPrice) });
       } catch (error) {
         status.textContent = getPrivatePageStatusCopy('product', 'logFailure', { message: error.message });
       }

@@ -60,8 +60,8 @@ const base = import.meta.env.BASE_URL || '/';
         <section class="tile tile--flow" id="product-personal-record">
           <div class="section__header section__header--tight">
             <div>
-              <h3>个人记录</h3>
-              <p>把你真实买到的价格直接记下来。</p>
+              <h3>记录店头价格</h3>
+              <p>把实体店货架价记下来，也可以提交给公共比价审核。</p>
             </div>
           </div>
           <div class="pillrow product-secondary-actions" aria-label="收藏操作">
@@ -88,8 +88,15 @@ const base = import.meta.env.BASE_URL || '/';
                 <input id="personal-note" name="personal-note" placeholder="备注" />
               </label>
             </div>
-            <button class="button" type="submit">记录个人价格</button>
-            <div class="notice notice--compact" id="personal-status">登录后可以保存你的购买价。</div>
+            <label class="field">
+              <input id="personal-evidence-url" name="personal-evidence-url" type="url" placeholder="价签或小票图片链接（可选）" />
+            </label>
+            <label class="field field--inline">
+              <input id="personal-share-public" type="checkbox" checked />
+              <span>参与公共比价（提交后由管理员审核）</span>
+            </label>
+            <button class="button" type="submit">提交店头价格</button>
+            <div class="notice notice--compact" id="personal-status">登录后可提交真实店头价；参与公共比价的记录会先进入审核。</div>
           </form>
         </section>
       </div>
@@ -120,7 +127,7 @@ const base = import.meta.env.BASE_URL || '/';
     restoreProductUrlBeforeLoading();
 
     const { recordRecentView, resolveBase, fetchNearbyPrices, fetchPricesForProduct, fetchStoresPage, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
-    const { fetchFavorites, fetchPersonalLogs, getCurrentUser, indexLatestPersonalPricesByStore, savePersonalLog, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+    const { fetchFavorites, fetchPersonalLogs, getCurrentUser, indexLatestPersonalPricesByStore, submitStorePrice, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { buildPrivatePageLoginUrl, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
     const { restGet } = await import(window.__APriceConfig?.supabaseRestJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'supabase-rest.js');
 
@@ -148,6 +155,8 @@ const base = import.meta.env.BASE_URL || '/';
     const store = document.querySelector('#personal-store');
     const price = document.querySelector('#personal-price');
     const note = document.querySelector('#personal-note');
+    const evidenceUrl = document.querySelector('#personal-evidence-url');
+    const sharePublic = document.querySelector('#personal-share-public');
     const status = document.querySelector('#personal-status');
 
     let product = null;
@@ -529,20 +538,29 @@ const base = import.meta.env.BASE_URL || '/';
       event.preventDefault();
       const user = await getCurrentUser();
       if (!user) {
-        if (status) status.textContent = '请先登录后再记录个人价格。';
+        if (status) status.textContent = '请先登录后再记录店头价格。';
         redirectToLogin(authGateLink?.href || resolveBase('login/'), authGate);
         return;
       }
       try {
-        await savePersonalLog({
+        const submittedPrice = Number(price?.value);
+        const shouldShare = sharePublic instanceof HTMLInputElement ? sharePublic.checked : false;
+        await submitStorePrice({
           product_id: productId,
           store_id: store?.value || selectedStoreId || null,
-          price_yen: Number(price?.value),
+          price_yen: submittedPrice,
           note: note?.value?.trim() || '',
+          evidence_url: evidenceUrl?.value?.trim?.() || '',
+          share_to_public: shouldShare,
           purchased_at: new Date().toISOString().slice(0, 10),
         });
-        if (status) status.textContent = `已保存 ${formatYen(Number(price?.value || 0))}。`;
+        if (price) price.value = '';
+        if (note) note.value = '';
+        if (evidenceUrl) evidenceUrl.value = '';
         await refreshPersonalPriceState(user);
+        if (status) status.textContent = shouldShare
+          ? `已提交 ${formatYen(submittedPrice || 0)}，审核后会进入公共比价。`
+          : `已保存 ${formatYen(submittedPrice || 0)}。`;
       } catch (error) {
         if (status) status.textContent = `保存失败：${error.message}`;
       }

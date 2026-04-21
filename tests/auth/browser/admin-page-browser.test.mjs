@@ -93,6 +93,7 @@ async function main() {
       await page.locator('#admin-products').waitFor({ state: 'attached' });
       await page.locator('#admin-stores').waitFor({ state: 'attached' });
       await page.locator('#admin-prices').waitFor({ state: 'attached' });
+      await page.locator('#admin-price-submissions').waitFor({ state: 'attached' });
       await page.locator('#admin-auth-gate').waitFor({ state: 'hidden' });
 
       await waitForText(page, '#admin-status', '可以开始维护数据');
@@ -103,6 +104,7 @@ async function main() {
       const productListText = await page.locator('#admin-products').textContent();
       const storeListText = await page.locator('#admin-stores').textContent();
       const priceListText = await page.locator('#admin-prices').textContent();
+      const pendingPriceText = await page.locator('#admin-price-submissions').textContent();
       const productOptions = await page.locator('#price-product option').allTextContents();
       const storeOptions = await page.locator('#price-store option').allTextContents();
 
@@ -111,8 +113,33 @@ async function main() {
       assert.match(productListText || '', /Loxonin S/);
       assert.match(storeListText || '', /Sugi Pharmacy Hiroo/);
       assert.match(priceListText || '', /¥698/);
+      assert.match(pendingPriceText || '', /front shelf community/);
+      assert.match(pendingPriceText || '', /¥688/);
       assert.ok(productOptions.some((text) => text.includes('Loxonin S')));
       assert.ok(storeOptions.some((text) => text.includes('Sugi Pharmacy Hiroo')));
+
+      await page.locator('[data-approve-submission="11111111-1111-4111-8111-111111111111"]').click();
+      await waitForText(page, '#admin-status', '店头价已通过');
+      assert.ok(
+        rpcCalls.some((call) =>
+          call.url.includes('/rpc/admin_review_price_submission') &&
+          call.bodyJson?.id === '11111111-1111-4111-8111-111111111111' &&
+          call.bodyJson?.action === 'approve' &&
+          String(call.bodyJson?.confidence_score) === '70'
+        ),
+        `expected approve payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
+      );
+
+      await page.locator('[data-reject-submission="22222222-2222-4222-8222-222222222222"]').click();
+      await waitForText(page, '#admin-status', '店头价已拒绝');
+      assert.ok(
+        rpcCalls.some((call) =>
+          call.url.includes('/rpc/admin_review_price_submission') &&
+          call.bodyJson?.id === '22222222-2222-4222-8222-222222222222' &&
+          call.bodyJson?.action === 'reject'
+        ),
+        `expected reject payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
+      );
 
       await page.locator('[data-edit-store="welcia-shibuya"]').click();
       assert.equal(await page.locator('#store-id').inputValue(), 'welcia-shibuya');
@@ -283,7 +310,6 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
 
 
 

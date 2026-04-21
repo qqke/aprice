@@ -184,13 +184,21 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
           </div>
           <div class="list" id="admin-prices"></div>
         </section>
+
+        <section class="tile tile--wide tile--flow">
+          <div class="section__header section__header--tight">
+            <h3>待审核店头价</h3>
+            <p>用户提交的实体店价格，通过后才会进入公共比价。</p>
+          </div>
+          <div class="list" id="admin-price-submissions"></div>
+        </section>
       </div>
     </div>
   </section>
 
   <script type="module" is:inline define:vars={{ loginUrl }}>
     const { fetchAllProducts, fetchAllStores, fetchRecentPrices } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
-    const { adminDeletePrice, adminDeleteProduct, adminDeleteStore, adminUpsertPrice, adminUpsertStore, createProduct, fetchCurrentProfile, getCurrentUser, signOut } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+    const { adminDeletePrice, adminDeleteProduct, adminDeleteStore, adminReviewPriceSubmission, adminUpsertPrice, adminUpsertStore, createProduct, fetchCurrentProfile, fetchPendingPriceSubmissions, getCurrentUser, signOut } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { applyPrivatePageGateCopy, getPrivatePageGateCopy, getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
 
     const status = document.querySelector('#admin-status');
@@ -210,6 +218,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     const productList = document.querySelector('#admin-products');
     const storeList = document.querySelector('#admin-stores');
     const priceList = document.querySelector('#admin-prices');
+    const priceSubmissionList = document.querySelector('#admin-price-submissions');
     const productReset = document.querySelector('#product-reset');
     const storeReset = document.querySelector('#store-reset');
     const priceReset = document.querySelector('#price-reset');
@@ -253,6 +262,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     let products = [];
     let stores = [];
     let prices = [];
+    let priceSubmissions = [];
     let selectedPriceId = '';
 
     function elValue(field) {
@@ -272,6 +282,26 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
 
     function optionHtml(items) {
       return items.map((item) => `<option value="${item.id}">${item.name}</option>`).join('');
+    }
+
+    function escapeHtml(value = '') {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function formatAdminDate(value) {
+      if (!value) return '未知时间';
+      return new Date(value).toLocaleString('ja-JP', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
     }
 
     function refreshSelectors() {
@@ -377,6 +407,32 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         : '<div class="list__item"><div><strong>暂无价格</strong><small>请保存一条价格。</small></div><span class="meta">暂无</span></div>';
     }
 
+    function renderPriceSubmissions() {
+      if (!priceSubmissionList) return;
+      priceSubmissionList.innerHTML = priceSubmissions.length
+        ? priceSubmissions.map((item) => {
+          const evidence = String(item.evidence_url || '').trim();
+          const evidenceHtml = evidence
+            ? ` · <a href="${escapeHtml(evidence)}" target="_blank" rel="noreferrer">证据</a>`
+            : '';
+          return `
+            <div class="list__item admin-record-item admin-record-item--price">
+              <div>
+                <strong>${escapeHtml(item.products?.name || item.product_id || 'Unknown product')}</strong>
+                <small>${escapeHtml(item.stores?.name || item.store_id || 'Unknown store')} · ${formatAdminDate(item.created_at)} · ${escapeHtml(item.note || '无备注')}${evidenceHtml}</small>
+                <small>状态 ${escapeHtml(item.review_status || 'pending')} · 可信度 ${escapeHtml(item.confidence_score ?? 0)}</small>
+              </div>
+              <div class="pillrow admin-record-actions admin-record-actions--price">
+                <span class="price admin-record-price">¥${escapeHtml(item.price_yen)}</span>
+                <button class="button button--ghost" data-approve-submission="${item.id}" type="button">通过</button>
+                <button class="button button--ghost" data-reject-submission="${item.id}" type="button">拒绝</button>
+              </div>
+            </div>
+          `;
+        }).join('')
+        : '<div class="list__item"><div><strong>暂无待审核店头价</strong><small>用户公开提交后会出现在这里。</small></div><span class="meta">0</span></div>';
+    }
+
     syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: false });
     switchAccountLink?.setAttribute('href', loginUrl);
 
@@ -421,21 +477,24 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         return false;
       }
 
-      const [productItems, storeItems, priceItems] = await Promise.all([
+      const [productItems, storeItems, priceItems, pendingItems] = await Promise.all([
         fetchAllProducts(),
         fetchAllStores(),
         fetchRecentPrices(12),
+        fetchPendingPriceSubmissions(20),
       ]);
       syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: false });
       if (logoutButton) logoutButton.hidden = false;
       products = productItems;
       stores = storeItems;
       prices = priceItems;
+      priceSubmissions = pendingItems;
 
       refreshSelectors();
       renderProducts();
       renderStores();
       renderPrices();
+      renderPriceSubmissions();
       if (status) status.textContent = getPrivatePageStatusCopy('admin', 'loaded', { email: profile.email || user.email });
       if (accessState) {
         accessState.innerHTML = `
@@ -603,6 +662,29 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         resetPriceForm();
         if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deletePriceSuccess');
         await loadData();
+      }
+    });
+
+    priceSubmissionList?.addEventListener('click', async (event) => {
+      const target = event.target;
+      const button = target instanceof Element ? target.closest('button') : null;
+      if (!button) return;
+      const approveId = button.dataset.approveSubmission;
+      const rejectId = button.dataset.rejectSubmission;
+      const submissionId = approveId || rejectId;
+      if (!submissionId) return;
+
+      try {
+        await adminReviewPriceSubmission({
+          id: submissionId,
+          action: approveId ? 'approve' : 'reject',
+          confidence_score: approveId ? 70 : 0,
+          review_note: approveId ? 'approved in admin' : 'rejected in admin',
+        });
+        await loadData();
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', approveId ? 'reviewApproveSuccess' : 'reviewRejectSuccess');
+      } catch (error) {
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'reviewFailure', { message: error.message });
       }
     });
 

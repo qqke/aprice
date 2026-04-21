@@ -72,7 +72,7 @@ async function main() {
         const url = new URL(requestUrl);
         requests.push(requestUrl);
 
-        if (url.pathname.endsWith('/user_price_logs')) {
+        if (url.pathname.endsWith('/rpc/submit_store_price')) {
           if (request.method() === 'POST') {
             const body = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
             const nextEntry = {
@@ -83,6 +83,13 @@ async function main() {
               price_yen: body.price_yen,
               purchased_at: body.purchased_at,
               note: body.note || '',
+              share_to_public: Boolean(body.share_to_public),
+              review_status: body.share_to_public ? 'pending' : 'private',
+              evidence_url: body.evidence_url || '',
+              confidence_score: 0,
+              review_note: '',
+              reviewed_at: null,
+              promoted_price_id: null,
               created_at: '2026-04-05T09:00:00.000Z',
               updated_at: '2026-04-05T09:00:00.000Z',
             };
@@ -94,7 +101,9 @@ async function main() {
             });
             return;
           }
+        }
 
+        if (url.pathname.endsWith('/user_price_logs')) {
           await route.fulfill({
             status: 200,
             contentType: 'application/json',
@@ -196,13 +205,16 @@ async function main() {
 
       await page.locator('#personal-price').fill('722');
       await page.locator('#personal-note').fill('browser regression');
+      await page.locator('#personal-evidence-url').fill('https://example.test/shelf.jpg');
       await page.locator('#personal-log-form button[type="submit"]').click();
       await page.waitForFunction(() => String(document.querySelector('#personal-price')?.value || '') === '722', null, { timeout: 10000 });
       await page.waitForFunction(() => String(document.querySelector('#personal-store-list')?.textContent || '').includes('我的价 ¥722'), null, { timeout: 10000 });
       const updatedStorePickerText = await page.locator('#personal-store-list').textContent();
       assert.match(updatedStorePickerText || '', /我的价 ¥722/);
-      assert.match(await page.locator('#personal-status').textContent(), /722/);
+      assert.match(await page.locator('#personal-status').textContent(), /审核后会进入公共比价/);
       assert.equal(await page.locator('#product-auth-gate').isHidden(), true);
+      assert.match(requests.join('\n'), /\/rest\/v1\/rpc\/submit_store_price/);
+      assert.doesNotMatch(requests.join('\n'), /POST .*\/rest\/v1\/user_price_logs/);
 
       console.log('product-page browser test passed');
     } finally {

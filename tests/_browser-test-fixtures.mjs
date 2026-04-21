@@ -165,6 +165,13 @@ export function makePersonalPriceLogs() {
       price_yen: 698,
       purchased_at: '2026-04-02',
       note: 'older store visit',
+      share_to_public: false,
+      review_status: 'private',
+      evidence_url: '',
+      confidence_score: 0,
+      review_note: '',
+      reviewed_at: null,
+      promoted_price_id: null,
       created_at: '2026-04-02T09:00:00.000Z',
       updated_at: '2026-04-02T09:00:00.000Z',
     },
@@ -176,6 +183,13 @@ export function makePersonalPriceLogs() {
       price_yen: 688,
       purchased_at: '2026-04-04',
       note: 'latest store visit',
+      share_to_public: false,
+      review_status: 'private',
+      evidence_url: '',
+      confidence_score: 0,
+      review_note: '',
+      reviewed_at: null,
+      promoted_price_id: null,
       created_at: '2026-04-04T09:00:00.000Z',
       updated_at: '2026-04-04T09:00:00.000Z',
     },
@@ -187,6 +201,13 @@ export function makePersonalPriceLogs() {
       price_yen: 712,
       purchased_at: '2026-04-03',
       note: 'different store',
+      share_to_public: false,
+      review_status: 'private',
+      evidence_url: '',
+      confidence_score: 0,
+      review_note: '',
+      reviewed_at: null,
+      promoted_price_id: null,
       created_at: '2026-04-03T09:00:00.000Z',
       updated_at: '2026-04-03T09:00:00.000Z',
     },
@@ -291,6 +312,53 @@ export function makeAdminPrices() {
   ];
 }
 
+export function makePendingPriceSubmissions() {
+  const products = makeAdminProducts();
+  const stores = makeAdminStores();
+  return [
+    {
+      id: '11111111-1111-4111-8111-111111111111',
+      user_id: 'member-1',
+      product_id: 'loxonin-s',
+      store_id: 'sugi-hiroo',
+      price_yen: 688,
+      purchased_at: '2026-04-05',
+      note: 'front shelf community',
+      share_to_public: true,
+      review_status: 'pending',
+      evidence_url: 'https://example.test/evidence.jpg',
+      confidence_score: 0,
+      review_note: '',
+      reviewed_at: null,
+      promoted_price_id: null,
+      created_at: '2026-04-05T08:00:00.000Z',
+      updated_at: '2026-04-05T08:00:00.000Z',
+      products: products[0],
+      stores: stores[0],
+    },
+    {
+      id: '22222222-2222-4222-8222-222222222222',
+      user_id: 'member-2',
+      product_id: 'eve-a',
+      store_id: 'welcia-shibuya',
+      price_yen: 818,
+      purchased_at: '2026-04-05',
+      note: 'looks wrong',
+      share_to_public: true,
+      review_status: 'pending',
+      evidence_url: '',
+      confidence_score: 0,
+      review_note: '',
+      reviewed_at: null,
+      promoted_price_id: null,
+      created_at: '2026-04-05T07:00:00.000Z',
+      updated_at: '2026-04-05T07:00:00.000Z',
+      products: products[1],
+      stores: stores[1],
+    },
+  ];
+}
+
 export function makeHomePageResponseForRequest(requestUrl) {
   const url = new URL(requestUrl);
   if (url.pathname.endsWith('/products')) {
@@ -362,6 +430,7 @@ export function makeAdminPageResponseForRequest(requestUrl, method) {
   if (url.pathname.endsWith('/products')) return makeAdminProducts();
   if (url.pathname.endsWith('/stores')) return makeAdminStores();
   if (url.pathname.endsWith('/prices')) return makeAdminPrices();
+  if (url.pathname.endsWith('/user_price_logs')) return makePendingPriceSubmissions();
   if (url.pathname.includes('/rpc/')) return [{ ok: true, method }];
   return [];
 }
