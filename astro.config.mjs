@@ -18,6 +18,7 @@ function createDev404Plugin(basePath) {
     const appPath = normalizePath(pathname).replace(/\/$/, '') || '/';
     if (appPath === '/' || appPath === '/404') return true;
     if (appPath === '/scan' || appPath === '/login' || appPath === '/me' || appPath === '/admin') return true;
+    if (appPath === '/product-runtime') return true;
     if (appPath.startsWith('/product/')) return true;
     return false;
   }
