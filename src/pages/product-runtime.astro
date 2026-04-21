@@ -90,6 +90,28 @@ const base = import.meta.env.BASE_URL || '/';
   </section>
 
   <script type="module" is:inline>
+    function readInitialProductId() {
+      const url = new URL(window.location.href);
+      const fromQuery = String(url.searchParams.get('id') || '').trim();
+      if (fromQuery) return fromQuery;
+      const match = url.pathname.match(/\/product\/([^/]+)\/?$/);
+      return match?.[1] ? decodeURIComponent(match[1]) : '';
+    }
+
+    function restoreProductUrlBeforeLoading() {
+      const initialProductId = readInitialProductId();
+      if (!initialProductId || !window.history?.replaceState) return;
+      const runtimeBase = window.__APriceConfig?.baseUrl || '/';
+      const base = runtimeBase.endsWith('/') ? runtimeBase : `${runtimeBase}/`;
+      const safeProductId = encodeURIComponent(initialProductId).replaceAll('%2F', '');
+      const targetPath = `${base.replace(/\/$/, '')}/product/${safeProductId}/`;
+      if (window.location.pathname !== targetPath) {
+        window.history.replaceState({}, '', targetPath);
+      }
+    }
+
+    restoreProductUrlBeforeLoading();
+
     const { recordRecentView, resolveBase, fetchAllStores, fetchNearbyPrices, fetchPricesForProduct, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
     const { fetchFavorites, fetchPersonalLogs, getCurrentUser, indexLatestPersonalPricesByStore, savePersonalLog, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { buildPrivatePageLoginUrl, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
@@ -137,11 +159,7 @@ const base = import.meta.env.BASE_URL || '/';
     }
 
     function readProductId() {
-      const url = new URL(window.location.href);
-      const fromQuery = String(url.searchParams.get('id') || '').trim();
-      if (fromQuery) return fromQuery;
-      const match = url.pathname.match(/\/product\/([^/]+)\/?$/);
-      return match?.[1] ? decodeURIComponent(match[1]) : '';
+      return readInitialProductId();
     }
 
     function syncCanonicalProductUrl() {
