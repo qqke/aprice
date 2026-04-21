@@ -25,6 +25,12 @@ async function main() {
         await waitForRequestMatch(rpcCalls, (call) => call.url.includes(pathPart));
       }
 
+      async function openPanel(selector) {
+        await page.locator(selector).evaluate((el) => {
+          if (el instanceof HTMLDetailsElement) el.open = true;
+        });
+      }
+
       page.on('pageerror', (error) => pageErrors.push(error.message));
       page.on('console', (message) => {
         if (message.type() === 'error') pageErrors.push(message.text());
@@ -94,6 +100,9 @@ async function main() {
       await page.locator('#admin-stores').waitFor({ state: 'attached' });
       await page.locator('#admin-prices').waitFor({ state: 'attached' });
       await page.locator('#admin-price-submissions').waitFor({ state: 'attached' });
+      await page.locator('#admin-panel-submissions').waitFor({ state: 'attached' });
+      await page.locator('#admin-panel-product').waitFor({ state: 'attached' });
+      await page.locator('#admin-product-summary-count').waitFor({ state: 'attached' });
       await page.locator('#admin-auth-gate').waitFor({ state: 'hidden' });
 
       await waitForText(page, '#admin-status', '可以开始维护数据');
@@ -105,11 +114,22 @@ async function main() {
       const storeListText = await page.locator('#admin-stores').textContent();
       const priceListText = await page.locator('#admin-prices').textContent();
       const pendingPriceText = await page.locator('#admin-price-submissions').textContent();
+      const productSummaryText = await page.locator('#admin-panel-product').textContent();
+      const storeSummaryText = await page.locator('#admin-panel-store').textContent();
+      const priceSummaryText = await page.locator('#admin-panel-price').textContent();
+      const submissionsSummaryText = await page.locator('#admin-panel-submissions').textContent();
       const productOptions = await page.locator('#price-product option').allTextContents();
       const storeOptions = await page.locator('#price-store option').allTextContents();
 
       assert.match(statusText || '', /可以开始维护数据/);
       assert.match(accessText || '', /管理员权限已开启/);
+      assert.equal(await page.locator('#admin-panel-submissions').evaluate((el) => el.open), true);
+      assert.equal(await page.locator('#admin-panel-product').evaluate((el) => el.open), false);
+      assert.match(submissionsSummaryText || '', /待审核店头价/);
+      assert.match(submissionsSummaryText || '', /待审核 2 条/);
+      assert.match(productSummaryText || '', /商品 2 条/);
+      assert.match(storeSummaryText || '', /门店 2 条/);
+      assert.match(priceSummaryText || '', /最近价格 2 条/);
       assert.match(productListText || '', /Loxonin S/);
       assert.match(storeListText || '', /Sugi Pharmacy Hiroo/);
       assert.match(priceListText || '', /¥698/);
@@ -141,17 +161,22 @@ async function main() {
         `expected reject payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
       );
 
+      await openPanel('#admin-panel-recent-stores');
       await page.locator('[data-edit-store="welcia-shibuya"]').click();
       assert.equal(await page.locator('#store-id').inputValue(), 'welcia-shibuya');
       assert.equal(await page.locator('#store-name').inputValue(), 'Welcia Shibuya');
       assert.equal(await page.locator('#store-chain').inputValue(), 'Welcia');
+      assert.equal(await page.locator('#admin-panel-store').evaluate((el) => el.open), true);
 
+      await openPanel('#admin-panel-recent-prices');
       await page.locator('[data-edit-price="price-admin-1"]').click();
       assert.equal(await page.locator('#price-product').inputValue(), 'loxonin-s');
       assert.equal(await page.locator('#price-store').inputValue(), 'sugi-hiroo');
       assert.equal(await page.locator('#price-yen').inputValue(), '698');
       assert.equal(await page.locator('#price-member').isChecked(), false);
+      assert.equal(await page.locator('#admin-panel-price').evaluate((el) => el.open), true);
 
+      await openPanel('#admin-panel-product');
       await page.locator('#product-id').fill('admin-fixture-product');
       await page.locator('#product-barcode').fill('4990000000001');
       await page.locator('#product-name').fill('Admin Fixture Product');
@@ -178,10 +203,12 @@ async function main() {
 
       assert.equal(await page.locator('[data-edit-product="eve-a"]').count(), 0);
 
+      await openPanel('#admin-panel-product');
       await clickConfirmAndWait('#product-delete', '/rpc/admin_delete_product');
       assert.ok(rpcCalls.some((call) => call.url.includes('/rpc/admin_delete_product')),
         `expected admin_delete_product RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`);
 
+      await openPanel('#admin-panel-store');
       await page.locator('#store-id').fill('admin-fixture-store');
       await page.locator('#store-name').fill('Admin Fixture Store');
       await page.locator('#store-chain').fill('Aprice');
@@ -200,6 +227,7 @@ async function main() {
         `expected admin_upsert_store payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
       );
 
+      await openPanel('#admin-panel-price');
       await page.locator('#price-product').selectOption('loxonin-s');
       await page.locator('#price-store').selectOption('sugi-hiroo');
       await page.locator('#price-yen').fill('688');
@@ -222,10 +250,12 @@ async function main() {
         `expected admin_upsert_price payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
       );
 
+      await openPanel('#admin-panel-recent-stores');
       await clickConfirmAndWait('[data-delete-store="welcia-shibuya"]', '/rpc/admin_delete_store');
       assert.ok(rpcCalls.some((call) => call.url.includes('/rpc/admin_delete_store')),
         `expected admin_delete_store RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`);
 
+      await openPanel('#admin-panel-recent-prices');
       await clickConfirmAndWait('[data-delete-price="price-admin-1"]', '/rpc/admin_delete_price');
       assert.ok(rpcCalls.some((call) => call.url.includes('/rpc/admin_delete_price')),
         `expected admin_delete_price RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`);
@@ -310,7 +340,6 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
 
 
 

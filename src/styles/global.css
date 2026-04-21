@@ -3270,6 +3270,90 @@ body.admin-page #admin-status {
   margin-bottom: 12px;
 }
 
+body.admin-page .admin-access-panel {
+  margin-bottom: 12px;
+}
+
+body.admin-page .admin-access-panel__body {
+  display: grid;
+  gap: 8px;
+}
+
+body.admin-page .admin-panels {
+  display: grid;
+  gap: 12px;
+}
+
+body.admin-page .admin-panel {
+  padding: 0;
+  overflow: clip;
+}
+
+body.admin-page .admin-panel__summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 14px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+body.admin-page .admin-panel__summary::-webkit-details-marker {
+  display: none;
+}
+
+body.admin-page .admin-panel__summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+body.admin-page .admin-panel__chevron {
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  color: var(--muted);
+  transform: rotate(-45deg);
+  transition: transform 160ms ease;
+}
+
+body.admin-page .admin-panel[open] .admin-panel__chevron {
+  transform: rotate(45deg);
+}
+
+body.admin-page .admin-panel__title {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+body.admin-page .admin-panel__title strong {
+  font-size: 1rem;
+}
+
+body.admin-page .admin-panel__title small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+body.admin-page .admin-panel__summary .pill,
+body.admin-page .admin-panel__summary .meta {
+  white-space: nowrap;
+}
+
+body.admin-page .admin-panel__body {
+  display: grid;
+  gap: 14px;
+  padding: 0 16px 16px;
+  border-top: 1px solid var(--border);
+}
+
+body.admin-page .admin-panel__body > .section__header:first-child {
+  padding-top: 16px;
+}
+
 body.login-page .login-state__card,
 body.login-page #session-state .list__item,
 body.me-page .me-favorites__item,
@@ -4038,6 +4122,18 @@ body.admin-page .admin-record-actions--price {
   body.admin-page .admin-record-price {
     grid-column: 1 / -1;
     justify-self: start;
+  }
+
+  body.admin-page .admin-panel__summary {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+
+  body.admin-page .admin-panel__summary .pill,
+  body.admin-page .admin-panel__summary .meta {
+    grid-column: 2;
+    justify-self: start;
+    white-space: normal;
   }
 
   body.error-page .hero__grid {

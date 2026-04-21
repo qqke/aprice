@@ -40,158 +40,231 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
 
       <div class="notice notice--warning" id="admin-status">检查登录状态与权限。</div>
 
-      <div class="grid">
-        <section class="tile tile--wide tile--flow">
-          <div class="section__header section__header--tight">
-            <div>
-              <h2>商品</h2>
-              <p>新增或删除产品基础信息。</p>
-            </div>
-            <div class="pillrow admin-toolbar">
-              <button class="button button--ghost" id="product-reset" type="button">清空</button>
-              <button class="button button--ghost" id="product-delete" type="button">删除</button>
-            </div>
+      <section class="tile tile--flow admin-access-panel">
+        <div class="section__header section__header--tight">
+          <div>
+            <h3>当前权限</h3>
+            <p>登录后检查权限并加载后台数据。</p>
           </div>
-          <form class="form admin-form" id="product-form">
-            <div class="admin-form__row admin-form__row--two">
-              <label class="field"><input id="product-id" placeholder="id，例如 loxonin-s" aria-label="商品 ID" /></label>
-              <label class="field"><input id="product-barcode" placeholder="barcode / JAN" aria-label="商品条码" /></label>
-            </div>
-            <div class="admin-form__row admin-form__row--two">
-              <label class="field"><input id="product-name" placeholder="名称" aria-label="商品名称" /></label>
-              <label class="field"><input id="product-brand" placeholder="品牌" aria-label="商品品牌" /></label>
-            </div>
-            <div class="admin-form__row admin-form__row--two">
-              <label class="field"><input id="product-pack" placeholder="规格" aria-label="商品规格" /></label>
-              <label class="field"><input id="product-category" placeholder="分类" aria-label="商品分类" /></label>
-            </div>
-            <div class="admin-form__row admin-form__row--two">
-              <label class="field">
-                <select id="product-tone" aria-label="商品色调">
-                  <option value="sunset">sunset</option>
-                  <option value="mint">mint</option>
-                  <option value="azure">azure</option>
-                </select>
-              </label>
-              <label class="field"><input id="product-description" placeholder="简短描述" aria-label="商品简短描述" /></label>
-            </div>
-            <button class="button admin-form__submit" type="submit">添加商品</button>
-          </form>
-        </section>
+        </div>
+        <div class="admin-access-panel__body">
+          <div class="notice notice--compact">仅供维护账号使用。普通用户会被权限检查拦截。</div>
+          <div class="list" id="admin-access">
+            <div class="notice notice--compact">读取登录状态，再检查权限。</div>
+          </div>
+        </div>
+      </section>
 
-        <section class="tile tile--flow">
-          <div class="section__header section__header--tight">
-            <div>
-              <h3>当前权限</h3>
-              <p>登录后检查权限并加载后台数据。</p>
-            </div>
+      <div class="admin-panels">
+        <details class="tile tile--wide tile--flow admin-panel" id="admin-panel-submissions" open>
+          <summary class="admin-panel__summary">
+            <span class="admin-panel__chevron" aria-hidden="true"></span>
+            <span class="admin-panel__title">
+              <strong>待审核店头价</strong>
+              <small>用户提交的实体店价格，通过后才会进入公共比价。</small>
+            </span>
+            <span class="pill" id="admin-submissions-summary-count">待审核 0 条</span>
+            <span class="meta" id="admin-submissions-summary-status">读取中</span>
+          </summary>
+          <div class="admin-panel__body">
+            <div class="list" id="admin-price-submissions"></div>
           </div>
-          <div class="stack">
-            <div class="notice notice--compact">仅供维护账号使用。普通用户会被权限检查拦截。</div>
-            <div class="list" id="admin-access">
-              <div class="notice notice--compact">读取登录状态，再检查权限。</div>
-            </div>
-          </div>
-        </section>
+        </details>
 
-        <section class="tile tile--wide tile--flow">
-          <div class="section__header section__header--tight">
-            <div>
-              <h2>门店</h2>
-              <p>新增、更新或删除门店坐标与营业信息。</p>
-            </div>
-            <div class="pillrow admin-toolbar">
-              <button class="button button--ghost" id="store-reset" type="button">清空</button>
-              <button class="button button--ghost" id="store-delete" type="button">删除</button>
-            </div>
-          </div>
-          <form class="form admin-form" id="store-form">
-            <div class="admin-form__row admin-form__row--two">
-              <label class="field"><input id="store-id" placeholder="id，例如 shibuya-matsumoto" aria-label="门店 ID" /></label>
-              <label class="field"><input id="store-name" placeholder="门店名" aria-label="门店名称" /></label>
-            </div>
-            <div class="admin-form__row admin-form__row--two">
-              <label class="field"><input id="store-chain" placeholder="连锁名" aria-label="连锁名称" /></label>
-              <label class="field"><input id="store-hours" placeholder="营业时间" aria-label="营业时间" /></label>
-            </div>
-            <div class="admin-form__row admin-form__row--two">
-              <label class="field"><input id="store-address" placeholder="地址" aria-label="门店地址" /></label>
-              <label class="field"><input id="store-city" placeholder="城市" aria-label="城市" /></label>
-            </div>
-            <div class="admin-form__row admin-form__row--two">
-              <label class="field"><input id="store-pref" placeholder="都道府县" aria-label="都道府县" /></label>
-              <div class="admin-form__row admin-form__row--two admin-form__row--nested">
-                <label class="field"><input id="store-lat" type="number" step="0.000001" placeholder="纬度" aria-label="纬度" /></label>
-                <label class="field"><input id="store-lng" type="number" step="0.000001" placeholder="经度" aria-label="经度" /></label>
+        <details class="tile tile--wide tile--flow admin-panel" id="admin-panel-price">
+          <summary class="admin-panel__summary">
+            <span class="admin-panel__chevron" aria-hidden="true"></span>
+            <span class="admin-panel__title">
+              <strong>价格</strong>
+              <small>录入公开价格或会员价，或删除最近采样。</small>
+            </span>
+            <span class="pill" id="admin-price-summary-count">最近价格 0 条</span>
+            <span class="meta" id="admin-price-summary-status">未选择</span>
+          </summary>
+          <div class="admin-panel__body">
+            <div class="section__header section__header--tight">
+              <div>
+                <h2>价格</h2>
+                <p>录入公开价格或会员价，或删除最近采样。</p>
+              </div>
+              <div class="pillrow admin-toolbar">
+                <button class="button button--ghost" id="price-reset" type="button">清空</button>
+                <button class="button button--ghost" id="price-delete" type="button">删除</button>
               </div>
             </div>
-            <button class="button admin-form__submit" type="submit">保存门店</button>
-          </form>
-        </section>
-
-        <section class="tile tile--wide tile--flow">
-          <div class="section__header section__header--tight">
-            <div>
-              <h2>价格</h2>
-              <p>录入公开价格或会员价，或删除最近采样。</p>
-            </div>
-            <div class="pillrow admin-toolbar">
-              <button class="button button--ghost" id="price-reset" type="button">清空</button>
-              <button class="button button--ghost" id="price-delete" type="button">删除</button>
-            </div>
+            <form class="form admin-form" id="price-form">
+              <div class="admin-form__row admin-form__row--two">
+                <label class="field"><select id="price-product" aria-label="价格对应商品"></select></label>
+                <label class="field"><select id="price-store" aria-label="价格对应门店"></select></label>
+              </div>
+              <div class="admin-form__row admin-form__row--two">
+                <label class="field"><input id="price-yen" type="number" inputmode="numeric" placeholder="价格（円）" aria-label="价格（日元）" /></label>
+                <label class="field"><input id="price-source" placeholder="来源，例如 store shelf / community" aria-label="价格来源" /></label>
+              </div>
+              <div class="admin-form__row admin-form__row--two">
+                <label class="field"><input id="price-note" placeholder="备注" aria-label="价格备注" /></label>
+                <label class="field"><input id="price-collected" type="datetime-local" aria-label="采集时间" /></label>
+              </div>
+              <label class="field field--inline">
+                <input id="price-member" type="checkbox" />
+                <span>会员价</span>
+              </label>
+              <button class="button admin-form__submit" type="submit">保存价格</button>
+            </form>
           </div>
-          <form class="form admin-form" id="price-form">
-            <div class="admin-form__row admin-form__row--two">
-              <label class="field"><select id="price-product" aria-label="价格对应商品"></select></label>
-              <label class="field"><select id="price-store" aria-label="价格对应门店"></select></label>
+        </details>
+
+        <details class="tile tile--wide tile--flow admin-panel" id="admin-panel-product">
+          <summary class="admin-panel__summary">
+            <span class="admin-panel__chevron" aria-hidden="true"></span>
+            <span class="admin-panel__title">
+              <strong>商品</strong>
+              <small>新增或删除产品基础信息。</small>
+            </span>
+            <span class="pill" id="admin-product-summary-count">商品 0 条</span>
+            <span class="meta" id="admin-product-summary-status">未加载</span>
+          </summary>
+          <div class="admin-panel__body">
+            <div class="section__header section__header--tight">
+              <div>
+                <h2>商品</h2>
+                <p>新增或删除产品基础信息。</p>
+              </div>
+              <div class="pillrow admin-toolbar">
+                <button class="button button--ghost" id="product-reset" type="button">清空</button>
+                <button class="button button--ghost" id="product-delete" type="button">删除</button>
+              </div>
             </div>
-            <div class="admin-form__row admin-form__row--two">
-              <label class="field"><input id="price-yen" type="number" inputmode="numeric" placeholder="价格（円）" aria-label="价格（日元）" /></label>
-              <label class="field"><input id="price-source" placeholder="来源，例如 store shelf / community" aria-label="价格来源" /></label>
+            <form class="form admin-form" id="product-form">
+              <div class="admin-form__row admin-form__row--two">
+                <label class="field"><input id="product-id" placeholder="id，例如 loxonin-s" aria-label="商品 ID" /></label>
+                <label class="field"><input id="product-barcode" placeholder="barcode / JAN" aria-label="商品条码" /></label>
+              </div>
+              <div class="admin-form__row admin-form__row--two">
+                <label class="field"><input id="product-name" placeholder="名称" aria-label="商品名称" /></label>
+                <label class="field"><input id="product-brand" placeholder="品牌" aria-label="商品品牌" /></label>
+              </div>
+              <div class="admin-form__row admin-form__row--two">
+                <label class="field"><input id="product-pack" placeholder="规格" aria-label="商品规格" /></label>
+                <label class="field"><input id="product-category" placeholder="分类" aria-label="商品分类" /></label>
+              </div>
+              <div class="admin-form__row admin-form__row--two">
+                <label class="field">
+                  <select id="product-tone" aria-label="商品色调">
+                    <option value="sunset">sunset</option>
+                    <option value="mint">mint</option>
+                    <option value="azure">azure</option>
+                  </select>
+                </label>
+                <label class="field"><input id="product-description" placeholder="简短描述" aria-label="商品简短描述" /></label>
+              </div>
+              <button class="button admin-form__submit" type="submit">添加商品</button>
+            </form>
+          </div>
+        </details>
+
+        <details class="tile tile--wide tile--flow admin-panel" id="admin-panel-store">
+          <summary class="admin-panel__summary">
+            <span class="admin-panel__chevron" aria-hidden="true"></span>
+            <span class="admin-panel__title">
+              <strong>门店</strong>
+              <small>新增、更新或删除门店坐标与营业信息。</small>
+            </span>
+            <span class="pill" id="admin-store-summary-count">门店 0 条</span>
+            <span class="meta" id="admin-store-summary-status">未加载</span>
+          </summary>
+          <div class="admin-panel__body">
+            <div class="section__header section__header--tight">
+              <div>
+                <h2>门店</h2>
+                <p>新增、更新或删除门店坐标与营业信息。</p>
+              </div>
+              <div class="pillrow admin-toolbar">
+                <button class="button button--ghost" id="store-reset" type="button">清空</button>
+                <button class="button button--ghost" id="store-delete" type="button">删除</button>
+              </div>
             </div>
-            <div class="admin-form__row admin-form__row--two">
-              <label class="field"><input id="price-note" placeholder="备注" aria-label="价格备注" /></label>
-              <label class="field"><input id="price-collected" type="datetime-local" aria-label="采集时间" /></label>
+            <form class="form admin-form" id="store-form">
+              <div class="admin-form__row admin-form__row--two">
+                <label class="field"><input id="store-id" placeholder="id，例如 shibuya-matsumoto" aria-label="门店 ID" /></label>
+                <label class="field"><input id="store-name" placeholder="门店名" aria-label="门店名称" /></label>
+              </div>
+              <div class="admin-form__row admin-form__row--two">
+                <label class="field"><input id="store-chain" placeholder="连锁名" aria-label="连锁名称" /></label>
+                <label class="field"><input id="store-hours" placeholder="营业时间" aria-label="营业时间" /></label>
+              </div>
+              <div class="admin-form__row admin-form__row--two">
+                <label class="field"><input id="store-address" placeholder="地址" aria-label="门店地址" /></label>
+                <label class="field"><input id="store-city" placeholder="城市" aria-label="城市" /></label>
+              </div>
+              <div class="admin-form__row admin-form__row--two">
+                <label class="field"><input id="store-pref" placeholder="都道府县" aria-label="都道府县" /></label>
+                <div class="admin-form__row admin-form__row--two admin-form__row--nested">
+                  <label class="field"><input id="store-lat" type="number" step="0.000001" placeholder="纬度" aria-label="纬度" /></label>
+                  <label class="field"><input id="store-lng" type="number" step="0.000001" placeholder="经度" aria-label="经度" /></label>
+                </div>
+              </div>
+              <button class="button admin-form__submit" type="submit">保存门店</button>
+            </form>
+          </div>
+        </details>
+
+        <details class="tile tile--flow admin-panel" id="admin-panel-recent-products">
+          <summary class="admin-panel__summary">
+            <span class="admin-panel__chevron" aria-hidden="true"></span>
+            <span class="admin-panel__title">
+              <strong>最近商品</strong>
+              <small>点击可回填到表单。</small>
+            </span>
+            <span class="pill" id="admin-recent-products-summary-count">商品 0 条</span>
+            <span class="meta" id="admin-recent-products-summary-status">未加载</span>
+          </summary>
+          <div class="admin-panel__body">
+            <div class="section__header section__header--tight">
+              <h3>最近商品</h3>
+              <p>点击可回填到表单。</p>
             </div>
-            <label class="field field--inline">
-              <input id="price-member" type="checkbox" />
-              <span>会员价</span>
-            </label>
-            <button class="button admin-form__submit" type="submit">保存价格</button>
-          </form>
-        </section>
-
-        <section class="tile tile--flow">
-          <div class="section__header section__header--tight">
-            <h3>最近商品</h3>
-            <p>点击可回填到表单。</p>
+            <div class="list" id="admin-products"></div>
           </div>
-          <div class="list" id="admin-products"></div>
-        </section>
+        </details>
 
-        <section class="tile tile--flow">
-          <div class="section__header section__header--tight">
-            <h3>最近门店</h3>
-            <p>点击可回填到表单。</p>
+        <details class="tile tile--flow admin-panel" id="admin-panel-recent-stores">
+          <summary class="admin-panel__summary">
+            <span class="admin-panel__chevron" aria-hidden="true"></span>
+            <span class="admin-panel__title">
+              <strong>最近门店</strong>
+              <small>点击可回填到表单。</small>
+            </span>
+            <span class="pill" id="admin-recent-stores-summary-count">门店 0 条</span>
+            <span class="meta" id="admin-recent-stores-summary-status">未加载</span>
+          </summary>
+          <div class="admin-panel__body">
+            <div class="section__header section__header--tight">
+              <h3>最近门店</h3>
+              <p>点击可回填到表单。</p>
+            </div>
+            <div class="list" id="admin-stores"></div>
           </div>
-          <div class="list" id="admin-stores"></div>
-        </section>
+        </details>
 
-        <section class="tile tile--wide tile--flow">
-          <div class="section__header section__header--tight">
-            <h3>最近价格</h3>
-            <p>可用于快速检查录入结果。</p>
+        <details class="tile tile--wide tile--flow admin-panel" id="admin-panel-recent-prices">
+          <summary class="admin-panel__summary">
+            <span class="admin-panel__chevron" aria-hidden="true"></span>
+            <span class="admin-panel__title">
+              <strong>最近价格</strong>
+              <small>可用于快速检查录入结果。</small>
+            </span>
+            <span class="pill" id="admin-recent-prices-summary-count">价格 0 条</span>
+            <span class="meta" id="admin-recent-prices-summary-status">未加载</span>
+          </summary>
+          <div class="admin-panel__body">
+            <div class="section__header section__header--tight">
+              <h3>最近价格</h3>
+              <p>可用于快速检查录入结果。</p>
+            </div>
+            <div class="list" id="admin-prices"></div>
           </div>
-          <div class="list" id="admin-prices"></div>
-        </section>
-
-        <section class="tile tile--wide tile--flow">
-          <div class="section__header section__header--tight">
-            <h3>待审核店头价</h3>
-            <p>用户提交的实体店价格，通过后才会进入公共比价。</p>
-          </div>
-          <div class="list" id="admin-price-submissions"></div>
-        </section>
+        </details>
       </div>
     </div>
   </section>
@@ -213,6 +286,9 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     const productForm = document.querySelector('#product-form');
     const storeForm = document.querySelector('#store-form');
     const priceForm = document.querySelector('#price-form');
+    const storePanel = document.querySelector('#admin-panel-store');
+    const pricePanel = document.querySelector('#admin-panel-price');
+    const submissionsPanel = document.querySelector('#admin-panel-submissions');
     const productSelect = document.querySelector('#price-product');
     const storeSelect = document.querySelector('#price-store');
     const productList = document.querySelector('#admin-products');
@@ -225,6 +301,22 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     const productDelete = document.querySelector('#product-delete');
     const storeDelete = document.querySelector('#store-delete');
     const priceDelete = document.querySelector('#price-delete');
+    const summaryEls = {
+      submissionsCount: document.querySelector('#admin-submissions-summary-count'),
+      submissionsStatus: document.querySelector('#admin-submissions-summary-status'),
+      productCount: document.querySelector('#admin-product-summary-count'),
+      productStatus: document.querySelector('#admin-product-summary-status'),
+      storeCount: document.querySelector('#admin-store-summary-count'),
+      storeStatus: document.querySelector('#admin-store-summary-status'),
+      priceCount: document.querySelector('#admin-price-summary-count'),
+      priceStatus: document.querySelector('#admin-price-summary-status'),
+      recentProductsCount: document.querySelector('#admin-recent-products-summary-count'),
+      recentProductsStatus: document.querySelector('#admin-recent-products-summary-status'),
+      recentStoresCount: document.querySelector('#admin-recent-stores-summary-count'),
+      recentStoresStatus: document.querySelector('#admin-recent-stores-summary-status'),
+      recentPricesCount: document.querySelector('#admin-recent-prices-summary-count'),
+      recentPricesStatus: document.querySelector('#admin-recent-prices-summary-status'),
+    };
 
     const productFields = {
       id: document.querySelector('#product-id'),
@@ -304,6 +396,28 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       });
     }
 
+    function setSummaryText(key, value) {
+      const el = summaryEls[key];
+      if (el) el.textContent = value;
+    }
+
+    function updateAdminSummaries() {
+      setSummaryText('productCount', `商品 ${products.length} 条`);
+      setSummaryText('productStatus', products.length ? '已加载' : '暂无数据');
+      setSummaryText('storeCount', `门店 ${stores.length} 条`);
+      setSummaryText('storeStatus', stores.length ? '已加载' : '暂无数据');
+      setSummaryText('priceCount', `最近价格 ${prices.length} 条`);
+      setSummaryText('priceStatus', selectedPriceId ? '正在编辑' : (prices.length ? '已加载' : '暂无数据'));
+      setSummaryText('recentProductsCount', `商品 ${products.length} 条`);
+      setSummaryText('recentProductsStatus', products.length ? '可回填' : '暂无数据');
+      setSummaryText('recentStoresCount', `门店 ${stores.length} 条`);
+      setSummaryText('recentStoresStatus', stores.length ? '可回填' : '暂无数据');
+      setSummaryText('recentPricesCount', `价格 ${prices.length} 条`);
+      setSummaryText('recentPricesStatus', prices.length ? '可检查' : '暂无数据');
+      setSummaryText('submissionsCount', `待审核 ${priceSubmissions.length} 条`);
+      setSummaryText('submissionsStatus', priceSubmissions.length ? `最新 ${priceSubmissions[0]?.products?.name || priceSubmissions[0]?.product_id || '提交'}` : '暂无数据');
+    }
+
     function refreshSelectors() {
       if (productSelect) productSelect.innerHTML = optionHtml(products);
       if (storeSelect) storeSelect.innerHTML = optionHtml(stores);
@@ -338,6 +452,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         price_yen: (value) => String(value ?? ''),
         collected_at: (value) => (value ? value.slice(0, 16) : ''),
       });
+      updateAdminSummaries();
     }
 
     function resetProductForm() {
@@ -351,6 +466,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     function resetPriceForm() {
       selectedPriceId = '';
       resetFields(priceFields);
+      updateAdminSummaries();
     }
 
     function renderProducts() {
@@ -495,6 +611,8 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       renderStores();
       renderPrices();
       renderPriceSubmissions();
+      updateAdminSummaries();
+      if (submissionsPanel && priceSubmissions.length) submissionsPanel.open = true;
       if (status) status.textContent = getPrivatePageStatusCopy('admin', 'loaded', { email: profile.email || user.email });
       if (accessState) {
         accessState.innerHTML = `
@@ -637,6 +755,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       const editId = button.dataset.editStore;
       const deleteId = button.dataset.deleteStore;
       if (editId) {
+        if (storePanel) storePanel.open = true;
         populateStoreForm(stores.find((item) => item.id === editId));
       }
       if (deleteId && window.confirm(`删除门店 ${deleteId} ?`)) {
@@ -655,7 +774,10 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       const deleteId = button.dataset.deletePrice;
       if (editId) {
         const item = prices.find((entry) => entry.id === editId);
-        if (item) populatePriceForm(item);
+        if (item) {
+          if (pricePanel) pricePanel.open = true;
+          populatePriceForm(item);
+        }
       }
       if (deleteId && window.confirm(`删除价格记录 ${deleteId} ?`)) {
         await adminDeletePrice(deleteId);
