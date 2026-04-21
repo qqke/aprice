@@ -67,37 +67,47 @@ const base = import.meta.env.BASE_URL || '/';
           <div class="pillrow product-secondary-actions" aria-label="收藏操作">
             <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button>
           </div>
-          <div class="store-search">
-            <label class="field store-search__input">
-              <input id="personal-store-search" name="personal-store-search" type="search" inputmode="search" placeholder="搜索店名或连锁名" autocomplete="off" spellcheck="false" aria-label="搜索门店" />
-            </label>
-            <button class="button button--ghost store-search__clear" id="personal-store-search-clear" type="button" hidden>清空</button>
-          </div>
-          <div class="notice notice--compact" id="personal-store-status">正在加载门店...</div>
-          <div class="feed" id="personal-store-list">
-            <div class="notice notice--compact">正在加载门店...</div>
-          </div>
-          <button class="button button--ghost store-search__load-more" id="personal-store-load-more" type="button" hidden>加载更多</button>
-          <form class="form" id="personal-log-form">
-            <input id="personal-store" type="hidden" value="" />
-            <div class="grid grid--two">
-              <label class="field">
-                <input id="personal-price" name="personal-price" type="number" inputmode="numeric" placeholder="你的购买价" />
-              </label>
-              <label class="field">
-                <input id="personal-note" name="personal-note" placeholder="备注" />
-              </label>
+          <div class="personal-record-layout">
+            <div class="personal-store-panel">
+              <div class="store-search">
+                <label class="field store-search__input">
+                  <input id="personal-store-search" name="personal-store-search" type="search" inputmode="search" placeholder="搜索店名或连锁名" autocomplete="off" spellcheck="false" aria-label="搜索门店" />
+                </label>
+                <button class="button button--ghost store-search__clear" id="personal-store-search-clear" type="button" hidden>清空</button>
+              </div>
+              <div class="notice notice--compact" id="personal-store-status">正在加载门店...</div>
+              <div class="feed" id="personal-store-list">
+                <div class="notice notice--compact">正在加载门店...</div>
+              </div>
+              <button class="button button--ghost store-search__load-more" id="personal-store-load-more" type="button" hidden>加载更多</button>
             </div>
-            <label class="field">
-              <input id="personal-evidence-url" name="personal-evidence-url" type="url" placeholder="价签或小票图片链接（可选）" />
-            </label>
-            <label class="field field--inline">
-              <input id="personal-share-public" type="checkbox" checked />
-              <span>参与公共比价（提交后由管理员审核）</span>
-            </label>
-            <button class="button" type="submit">提交店头价格</button>
-            <div class="notice notice--compact" id="personal-status">登录后可提交真实店头价；参与公共比价的记录会先进入审核。</div>
-          </form>
+            <form class="form personal-log-form" id="personal-log-form">
+              <input id="personal-store" type="hidden" value="" />
+              <div class="personal-log-form__selected">
+                <span>当前门店</span>
+                <strong id="personal-selected-store-label">未选择门店</strong>
+              </div>
+              <div class="personal-log-form__action">
+                <label class="field">
+                  <input id="personal-price" name="personal-price" type="number" inputmode="numeric" placeholder="你的购买价" />
+                </label>
+                <button class="button" type="submit" disabled>提交店头价格</button>
+              </div>
+              <div class="personal-log-form__secondary">
+                <label class="field">
+                  <input id="personal-note" name="personal-note" placeholder="备注" />
+                </label>
+                <label class="field">
+                  <input id="personal-evidence-url" name="personal-evidence-url" type="url" placeholder="价签或小票图片链接（可选）" />
+                </label>
+                <label class="field field--inline">
+                  <input id="personal-share-public" type="checkbox" checked />
+                  <span>参与公共比价（提交后由管理员审核）</span>
+                </label>
+              </div>
+              <div class="notice notice--compact" id="personal-status">登录后可提交真实店头价；参与公共比价的记录会先进入审核。</div>
+            </form>
+          </div>
         </section>
       </div>
     </div>
@@ -158,6 +168,8 @@ const base = import.meta.env.BASE_URL || '/';
     const evidenceUrl = document.querySelector('#personal-evidence-url');
     const sharePublic = document.querySelector('#personal-share-public');
     const status = document.querySelector('#personal-status');
+    const selectedStoreLabel = document.querySelector('#personal-selected-store-label');
+    const personalSubmitButton = form?.querySelector('button[type="submit"]');
 
     let product = null;
     let productId = '';
@@ -211,15 +223,23 @@ const base = import.meta.env.BASE_URL || '/';
         inactiveLabel: '添加商品收藏',
         disabled: !productId,
       });
-      syncFavoriteButton(favoriteStoreButton, activeStoreId && favoriteStoreIds.has(activeStoreId), {
+      const favoriteStoreId = selectedStoreId || activeStoreId;
+      syncFavoriteButton(favoriteStoreButton, favoriteStoreId && favoriteStoreIds.has(favoriteStoreId), {
         activeLabel: '取消门店收藏',
         inactiveLabel: '添加门店收藏',
-        disabled: !activeStoreId,
+        disabled: !favoriteStoreId,
       });
     }
 
     function getSelectedStore() {
       return storeRows.find((item) => item.id === selectedStoreId) || selectedStoreSnapshot || null;
+    }
+
+    function syncPersonalLogFormState({ focus = false } = {}) {
+      const selectedStore = selectedStoreId ? getSelectedStore() : null;
+      if (selectedStoreLabel) selectedStoreLabel.textContent = selectedStore?.name || '未选择门店';
+      if (personalSubmitButton instanceof HTMLButtonElement) personalSubmitButton.disabled = !selectedStoreId;
+      if (focus && price instanceof HTMLInputElement) price.focus({ preventScroll: true });
     }
 
     function syncStoreLoadMoreButton() {
@@ -278,7 +298,7 @@ const base = import.meta.env.BASE_URL || '/';
         return;
       }
 
-      activeStoreId = rows[0]?.store_id || '';
+      activeStoreId = selectedStoreId;
       syncFavoriteButtons();
       const sortedRows = rows.slice().sort((a, b) => Number(a.price_yen || 0) - Number(b.price_yen || 0));
       const minPrice = Number(sortedRows[0]?.price_yen || 0);
@@ -311,6 +331,7 @@ const base = import.meta.env.BASE_URL || '/';
       if (storeLoading && !storeRows.length) {
         storeList.innerHTML = '<div class="notice notice--compact">正在加载门店...</div>';
         if (storeStatus) storeStatus.textContent = '正在加载门店...';
+        syncPersonalLogFormState();
         syncStoreLoadMoreButton();
         return;
       }
@@ -319,6 +340,7 @@ const base = import.meta.env.BASE_URL || '/';
       if (!storeRows.length && !selectedStore) {
         storeList.innerHTML = `<div class="notice notice--compact">${storeSearchTerm ? '没有匹配到门店，换个关键词试试。' : '暂无门店。'}</div>`;
         if (storeStatus) storeStatus.textContent = storeSearchTerm ? '没有匹配到门店，换个关键词试试。' : '暂无门店可选。';
+        syncPersonalLogFormState();
         syncStoreLoadMoreButton();
         return;
       }
@@ -327,7 +349,6 @@ const base = import.meta.env.BASE_URL || '/';
         ? [selectedStore, ...storeRows]
         : storeRows;
 
-      if (!selectedStoreId) selectedStoreId = activeStoreId || visibleStores[0]?.id || '';
       if (store) store.value = selectedStoreId;
       if (storeStatus) {
         const selectedMatchesSearch = selectedStore ? storeRows.some((item) => item.id === selectedStore.id) : false;
@@ -369,6 +390,7 @@ const base = import.meta.env.BASE_URL || '/';
           </button>
         `;
       }).join('');
+      syncPersonalLogFormState();
       syncStoreLoadMoreButton();
     }
 
@@ -401,6 +423,7 @@ const base = import.meta.env.BASE_URL || '/';
         personalPriceIndex = new Map();
         if (status) status.textContent = '登录后可以保存你的购买价。';
         renderStorePicker();
+        syncPersonalLogFormState();
         return;
       }
       const logs = await fetchPersonalLogs(user.id);
@@ -473,6 +496,7 @@ const base = import.meta.env.BASE_URL || '/';
       if (store) store.value = selectedStoreId;
       const personalPrice = personalPriceIndex.get(selectedStoreId);
       if (price) price.value = personalPrice ? String(personalPrice.price_yen) : '';
+      syncPersonalLogFormState({ focus: true });
       if (status) status.textContent = personalPrice ? `已回填你的最新价 ${formatYen(personalPrice.price_yen)}。` : '这家门店还没有你的个人价，输入后就能保存。';
       renderStorePicker();
       syncFavoriteButtons();
@@ -514,10 +538,11 @@ const base = import.meta.env.BASE_URL || '/';
         redirectToLogin(authGateLink?.href || resolveBase('login/'), authGate);
         return;
       }
-      if (!activeStoreId) return;
-      const result = await toggleFavorite('store', activeStoreId);
-      if (result?.action === 'added') favoriteStoreIds.add(activeStoreId);
-      if (result?.action === 'removed') favoriteStoreIds.delete(activeStoreId);
+      const favoriteStoreId = selectedStoreId || activeStoreId;
+      if (!favoriteStoreId) return;
+      const result = await toggleFavorite('store', favoriteStoreId);
+      if (result?.action === 'added') favoriteStoreIds.add(favoriteStoreId);
+      if (result?.action === 'removed') favoriteStoreIds.delete(favoriteStoreId);
       syncFavoriteButtons();
     });
 
@@ -543,6 +568,10 @@ const base = import.meta.env.BASE_URL || '/';
         return;
       }
       try {
+        if (!selectedStoreId && !store?.value) {
+          if (status) status.textContent = '请选择门店后记录价格。';
+          return;
+        }
         const submittedPrice = Number(price?.value);
         const shouldShare = sharePublic instanceof HTMLInputElement ? sharePublic.checked : false;
         await submitStorePrice({

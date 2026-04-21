@@ -10,6 +10,7 @@ assert.equal(normalizeInternalRedirectTarget('', { origin, basePath, loginPath }
 assert.equal(normalizeInternalRedirectTarget(null, { origin, basePath, loginPath }), '');
 assert.equal(normalizeInternalRedirectTarget(undefined, { origin, basePath, loginPath }), '');
 assert.equal(normalizeInternalRedirectTarget('/aprice/', {}), '');
+assert.equal(normalizeInternalRedirectTarget('/aprice/product/loxonin-s/', { origin }), '');
 
 assert.equal(
   normalizeInternalRedirectTarget('/aprice/product/loxonin-s/?tab=prices#stores', {
@@ -18,6 +19,15 @@ assert.equal(
     loginPath,
   }),
   '/aprice/product/loxonin-s/?tab=prices#stores',
+);
+
+assert.equal(
+  normalizeInternalRedirectTarget('  /aprice/product/eve-a/  ', {
+    origin,
+    basePath,
+    loginPath,
+  }),
+  '/aprice/product/eve-a/',
 );
 
 assert.equal(
@@ -48,6 +58,15 @@ assert.equal(
 );
 
 assert.equal(
+  normalizeInternalRedirectTarget('https://aprice.example/other/path', {
+    origin,
+    basePath,
+    loginPath,
+  }),
+  '',
+);
+
+assert.equal(
   normalizeInternalRedirectTarget('/other/path', {
     origin,
     basePath,
@@ -58,6 +77,14 @@ assert.equal(
 
 assert.equal(
   normalizeInternalRedirectTarget('/aprice/login/?redirect=/aprice/', {
+    origin,
+    basePath,
+    loginPath,
+  }),
+  '',
+);
+assert.equal(
+  normalizeInternalRedirectTarget('/aprice/login/?redirect=/aprice/admin/#top', {
     origin,
     basePath,
     loginPath,

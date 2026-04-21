@@ -3218,6 +3218,71 @@ body.product-page .store-picker__item.is-active {
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
 }
 
+body.product-page .personal-record-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  align-items: start;
+  gap: 12px;
+}
+
+body.product-page .personal-store-panel {
+  min-width: 0;
+}
+
+body.product-page .personal-log-form {
+  position: sticky;
+  top: 88px;
+  z-index: 3;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(42, 109, 245, 0.14);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.94)),
+    rgba(255, 255, 255, 0.96);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(14px) saturate(130%);
+}
+
+body.product-page .personal-log-form__selected {
+  display: grid;
+  gap: 2px;
+}
+
+body.product-page .personal-log-form__selected span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+body.product-page .personal-log-form__selected strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 0.98rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.product-page .personal-log-form__action {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+body.product-page .personal-log-form__action .field {
+  margin: 0;
+}
+
+body.product-page .personal-log-form__action .button {
+  width: 100%;
+}
+
+body.product-page .personal-log-form__secondary {
+  display: grid;
+  gap: 8px;
+}
+
 body.product-page .store-search {
   display: flex;
   gap: 8px;
@@ -3885,6 +3950,37 @@ body.admin-page .admin-record-actions--price {
 
   body.product-page .grid {
     gap: 8px;
+  }
+
+  body.product-page .personal-record-layout {
+    grid-template-columns: 1fr;
+  }
+
+  body.product-page .personal-log-form {
+    order: -1;
+    top: auto;
+    bottom: calc(var(--mobile-footer-space, 72px) + env(safe-area-inset-bottom) + 8px);
+    border-radius: 16px;
+  }
+
+  body.product-page .personal-log-form__action {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+  }
+
+  body.product-page .personal-log-form__action .button {
+    min-width: 120px;
+    padding-inline: 14px;
+  }
+
+  body.product-page .personal-log-form__secondary {
+    grid-template-columns: 1fr;
+  }
+
+  @media (max-width: 380px) {
+    body.product-page .personal-log-form__action {
+      grid-template-columns: 1fr;
+    }
   }
 
   body.product-page .grid--two {

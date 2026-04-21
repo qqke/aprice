@@ -35,6 +35,8 @@ async function main() {
       const productSlug = '9999999999999';
       const productPath = `/aprice/product/${productSlug}/`;
       const personalLogs = makePersonalPriceLogs();
+      const restCalls = [];
+      const favoriteRows = [];
 
       page.on('pageerror', (error) => pageErrors.push(error.message));
       page.on('console', (message) => {
@@ -71,6 +73,7 @@ async function main() {
         const request = route.request();
         const url = new URL(requestUrl);
         requests.push(requestUrl);
+        restCalls.push({ method: request.method(), url: requestUrl, body: request.postData() || '' });
 
         if (url.pathname.endsWith('/rpc/submit_store_price')) {
           if (request.method() === 'POST') {
@@ -99,6 +102,54 @@ async function main() {
               status: 200,
               contentType: 'application/json',
               body: JSON.stringify([nextEntry]),
+            });
+            return;
+          }
+        }
+
+        if (url.pathname.endsWith('/favorites')) {
+          if (request.method() === 'GET') {
+            const entityType = url.searchParams.get('entity_type')?.replace(/^eq\./, '') || '';
+            const entityId = url.searchParams.get('entity_id')?.replace(/^eq\./, '') || '';
+            const filteredRows = favoriteRows.filter((row) => {
+              if (entityType && row.entity_type !== entityType) return false;
+              if (entityId && row.entity_id !== entityId) return false;
+              return true;
+            });
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify(filteredRows),
+            });
+            return;
+          }
+
+          if (request.method() === 'POST') {
+            const body = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
+            const nextFavorite = {
+              id: `favorite-${favoriteRows.length + 1}`,
+              user_id: body.user_id,
+              entity_type: body.entity_type,
+              entity_id: body.entity_id,
+              created_at: '2026-04-05T09:00:00.000Z',
+            };
+            favoriteRows.unshift(nextFavorite);
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify([nextFavorite]),
+            });
+            return;
+          }
+
+          if (request.method() === 'DELETE') {
+            const favoriteId = url.searchParams.get('id')?.replace(/^eq\./, '') || '';
+            const index = favoriteRows.findIndex((row) => row.id === favoriteId);
+            const deletedRows = index >= 0 ? favoriteRows.splice(index, 1) : [];
+            await route.fulfill({
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify(deletedRows),
             });
             return;
           }
@@ -169,10 +220,26 @@ async function main() {
       assert.match(storePickerText || '', /Welcia Shibuya/);
       assert.match(storeStatusText || '', /当前位置优先排序|点击门店即可回填你的最新价/);
       assert.match(personalStatusText || '', /已同步 3 条个人价格记录/);
+      assert.equal(await page.locator('#personal-selected-store-label').textContent(), '未选择门店');
+      assert.equal(await page.locator('#personal-store').inputValue(), '');
+      assert.equal(await page.locator('#personal-log-form button[type="submit"]').isDisabled(), true);
+      assert.equal(await page.locator('#favorite-store-button').isDisabled(), true);
       assert.match(requests.join('\n'), /\/rest\/v1\/prices/);
       assert.match(requests.join('\n'), /\/rest\/v1\/stores/);
       assert.match(requests.join('\n'), /limit=11/);
       assert.match(requests.join('\n'), /\/rest\/v1\/user_price_logs/);
+
+      const submitRpcCountBeforeSelection = restCalls.filter((call) => call.url.includes('/rest/v1/rpc/submit_store_price')).length;
+      await page.locator('#personal-price').fill('701');
+      await page.locator('#personal-log-form').evaluate((form) => {
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      });
+      await page.waitForFunction(() => String(document.querySelector('#personal-status')?.textContent || '').includes('请选择门店后记录价格。'), null, { timeout: 10000 });
+      assert.equal(
+        restCalls.filter((call) => call.url.includes('/rest/v1/rpc/submit_store_price')).length,
+        submitRpcCountBeforeSelection,
+      );
+
       assert.equal(await page.locator('#personal-store-list .store-picker__item').count(), 10);
       await page.locator('#personal-store-load-more').click();
       await page.waitForFunction(() => document.querySelectorAll('#personal-store-list .store-picker__item').length > 10, null, { timeout: 10000 });
@@ -195,11 +262,37 @@ async function main() {
       await page.locator('#personal-store-list [data-store-id="welcia-shibuya"]').click();
       await page.waitForFunction(() => String(document.querySelector('#personal-price')?.value || '') === '712', null, { timeout: 10000 });
       assert.equal(await page.locator('#personal-price').inputValue(), '712');
+      assert.equal(await page.locator('#personal-selected-store-label').textContent(), 'Welcia Shibuya');
+      assert.equal(await page.locator('#personal-store').inputValue(), 'welcia-shibuya');
+      assert.equal(await page.locator('#personal-log-form button[type="submit"]').isEnabled(), true);
+      assert.equal(await page.locator('#favorite-store-button').isEnabled(), true);
+      assert.equal(await page.evaluate(() => document.activeElement?.id), 'personal-price');
       assert.match(await page.locator('#personal-status').textContent(), /712/);
 
       await page.locator('#personal-store-search').fill('sugi');
       await page.waitForFunction(() => String(document.querySelector('#personal-store-list')?.textContent || '').includes('Welcia Shibuya'), null, { timeout: 10000 });
       assert.match(await page.locator('#personal-store-status').textContent(), /当前选择已保留在顶部|没有匹配到搜索词/);
+      assert.equal(await page.locator('#personal-selected-store-label').textContent(), 'Welcia Shibuya');
+      assert.equal(await page.locator('#personal-store').inputValue(), 'welcia-shibuya');
+      assert.equal(await page.locator('#personal-log-form button[type="submit"]').isEnabled(), true);
+
+      await page.locator('#favorite-store-button').click();
+      await page.waitForFunction(() => document.querySelector('#favorite-store-button')?.textContent?.includes('取消门店收藏'), null, { timeout: 10000 });
+      assert.ok(
+        restCalls.some((call) => call.method === 'POST' && call.url.includes('/rest/v1/favorites') && call.body.includes('"entity_type":"store"') && call.body.includes('"entity_id":"welcia-shibuya"')),
+        `expected selected store favorite insert, got ${restCalls.map((call) => `${call.method} ${call.url} ${call.body}`).join(' | ')}`,
+      );
+      assert.equal(
+        restCalls.some((call) => call.method === 'POST' && call.url.includes('/rest/v1/favorites') && call.body.includes('"entity_id":"sugi-hiroo"')),
+        false,
+      );
+
+      await page.locator('#favorite-store-button').click();
+      await page.waitForFunction(() => document.querySelector('#favorite-store-button')?.textContent?.includes('添加门店收藏'), null, { timeout: 10000 });
+      assert.ok(
+        restCalls.some((call) => call.method === 'DELETE' && call.url.includes('/rest/v1/favorites') && call.url.includes('id=eq.favorite-1')),
+        `expected selected store favorite delete, got ${restCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
+      );
 
       await page.locator('#personal-store-search-clear').click();
       await page.waitForFunction(() => String(document.querySelector('#personal-store-search')?.value || '') === '', null, { timeout: 10000 });
@@ -215,7 +308,11 @@ async function main() {
       assert.match(await page.locator('#personal-status').textContent(), /审核后会进入公共比价/);
       assert.equal(await page.locator('#product-auth-gate').isHidden(), true);
       assert.match(requests.join('\n'), /\/rest\/v1\/rpc\/submit_store_price/);
-      assert.doesNotMatch(requests.join('\n'), /POST .*\/rest\/v1\/user_price_logs/);
+      assert.ok(
+        restCalls.some((call) => call.method === 'POST' && call.url.includes('/rest/v1/rpc/submit_store_price') && call.body.includes('"store_id":"welcia-shibuya"')),
+        `expected submit_store_price payload for selected store, got ${restCalls.map((call) => `${call.method} ${call.url} ${call.body}`).join(' | ')}`,
+      );
+      assert.equal(restCalls.some((call) => call.method === 'POST' && call.url.includes('/rest/v1/user_price_logs')), false);
 
       console.log('product-page browser test passed');
     } finally {
