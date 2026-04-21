@@ -161,8 +161,11 @@ async function main() {
       assert.match(personalStatusText || '', /已同步 3 条个人价格记录/);
       assert.match(requests.join('\n'), /\/rest\/v1\/prices/);
       assert.match(requests.join('\n'), /\/rest\/v1\/stores/);
-      assert.match(requests.join('\n'), /limit=21/);
+      assert.match(requests.join('\n'), /limit=11/);
       assert.match(requests.join('\n'), /\/rest\/v1\/user_price_logs/);
+      assert.equal(await page.locator('#personal-store-list .store-picker__item').count(), 10);
+      await page.locator('#personal-store-load-more').click();
+      await page.waitForFunction(() => document.querySelectorAll('#personal-store-list .store-picker__item').length > 10, null, { timeout: 10000 });
       assert.equal(await page.locator('#personal-store-list .store-picker__item').count(), 20);
       await page.locator('#personal-store-load-more').click();
       await page.waitForFunction(() => document.querySelectorAll('#personal-store-list .store-picker__item').length > 20, null, { timeout: 10000 });
@@ -177,7 +180,7 @@ async function main() {
 
       await page.locator('#personal-store-search').fill('');
       await page.waitForFunction(() => String(document.querySelector('#personal-store-search-clear')?.hidden || '') === 'true', null, { timeout: 10000 });
-      await page.waitForFunction(() => document.querySelectorAll('#personal-store-list .store-picker__item').length === 20, null, { timeout: 10000 });
+      await page.waitForFunction(() => document.querySelectorAll('#personal-store-list .store-picker__item').length === 10, null, { timeout: 10000 });
 
       await page.locator('#personal-store-list [data-store-id="welcia-shibuya"]').click();
       await page.waitForFunction(() => String(document.querySelector('#personal-price')?.value || '') === '712', null, { timeout: 10000 });

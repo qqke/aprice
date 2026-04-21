@@ -75,8 +75,8 @@ export async function fetchAllStores() {
   });
 }
 
-export async function fetchStoresPage({ term = '', limit = 20, offset = 0 } = {}) {
-  const pageSize = Math.max(1, Number(limit) || 20);
+export async function fetchStoresPage({ term = '', limit = 10, offset = 0 } = {}) {
+  const pageSize = Math.max(1, Number(limit) || 10);
   const pageOffset = Math.max(0, Number(offset) || 0);
   const q = String(term || '').trim();
   const query = {
