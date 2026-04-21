@@ -23,16 +23,72 @@ const base = import.meta.env.BASE_URL || '/';
     if (matched?.[1]) {
       document.documentElement.dataset.productFallbackLoading = 'true';
       const target = new URL(`${base}product-runtime/`, window.location.origin);
+
+      const withTargetBase = (value) => {
+        if (!value) return value;
+        return new URL(value, target).toString();
+      };
+
+      const copyAttributes = (source, destination) => {
+        for (const { name, value } of source.attributes) {
+          destination.setAttribute(name, (name === 'href' || name === 'src') ? withTargetBase(value) : value);
+        }
+      };
+
+      const waitForStylesheet = (link) => new Promise((resolve) => {
+        const href = withTargetBase(link.getAttribute('href'));
+        if (!href) {
+          resolve();
+          return;
+        }
+
+        const existing = [...document.querySelectorAll('link[rel="stylesheet"]')]
+          .find((item) => item.href === href);
+        if (existing) {
+          if (existing.sheet) {
+            resolve();
+            return;
+          }
+          existing.addEventListener('load', resolve, { once: true });
+          existing.addEventListener('error', resolve, { once: true });
+          return;
+        }
+
+        const next = document.createElement('link');
+        copyAttributes(link, next);
+        next.href = href;
+        next.addEventListener('load', resolve, { once: true });
+        next.addEventListener('error', resolve, { once: true });
+        document.head.appendChild(next);
+      });
+
+      const runInsertedScripts = (root) => {
+        for (const script of root.querySelectorAll('script')) {
+          const next = document.createElement('script');
+          copyAttributes(script, next);
+          next.textContent = script.textContent;
+          script.replaceWith(next);
+        }
+      };
+
       fetch(target.toString(), { credentials: 'same-origin' })
         .then((response) => {
           if (!response.ok) throw new Error(`商品页加载失败: ${response.status}`);
           return response.text();
         })
-        .then((html) => {
-          const writeDocument = Reflect.get(document, 'write');
-          document.open();
-          writeDocument.call(document, html);
-          document.close();
+        .then(async (html) => {
+          const nextDocument = new DOMParser().parseFromString(html, 'text/html');
+          const nextMain = nextDocument.querySelector('#main-content');
+          const currentMain = document.querySelector('#main-content');
+          if (!nextMain || !currentMain) throw new Error('商品页内容缺失');
+
+          document.title = nextDocument.title || document.title;
+          await Promise.all([...nextDocument.querySelectorAll('link[rel="stylesheet"]')].map(waitForStylesheet));
+
+          document.body.className = nextDocument.body.className || 'product-page';
+          currentMain.innerHTML = nextMain.innerHTML;
+          runInsertedScripts(currentMain);
+          delete document.documentElement.dataset.productFallbackLoading;
         })
         .catch((error) => {
           delete document.documentElement.dataset.productFallbackLoading;
