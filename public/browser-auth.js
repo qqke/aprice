@@ -214,7 +214,7 @@ export async function submitStorePrice(entry) {
     throw new Error('product_id, store_id and price_yen are required');
   }
   const session = await requireSession();
-  return restRpc('submit_store_price', entry, { token: session.access_token });
+  return restRpc('submit_store_price', { payload: entry }, { token: session.access_token });
 }
 
 export async function fetchPendingPriceSubmissions(limit = 20) {
@@ -233,7 +233,7 @@ export async function fetchPendingPriceSubmissions(limit = 20) {
 
 export async function adminReviewPriceSubmission(payload) {
   const session = await requireSession();
-  return restRpc('admin_review_price_submission', payload, { token: session.access_token });
+  return restRpc('admin_review_price_submission', { payload }, { token: session.access_token });
 }
 
 export async function fetchFavorites(userId) {

@@ -123,9 +123,9 @@ async function main() {
       assert.ok(
         rpcCalls.some((call) =>
           call.url.includes('/rpc/admin_review_price_submission') &&
-          call.bodyJson?.id === '11111111-1111-4111-8111-111111111111' &&
-          call.bodyJson?.action === 'approve' &&
-          String(call.bodyJson?.confidence_score) === '70'
+          call.bodyJson?.payload?.id === '11111111-1111-4111-8111-111111111111' &&
+          call.bodyJson?.payload?.action === 'approve' &&
+          String(call.bodyJson?.payload?.confidence_score) === '70'
         ),
         `expected approve payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
       );
@@ -135,8 +135,8 @@ async function main() {
       assert.ok(
         rpcCalls.some((call) =>
           call.url.includes('/rpc/admin_review_price_submission') &&
-          call.bodyJson?.id === '22222222-2222-4222-8222-222222222222' &&
-          call.bodyJson?.action === 'reject'
+          call.bodyJson?.payload?.id === '22222222-2222-4222-8222-222222222222' &&
+          call.bodyJson?.payload?.action === 'reject'
         ),
         `expected reject payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
       );
@@ -310,7 +310,6 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
 
 
 

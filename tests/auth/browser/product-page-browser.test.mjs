@@ -74,7 +74,8 @@ async function main() {
 
         if (url.pathname.endsWith('/rpc/submit_store_price')) {
           if (request.method() === 'POST') {
-            const body = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
+            const bodyJson = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
+            const body = bodyJson.payload || bodyJson;
             const nextEntry = {
               id: `personal-log-${personalLogs.length + 1}`,
               user_id: 'member-1',
