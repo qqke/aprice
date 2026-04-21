@@ -50,6 +50,7 @@ const base = import.meta.env.BASE_URL || '/';
       const id = matched[1];
       const target = new URL(`${base}product-runtime/`, window.location.origin);
       target.searchParams.set('id', id);
+      target.searchParams.set('fallback', '1');
       window.location.replace(target.toString());
     }
   </script>

@@ -4,155 +4,72 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 export const prerender = true;
 const base = import.meta.env.BASE_URL || '/';
 ---
-<BaseLayout title="商品详情 - 搜比价" description="商品详情、门店价格与最近采样。" bodyClass="product-page">
+<BaseLayout title="正在打开商品详情 - 搜比价" description="正在打开完整商品详情页。" bodyClass="product-page">
   <section class="section section--first-workspace" id="product-runtime-page" data-base={base}>
     <div class="shell">
       <div class="eyebrow">商品</div>
       <div class="tile tile--wide tile--flow">
         <div class="section__header section__header--tight">
           <div>
-            <h1 class="product-title" id="runtime-product-title">正在加载商品...</h1>
-            <p class="product-sub" id="runtime-product-sub">请稍候，正在拉取商品信息与门店价格。</p>
+            <h1 class="product-title" id="runtime-product-title">正在打开完整商品页...</h1>
+            <p class="product-sub" id="runtime-product-sub">请稍候，正在转到包含个人记录和收藏状态的商品详情。</p>
           </div>
         </div>
-        <div class="pillrow" id="runtime-product-meta">
-          <span class="pill">等待数据</span>
+        <div class="pillrow" id="runtime-product-actions">
+          <span class="pill">跳转中</span>
         </div>
-      </div>
-
-      <div class="grid">
-        <section class="tile tile--wide tile--flow">
-          <div class="section__header section__header--tight">
-            <div>
-              <h3>门店价格</h3>
-              <p>按采样时间排序。</p>
-            </div>
-          </div>
-          <div class="feed" id="runtime-price-list">
-            <div class="notice notice--compact">正在加载价格...</div>
-          </div>
-        </section>
       </div>
     </div>
   </section>
 
   <script type="module" is:inline>
-    const { resolveBase, fetchPricesForProduct, formatYen } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
-    const { restGet } = await import(window.__APriceConfig?.supabaseRestJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'supabase-rest.js');
+    const { resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
 
     const title = document.querySelector('#runtime-product-title');
     const sub = document.querySelector('#runtime-product-sub');
-    const meta = document.querySelector('#runtime-product-meta');
-    const list = document.querySelector('#runtime-price-list');
-
-    function escapeHtml(value = '') {
-      return String(value || '')
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-    }
+    const actions = document.querySelector('#runtime-product-actions');
 
     function readProductId() {
       const url = new URL(window.location.href);
-      const fromQuery = String(url.searchParams.get('id') || '').trim();
-      if (fromQuery) return fromQuery;
-      return '';
+      return String(url.searchParams.get('id') || '').trim();
     }
 
-    function renderMissingId() {
+    function isFallbackVisit() {
+      const url = new URL(window.location.href);
+      return url.searchParams.get('fallback') === '1';
+    }
+
+    function escapePathSegment(value) {
+      return encodeURIComponent(value).replaceAll('%2F', '');
+    }
+
+    const productId = readProductId();
+    if (productId) {
+      const target = resolveBase(`product/${escapePathSegment(productId)}/`);
+      if (actions) {
+        actions.innerHTML = `<a class="button" href="${target}">打开完整详情</a>`;
+      }
+      if (isFallbackVisit()) {
+        if (title) title.textContent = '完整商品页暂时没有命中';
+        if (sub) sub.textContent = '可以重新打开完整详情，或回到扫码页继续查询。';
+        if (actions) {
+          actions.innerHTML = `
+            <a class="button" href="${target}">重新打开完整详情</a>
+            <a class="button button--ghost" href="${resolveBase('scan/')}">去扫码</a>
+          `;
+        }
+      } else {
+        window.location.replace(target);
+      }
+    } else {
       if (title) title.textContent = '缺少商品编号';
       if (sub) sub.textContent = 'URL 里没有商品 id，返回首页或扫码重新打开。';
-      if (meta) meta.innerHTML = `<a class="button button--ghost" href="${resolveBase('')}">返回首页</a>`;
-      if (list) {
-        list.innerHTML = `
-          <div class="notice notice--compact">
-            未提供商品 id，无法查询价格。
-          </div>
+      if (actions) {
+        actions.innerHTML = `
+          <a class="button" href="${resolveBase('scan/')}">去扫码</a>
+          <a class="button button--ghost" href="${resolveBase('')}">返回首页</a>
         `;
       }
     }
-
-    function renderNotFound(productId) {
-      if (title) title.textContent = '未找到该商品';
-      if (sub) sub.textContent = `商品 id: ${productId}`;
-      if (meta) meta.innerHTML = `<span class="pill">未命中</span><a class="button button--ghost" href="${resolveBase('scan/')}">去扫码</a>`;
-      if (list) {
-        list.innerHTML = `
-          <div class="notice notice--compact">
-            当前数据库里没有这条商品记录。
-          </div>
-        `;
-      }
-    }
-
-    function renderProduct(product) {
-      if (title) title.textContent = product.name || product.id || '商品详情';
-      if (sub) sub.textContent = product.description || '查看该商品在不同门店的采样价格。';
-      if (meta) {
-        meta.innerHTML = `
-          <span class="pill">JAN ${escapeHtml(product.barcode || '')}</span>
-          <span class="pill">${escapeHtml(product.brand || '品牌未知')}</span>
-          <span class="pill">${escapeHtml(product.pack || '规格未知')}</span>
-          <a class="button button--ghost" href="${resolveBase('scan/')}">去扫码</a>
-        `;
-      }
-      document.title = `${product.name || product.id} - 搜比价`;
-    }
-
-    function renderPrices(rows) {
-      if (!list) return;
-      if (!rows?.length) {
-        list.innerHTML = `
-          <div class="notice notice--compact">
-            暂无价格记录。
-          </div>
-        `;
-        return;
-      }
-
-      list.innerHTML = rows.map((row) => `
-        <div class="feed__item">
-          <div>
-            <strong>${escapeHtml(row.stores?.name || 'Unknown store')}</strong>
-            <small>${escapeHtml(row.stores?.city || '')}${row.stores?.pref ? ` · ${escapeHtml(row.stores.pref)}` : ''}${row.collected_at ? ` · ${escapeHtml(new Date(row.collected_at).toLocaleDateString('ja-JP'))}` : ''}</small>
-          </div>
-          <span class="price">${escapeHtml(formatYen(row.price_yen))}</span>
-        </div>
-      `).join('');
-    }
-
-    async function main() {
-      const productId = readProductId();
-      if (!productId) {
-        renderMissingId();
-        return;
-      }
-
-      const rows = await restGet('products', {
-        query: {
-          select: '*',
-          id: `eq.${productId}`,
-          limit: 1,
-        },
-      });
-      const product = rows?.[0] || null;
-      if (!product) {
-        renderNotFound(productId);
-        return;
-      }
-
-      renderProduct(product);
-      const prices = await fetchPricesForProduct(productId);
-      renderPrices(prices);
-    }
-
-    void main().catch((error) => {
-      console.error(error);
-      if (title) title.textContent = '加载失败';
-      if (sub) sub.textContent = String(error?.message || error || '未知错误');
-      if (list) list.innerHTML = '<div class="notice notice--compact">加载失败，请稍后重试。</div>';
-    });
   </script>
 </BaseLayout>
