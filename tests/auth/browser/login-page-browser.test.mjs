@@ -166,6 +166,12 @@ async function main() {
     await page.setViewportSize({ width: 1280, height: 900 });
 
     await waitForText(page, '#session-state', '未登录');
+    await waitForText(page, '[data-auth-nav]', '登录');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.locator('#nav-toggle').click();
+    await waitForText(page, '[data-auth-nav-mobile]', '登录');
+    await page.locator('#nav-toggle').click();
+    await page.setViewportSize({ width: 1280, height: 900 });
 
     await page.locator('#email').fill('name@example.com');
     await page.locator('#password').fill('password123');
@@ -184,11 +190,22 @@ async function main() {
     await waitForText(page, '#signed-in-action', '继续访问');
     await page.locator('#signed-in-action').waitFor({ state: 'attached' });
     assert.equal(await page.locator('#signed-in-action').getAttribute('href'), redirectTarget);
+    await waitForText(page, '[data-auth-nav]', '退出');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.locator('#nav-toggle').click();
+    await waitForText(page, '[data-auth-nav-mobile]', '退出');
+    await page.locator('#nav-toggle').click();
+    await page.setViewportSize({ width: 1280, height: 900 });
 
     await page.locator('#switch-account-button').click();
     await waitForVisible(page, '#auth-form-shell');
     await waitForHidden(page, '#signed-in-state');
     await waitForText(page, '[data-auth-nav]', '登录');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.locator('#nav-toggle').click();
+    await waitForText(page, '[data-auth-nav-mobile]', '登录');
+    await page.locator('#nav-toggle').click();
+    await page.setViewportSize({ width: 1280, height: 900 });
     await waitForHidden(page, '#logout-button');
 
     await page.goto(`${baseUrl}/aprice/login/?redirect=${encodeURIComponent('https://evil.example/phish')}`, { waitUntil: 'domcontentloaded' });

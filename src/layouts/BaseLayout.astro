@@ -170,7 +170,6 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
       const chip = document.querySelector('#session-chip');
       const authNav = document.querySelector('[data-auth-nav]');
       const authNavMobile = document.querySelector('[data-auth-nav-mobile]');
-      const authFooter = document.querySelector('[data-auth-footer]');
       const navToggle = document.querySelector('#nav-toggle');
       const mobileNav = document.querySelector('#mobile-nav');
       let unsubscribeAuth = null;
@@ -200,8 +199,29 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
         }
       }
 
+      function renderAuthEntryState(targets, state) {
+        const isLoginPath = window.location.pathname.endsWith('/login/');
+        const nextLabel = state === 'signed-in'
+          ? getPrivatePageStatusCopy('shell', 'signedInNav')
+          : getPrivatePageStatusCopy('shell', 'guestNav');
+        const nextHref = state === 'signed-in' ? '#' : loginUrl;
+
+        for (const target of targets) {
+          if (!target) continue;
+          target.textContent = nextLabel;
+          target.href = nextHref;
+          target.dataset.authState = state;
+          if (state === 'guest' && isLoginPath) {
+            target.setAttribute('aria-current', 'page');
+            continue;
+          }
+          target.removeAttribute('aria-current');
+        }
+      }
+
       async function refreshSessionChip() {
         if (!chip) return;
+        const authEntryTargets = [authNav, authNavMobile];
         try {
           const { fetchCurrentProfile, getCurrentUser } = await loadAuthModule();
           const user = await getCurrentUser();
@@ -210,36 +230,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
             chip.href = loginUrl;
             chip.className = 'chip session-chip session-chip--guest';
             chip.title = getPrivatePageStatusCopy('shell', 'guestTitle');
-            if (authNav) {
-              authNav.textContent = getPrivatePageStatusCopy('shell', 'guestNav');
-              authNav.href = loginUrl;
-              authNav.dataset.authState = 'guest';
-              if (window.location.pathname.endsWith('/login/')) {
-                authNav.setAttribute('aria-current', 'page');
-              } else {
-                authNav.removeAttribute('aria-current');
-              }
-            }
-            if (authNavMobile) {
-              authNavMobile.textContent = getPrivatePageStatusCopy('shell', 'guestNav');
-              authNavMobile.href = loginUrl;
-              authNavMobile.dataset.authState = 'guest';
-              if (window.location.pathname.endsWith('/login/')) {
-                authNavMobile.setAttribute('aria-current', 'page');
-              } else {
-                authNavMobile.removeAttribute('aria-current');
-              }
-            }
-            if (authFooter) {
-              authFooter.textContent = getPrivatePageStatusCopy('shell', 'guestFooter');
-              authFooter.href = loginUrl;
-              authFooter.dataset.authState = 'guest';
-              if (window.location.pathname.endsWith('/login/')) {
-                authFooter.setAttribute('aria-current', 'page');
-              } else {
-                authFooter.removeAttribute('aria-current');
-              }
-            }
+            renderAuthEntryState(authEntryTargets, 'guest');
             return;
           }
 
@@ -251,59 +242,13 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
           chip.href = isAdmin ? resolveBase('admin/') : resolveBase('me/');
           chip.className = isAdmin ? 'chip session-chip session-chip--admin' : 'chip session-chip session-chip--member';
           chip.title = user.email || label;
-          if (authNav) {
-            authNav.textContent = getPrivatePageStatusCopy('shell', 'signedInNav');
-            authNav.href = '#';
-            authNav.dataset.authState = 'signed-in';
-            authNav.removeAttribute('aria-current');
-          }
-          if (authNavMobile) {
-            authNavMobile.textContent = getPrivatePageStatusCopy('shell', 'signedInNav');
-            authNavMobile.href = '#';
-            authNavMobile.dataset.authState = 'signed-in';
-            authNavMobile.removeAttribute('aria-current');
-          }
-          if (authFooter) {
-            authFooter.textContent = getPrivatePageStatusCopy('shell', 'signedInFooter');
-            authFooter.href = '#';
-            authFooter.dataset.authState = 'signed-in';
-            authFooter.removeAttribute('aria-current');
-          }
+          renderAuthEntryState(authEntryTargets, 'signed-in');
         } catch {
           chip.textContent = getPrivatePageStatusCopy('shell', 'fallbackChip');
           chip.href = loginUrl;
           chip.className = 'chip session-chip session-chip--guest';
           chip.title = getPrivatePageStatusCopy('shell', 'fallbackChip');
-          if (authNav) {
-            authNav.textContent = getPrivatePageStatusCopy('shell', 'guestNav');
-            authNav.href = loginUrl;
-            authNav.dataset.authState = 'guest';
-            if (window.location.pathname.endsWith('/login/')) {
-              authNav.setAttribute('aria-current', 'page');
-            } else {
-              authNav.removeAttribute('aria-current');
-            }
-          }
-          if (authNavMobile) {
-            authNavMobile.textContent = getPrivatePageStatusCopy('shell', 'guestNav');
-            authNavMobile.href = loginUrl;
-            authNavMobile.dataset.authState = 'guest';
-            if (window.location.pathname.endsWith('/login/')) {
-              authNavMobile.setAttribute('aria-current', 'page');
-            } else {
-              authNavMobile.removeAttribute('aria-current');
-            }
-          }
-          if (authFooter) {
-            authFooter.textContent = getPrivatePageStatusCopy('shell', 'guestFooter');
-            authFooter.href = loginUrl;
-            authFooter.dataset.authState = 'guest';
-            if (window.location.pathname.endsWith('/login/')) {
-              authFooter.setAttribute('aria-current', 'page');
-            } else {
-              authFooter.removeAttribute('aria-current');
-            }
-          }
+          renderAuthEntryState(authEntryTargets, 'guest');
         }
       }
 
@@ -323,12 +268,6 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
 
       authNavMobile?.addEventListener('click', async (event) => {
         if (authNavMobile.dataset.authState !== 'signed-in') return;
-        event.preventDefault();
-        await signOutAndReset();
-      });
-
-      authFooter?.addEventListener('click', async (event) => {
-        if (authFooter.dataset.authState !== 'signed-in') return;
         event.preventDefault();
         await signOutAndReset();
       });
