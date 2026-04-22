@@ -30,6 +30,19 @@ export function resolveBase(pathname = '') {
   return `${base.replace(/\/$/, '')}/${cleanPath}`;
 }
 
+export function escapeHtml(value = '') {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+export function escapeAttribute(value = '') {
+  return escapeHtml(value).replace(/`/g, '&#96;');
+}
+
 export async function searchProducts(term = '') {
   const q = term.trim();
   if (!q) return fetchAllProducts();

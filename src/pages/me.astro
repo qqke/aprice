@@ -129,7 +129,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
   </section>
 
   <script type="module" is:inline define:vars={{ loginUrl }}>
-    const { clearRecentViews, fetchAllProducts, fetchAllStores, fetchRecentViews, formatDateTime, formatYen, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
+    const { clearRecentViews, escapeAttribute, escapeHtml, fetchAllProducts, fetchAllStores, fetchRecentViews, formatDateTime, formatYen, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
     const { fetchFavorites, fetchPersonalLogs, getCurrentUser, savePersonalLog, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
 
@@ -179,10 +179,10 @@ const meGateCopy = getPrivatePageGateCopy('me');
       if (!recentViewsEl) return;
       recentViewsEl.innerHTML = rows.length
         ? rows.map((item) => `
-          <a class="feed__item" href="${resolveBase(`product/${item.id}/`)}">
+          <a class="feed__item" href="${escapeAttribute(resolveBase(`product/${item.id}/`))}">
             <div>
-              <strong>${item.name || 'Unknown product'}</strong>
-              <small>${item.brand || '品牌未知'} · ${item.pack || ''} · ${item.barcode || ''}</small>
+              <strong>${escapeHtml(item.name || 'Unknown product')}</strong>
+              <small>${escapeHtml(item.brand || '品牌未知')} · ${escapeHtml(item.pack || '')} · ${escapeHtml(item.barcode || '')}</small>
             </div>
             <div class="feed__meta">
               <span class="price">查看</span>
@@ -217,13 +217,13 @@ const meGateCopy = getPrivatePageGateCopy('me');
         ? filtered.map((fav) => `
             <div class="feed__item me-favorites__item">
             <div>
-              <strong>${fav.entity_type === 'product' ? lookupName(products, fav.entity_id) : lookupName(stores, fav.entity_id)}</strong>
-              <small>${fav.entity_type === 'product' ? '商品' : '门店'} · ${fav.entity_id}</small>
+              <strong>${escapeHtml(fav.entity_type === 'product' ? lookupName(products, fav.entity_id) : lookupName(stores, fav.entity_id))}</strong>
+              <small>${fav.entity_type === 'product' ? '商品' : '门店'} · ${escapeHtml(fav.entity_id)}</small>
             </div>
             <div class="feed__meta me-favorites__meta">
               <span class="price">收藏</span>
               <small>${fav.created_at ? formatDateTime(fav.created_at) : ''}</small>
-              <button class="button button--ghost" type="button" data-remove-favorite="${fav.id}" data-remove-favorite-type="${fav.entity_type}" data-remove-favorite-entity="${fav.entity_id}">取消</button>
+              <button class="button button--ghost" type="button" data-remove-favorite="${escapeAttribute(fav.id)}" data-remove-favorite-type="${escapeAttribute(fav.entity_type)}" data-remove-favorite-entity="${escapeAttribute(fav.entity_id)}">取消</button>
             </div>
           </div>
         `).join('')
@@ -264,8 +264,8 @@ const meGateCopy = getPrivatePageGateCopy('me');
         ? logs.map((log) => `
           <div class="list__item">
             <div>
-              <strong>${lookupName(products, log.product_id)}</strong>
-              <small>${formatDateTime(log.created_at || log.purchased_at || new Date())} · ${lookupName(stores, log.store_id)} · ${log.note || '无备注'}</small>
+              <strong>${escapeHtml(lookupName(products, log.product_id))}</strong>
+              <small>${formatDateTime(log.created_at || log.purchased_at || new Date())} · ${escapeHtml(lookupName(stores, log.store_id))} · ${escapeHtml(log.note || '无备注')}</small>
             </div>
             <span class="price">${formatYen(log.price_yen)}</span>
           </div>
@@ -317,24 +317,39 @@ const meGateCopy = getPrivatePageGateCopy('me');
       status.textContent = getPrivatePageStatusCopy('me', 'loading');
       setControlsDisabled(false);
 
-      const [loadedProducts, loadedStores, logs, loadedFavorites] = await Promise.all([
-        fetchAllProducts(),
-        fetchAllStores(),
-        fetchPersonalLogs(user.id),
-        fetchFavorites(user.id),
-      ]);
+      let loadedProducts;
+      let loadedStores;
+      let logs;
+      let loadedFavorites;
+      try {
+        [loadedProducts, loadedStores, logs, loadedFavorites] = await Promise.all([
+          fetchAllProducts(),
+          fetchAllStores(),
+          fetchPersonalLogs(user.id),
+          fetchFavorites(user.id),
+        ]);
+      } catch (error) {
+        products = [];
+        stores = [];
+        favorites = [];
+        renderLogs([]);
+        renderFavorites([]);
+        setControlsDisabled(true);
+        status.textContent = getPrivatePageStatusCopy('me', 'saveFailure', { message: error.message });
+        return;
+      }
       products = loadedProducts;
       stores = loadedStores;
       favorites = loadedFavorites;
 
       if (productInput) {
         productInput.innerHTML = products.length
-          ? products.map((item) => `<option value="${item.id}">${item.name}</option>`).join('')
+          ? products.map((item) => `<option value="${escapeAttribute(item.id)}">${escapeHtml(item.name)}</option>`).join('')
           : '<option value="">暂无商品</option>';
       }
       if (storeInput) {
         storeInput.innerHTML = stores.length
-          ? stores.map((item) => `<option value="${item.id}">${item.name}</option>`).join('')
+          ? stores.map((item) => `<option value="${escapeAttribute(item.id)}">${escapeHtml(item.name)}</option>`).join('')
           : '<option value="">暂无门店</option>';
       }
 

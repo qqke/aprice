@@ -377,7 +377,81 @@ async function main() {
         `expected manual product insert payload, got ${manualRequests.map((call) => call.body).join(' | ')}`,
       );
 
-      assert.equal(pageErrors.length, 0, `page errors: ${pageErrors.join(' | ')}`);
+      const failureManualPage = await browser.newPage();
+      failureManualPage.on('pageerror', (error) => pageErrors.push(error.message));
+      failureManualPage.on('console', (message) => {
+        if (message.type() === 'error') pageErrors.push(message.text());
+      });
+      await failureManualPage.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/javascript; charset=utf-8',
+          body: makeSupabaseShimModuleBody(),
+        });
+      });
+      await failureManualPage.route('https://r.jina.ai/**', async (route) => {
+        await route.fulfill({
+          status: 500,
+          contentType: 'text/plain; charset=utf-8',
+          body: 'forced jancode failure',
+        });
+      });
+      await failureManualPage.route('**/rest/v1/**', async (route) => {
+        const request = route.request();
+        if (request.method() === 'POST') {
+          await route.fulfill({
+            status: 500,
+            contentType: 'text/plain; charset=utf-8',
+            body: 'forced manual save failure',
+          });
+          return;
+        }
+        await route.fulfill({ status: 200, contentType: 'application/json; charset=utf-8', body: '[]' });
+      });
+      await failureManualPage.goto(scanUrl, { waitUntil: 'domcontentloaded' });
+      await failureManualPage.locator('#barcode-input').fill('4900000000001');
+      await failureManualPage.locator('#barcode-search').click();
+      await failureManualPage.locator('#missing-product-panel').waitFor({ state: 'visible', timeout: 10000 });
+      await failureManualPage.waitForFunction(() => {
+        const text = String(document.querySelector('#scan-status')?.textContent || '');
+        return text.includes('JANCODE 预填失败') || text.includes('JANCODE 信息');
+      });
+      await failureManualPage.locator('#missing-product-name').fill('Unsafe <script>window.__scanXss = true</script>');
+      await failureManualPage.locator('#missing-product-form button[type="submit"]').click();
+      await failureManualPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('添加失败：forced manual save failure'));
+
+      const xssPage = await browser.newPage();
+      xssPage.on('pageerror', (error) => pageErrors.push(error.message));
+      xssPage.on('console', (message) => {
+        if (message.type() === 'error') pageErrors.push(message.text());
+      });
+      await xssPage.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/javascript; charset=utf-8',
+          body: makeSupabaseShimModuleBody(),
+        });
+      });
+      await xssPage.route('**/rest/v1/**', async (route) => {
+        const url = new URL(route.request().url());
+        if (url.pathname.endsWith('/products')) {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json; charset=utf-8',
+            body: JSON.stringify([{ id: '4900000000002', barcode: '4900000000002', name: 'Scan XSS <script>window.__scanXss = true</script>', brand: 'Brand <img src=x onerror=window.__scanXss=true>', pack: '1 pack' }]),
+          });
+          return;
+        }
+        await route.fulfill({ status: 200, contentType: 'application/json; charset=utf-8', body: '[]' });
+      });
+      await xssPage.goto(scanUrl, { waitUntil: 'domcontentloaded' });
+      await xssPage.locator('#barcode-input').fill('4900000000002');
+      await xssPage.locator('#barcode-search').click();
+      await xssPage.waitForFunction(() => String(document.querySelector('#scan-result-list')?.textContent || '').includes('Scan XSS'));
+      assert.equal(await xssPage.evaluate(() => window.__scanXss === true), false);
+      assert.equal(await xssPage.locator('#scan-result-list script, #scan-result-list img[onerror]').count(), 0);
+
+      assert.equal(pageErrors.filter((message) => !message.includes('Failed to load resource')).length, 0, `page errors: ${pageErrors.join(' | ')}`);
 
       console.log('scan-page browser test passed');
     } finally {

@@ -14,27 +14,40 @@ const middleware = await import(`data:text/javascript;base64,${Buffer.from(patch
 assert.equal(middleware.normalizePath('/aprice/'), '/');
 assert.equal(middleware.normalizePath('/aprice/login/'), '/login/');
 assert.equal(middleware.normalizePath('/outside/'), '/outside/');
+assert.equal(middleware.normalizePath('/aprice'), '/');
+assert.equal(middleware.normalizePath('/aprice//scan//'), '//scan//');
 
 for (const pathname of [
   '/aprice/',
+  '/aprice',
   '/aprice/login/',
   '/aprice/scan/',
   '/aprice/me/',
   '/aprice/admin/',
   '/aprice/product/loxonin-s/',
   '/aprice/product-runtime/',
+  '/aprice/product-runtime',
   '/aprice/404/',
 ]) {
   assert.equal(middleware.isKnownRoute(pathname), true, `${pathname} should be known`);
 }
 
-for (const pathname of ['/aprice/unknown/', '/aprice/products', '/random']) {
+for (const pathname of ['/aprice/unknown/', '/aprice/products', '/aprice//scan//', '/aprice/product%2Fbad/', '/random']) {
   assert.equal(middleware.isKnownRoute(pathname), false, `${pathname} should be unknown`);
 }
 
 const nextCalls = [];
 await middleware.onRequest(
   { url: new URL('https://aprice.example/aprice/product/loxonin-s/') },
+  (target) => {
+    nextCalls.push(target || '');
+    return new Response('ok');
+  },
+);
+assert.equal(nextCalls.at(-1), '');
+
+await middleware.onRequest(
+  { url: new URL('https://aprice.example/aprice/product-runtime?id=loxonin-s#top') },
   (target) => {
     nextCalls.push(target || '');
     return new Response('ok');

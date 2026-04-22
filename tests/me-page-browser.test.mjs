@@ -76,11 +76,11 @@ async function main() {
       const signedPage = await browser.newPage();
       const restCalls = [];
       const products = [
-        { id: 'loxonin-s', name: 'Loxonin S', brand: 'Santen', pack: '12 tabs', barcode: '4987188161027' },
+        { id: 'loxonin-s', name: 'Loxonin S <script>window.__meXss = true</script>', brand: 'Santen', pack: '12 tabs', barcode: '4987188161027' },
         { id: 'eve-a', name: 'EVE A', brand: 'SS Pharmaceuticals', pack: '20 tabs', barcode: '4987300051234' },
       ];
       const stores = [
-        { id: 'sugi-hiroo', name: 'Sugi Pharmacy Hiroo', city: 'Tokyo', pref: 'Tokyo' },
+        { id: 'sugi-hiroo', name: 'Sugi Pharmacy Hiroo <img src=x onerror=window.__meXss=true>', city: 'Tokyo', pref: 'Tokyo' },
         { id: 'welcia-shibuya', name: 'Welcia Shibuya', city: 'Tokyo', pref: 'Tokyo' },
       ];
       const logs = [
@@ -90,7 +90,7 @@ async function main() {
           product_id: 'loxonin-s',
           store_id: 'sugi-hiroo',
           price_yen: 698,
-          note: 'latest store visit',
+          note: 'latest store visit <script>window.__meXss = true</script>',
           purchased_at: '2026-04-04',
           created_at: '2026-04-04T09:00:00.000Z',
         },
@@ -101,6 +101,7 @@ async function main() {
       ];
       let failNextLogInsert = false;
       let failNextFavoriteInsert = false;
+      let failNextFavoriteDelete = false;
 
       signedPage.on('pageerror', (error) => {
         throw error;
@@ -211,6 +212,15 @@ async function main() {
           }
 
           if (method === 'DELETE') {
+            if (failNextFavoriteDelete) {
+              failNextFavoriteDelete = false;
+              await route.fulfill({
+                status: 500,
+                contentType: 'text/plain; charset=utf-8',
+                body: 'forced favorite delete failure',
+              });
+              return;
+            }
             const id = url.searchParams.get('id')?.replace(/^eq\./, '') || '';
             const index = favorites.findIndex((favorite) => favorite.id === id);
             const deleted = index >= 0 ? favorites.splice(index, 1) : [];
@@ -235,6 +245,8 @@ async function main() {
       assert.match(await signedPage.locator('#my-favorites').textContent(), /Welcia Shibuya/);
       assert.match(await signedPage.locator('#favorites-summary').textContent(), /共 2 项收藏，当前显示 2 项/);
       assert.match(await signedPage.locator('#recent-views').textContent(), /Loxonin S/);
+      assert.equal(await signedPage.evaluate(() => window.__meXss === true), false);
+      assert.equal(await signedPage.locator('#my-logs script, #my-logs img[onerror], #my-favorites script, #my-favorites img[onerror], #recent-views script, #recent-views img[onerror]').count(), 0);
 
       await signedPage.locator('[data-favorite-filter="product"]').click();
       assert.equal(await signedPage.locator('[data-favorite-filter="product"]').getAttribute('aria-pressed'), 'true');
@@ -293,6 +305,9 @@ async function main() {
       await signedPage.locator('#favorite-product-button').click();
       await signedPage.waitForFunction(() => String(document.querySelector('#favorites-summary')?.textContent || '').includes('共 3 项收藏'));
       await signedPage.locator('#log-store').selectOption('welcia-shibuya');
+      failNextFavoriteDelete = true;
+      await signedPage.locator('#favorite-store-button').click();
+      await signedPage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('收藏失败：forced favorite delete failure'));
       await signedPage.locator('#favorite-store-button').click();
       await waitForRequestMatch(restCalls, (call) => call.method === 'DELETE' && call.url.includes('/rest/v1/favorites'));
       assert.ok(restCalls.some((call) => call.method === 'POST' && call.url.includes('/rest/v1/favorites') && call.bodyJson?.entity_type === 'product' && call.bodyJson?.entity_id === 'eve-a'));
@@ -304,6 +319,33 @@ async function main() {
       await signedPage.locator('#clear-recent-views').click();
       await signedPage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('已清空最近浏览。'));
       assert.match(await signedPage.locator('#recent-views').textContent(), /暂无浏览记录/);
+
+      const refreshFailurePage = await browser.newPage();
+      refreshFailurePage.on('pageerror', (error) => {
+        throw error;
+      });
+      await refreshFailurePage.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/javascript; charset=utf-8',
+          body: makeSupabaseShimModuleBody({ signedIn: true }),
+        });
+      });
+      await refreshFailurePage.route('**/rest/v1/**', async (route) => {
+        const url = new URL(route.request().url());
+        if (url.pathname.endsWith('/products')) {
+          await route.fulfill({
+            status: 500,
+            contentType: 'text/plain; charset=utf-8',
+            body: 'forced refresh failure',
+          });
+          return;
+        }
+        await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+      });
+      await refreshFailurePage.goto(`${baseUrl}/aprice/me/`, { waitUntil: 'domcontentloaded' });
+      await refreshFailurePage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('记录失败：forced refresh failure'));
+      assert.equal(await refreshFailurePage.locator('#log-product').isDisabled(), true);
 
       console.log('me-page browser test passed');
     } finally {

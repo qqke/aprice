@@ -122,6 +122,8 @@ const base = import.meta.env.BASE_URL || '/';
       fetchNearbyPrices,
       fetchPricesForProduct,
       fetchRecentPrices,
+      escapeAttribute,
+      escapeHtml,
       formatDistance,
       formatYen,
       geolocate,
@@ -154,13 +156,13 @@ const base = import.meta.env.BASE_URL || '/';
     function renderEmptyList(node, title, detail, meta) {
       if (!node) return;
       node.innerHTML = `
-        <div class="list__item">
-          <div>
-            <strong>${title}</strong>
-            <small>${detail}</small>
+          <div class="list__item">
+            <div>
+              <strong>${escapeHtml(title)}</strong>
+              <small>${escapeHtml(detail)}</small>
+            </div>
+            <span class="meta">${escapeHtml(meta)}</span>
           </div>
-          <span class="meta">${meta}</span>
-        </div>
       `;
     }
 
@@ -297,16 +299,16 @@ const base = import.meta.env.BASE_URL || '/';
         const statusLabel = selected ? '当前选中' : focused ? '当前焦点' : '';
         return `
           <div class="list__item home-result${selected ? ' is-active' : ''}${focused ? ' is-focused' : ''}" data-result-index="${index}">
-            <button class="home-result__main" id="home-result-option-${item.id}" type="button" data-select-product="${item.id}" role="option" aria-selected="${selected ? 'true' : 'false'}" aria-pressed="${selected ? 'true' : 'false'}" aria-label="选择 ${item.name}">
+            <button class="home-result__main" id="home-result-option-${escapeAttribute(item.id)}" type="button" data-select-product="${escapeAttribute(item.id)}" role="option" aria-selected="${selected ? 'true' : 'false'}" aria-pressed="${selected ? 'true' : 'false'}" aria-label="选择 ${escapeAttribute(item.name)}">
               ${statusLabel ? `<span class="home-result__status">${statusLabel}</span>` : ''}
-              <strong>${item.name}</strong>
+              <strong>${escapeHtml(item.name)}</strong>
               <div class="home-result__meta-row">
-                <small class="home-result__details">${item.brand} · ${item.pack}</small>
-                <span class="home-result__barcode">JAN ${item.barcode}</span>
+                <small class="home-result__details">${escapeHtml(item.brand)} · ${escapeHtml(item.pack)}</small>
+                <span class="home-result__barcode">JAN ${escapeHtml(item.barcode)}</span>
               </div>
             </button>
             <div class="home-result__actions">
-              <a class="button button--ghost home-result__action" href="${productHref(item.id)}">详情</a>
+              <a class="button button--ghost home-result__action" href="${escapeAttribute(productHref(item.id))}">详情</a>
             </div>
           </div>
         `;
@@ -335,14 +337,14 @@ const base = import.meta.env.BASE_URL || '/';
         }
 
         nearbyResults.innerHTML = prices.slice(0, 4).map((row) => `
-          <a class="list__item" href="${productHref(product.id)}">
+          <a class="list__item" href="${escapeAttribute(productHref(product.id))}">
             <div>
-              <strong>${row.stores?.name || '未知门店'}</strong>
-              <small>${row.stores?.city || ''}${row.stores?.city ? ' · ' : ''}${row.stores?.pref || ''}${row.is_member_price ? ' · 会员价' : ' · 公开价'}</small>
+              <strong>${escapeHtml(row.stores?.name || '未知门店')}</strong>
+              <small>${escapeHtml(row.stores?.city || '')}${row.stores?.city ? ' · ' : ''}${escapeHtml(row.stores?.pref || '')}${row.is_member_price ? ' · 会员价' : ' · 公开价'}</small>
             </div>
             <div class="home-results__meta">
               <div class="price">${formatYen(row.price_yen)}</div>
-              <small>${row.stores?.hours || ''}</small>
+              <small>${escapeHtml(row.stores?.hours || '')}</small>
             </div>
           </a>
         `).join('');
@@ -413,10 +415,10 @@ const base = import.meta.env.BASE_URL || '/';
         }
 
         nearbyResults.innerHTML = rows.slice(0, 4).map((row) => `
-          <a class="list__item" href="${productHref(activeProduct.id)}">
+          <a class="list__item" href="${escapeAttribute(productHref(activeProduct.id))}">
             <div>
-              <strong>${row.stores?.name || '未知门店'}</strong>
-              <small>${row.stores?.city || ''}${row.stores?.city ? ' · ' : ''}${row.stores?.pref || ''}${row.distance_km !== null && row.distance_km !== undefined ? ` · ${formatDistance(row.distance_km)}` : ''}</small>
+              <strong>${escapeHtml(row.stores?.name || '未知门店')}</strong>
+              <small>${escapeHtml(row.stores?.city || '')}${row.stores?.city ? ' · ' : ''}${escapeHtml(row.stores?.pref || '')}${row.distance_km !== null && row.distance_km !== undefined ? ` · ${formatDistance(row.distance_km)}` : ''}</small>
             </div>
             <div class="home-results__meta">
               <div class="price">${formatYen(row.price_yen)}</div>
@@ -443,10 +445,10 @@ const base = import.meta.env.BASE_URL || '/';
         }
 
         recentlyViewed.innerHTML = rows.slice(0, 6).map((row) => `
-          <a class="list__item" href="${productHref(row.products?.id || row.product_id || '')}">
+          <a class="list__item" href="${escapeAttribute(productHref(row.products?.id || row.product_id || ''))}">
             <div>
-              <strong>${row.products?.name || '未知商品'}</strong>
-              <small>${row.stores?.name || '未知门店'}${row.stores?.city ? ` · ${row.stores.city}` : ''}${row.is_member_price ? ' · 会员价' : ' · 公开价'}</small>
+              <strong>${escapeHtml(row.products?.name || '未知商品')}</strong>
+              <small>${escapeHtml(row.stores?.name || '未知门店')}${row.stores?.city ? ` · ${escapeHtml(row.stores.city)}` : ''}${row.is_member_price ? ' · 会员价' : ' · 公开价'}</small>
             </div>
             <div class="home-results__meta">
               <div class="price">${formatYen(row.price_yen)}</div>

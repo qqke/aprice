@@ -13,6 +13,10 @@ globalThis.fetch = async (input) => {
   const url = String(input);
   requests.push(url);
 
+  if (url.includes('r.jina.ai/http://www.jancode.xyz/4999999999999/')) {
+    return new Response('not found', { status: 500, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  }
+
   if (url.includes('r.jina.ai/http://www.jancode.xyz/4987240210733/')) {
     return new Response(
       [
@@ -123,6 +127,16 @@ assert.match(requests[0], /\/rest\/v1\/products/);
 assert.match(requests[0], /name\.ilike/);
 assert.equal(browser.resolveBase('product/loxonin-s/'), '/aprice/product/loxonin-s/');
 
+requests.length = 0;
+await browser.searchProducts('');
+assert.match(requests.at(-1), /\/rest\/v1\/products/);
+assert.match(requests.at(-1), /limit=100/);
+assert.doesNotMatch(requests.at(-1), /name\.ilike/);
+
+requests.length = 0;
+await browser.searchProducts('JAN 4987-1881-6102-7');
+assert.match(decodeURIComponent(requests.at(-1)), /barcode\.ilike\.%4987188161027%/);
+
 const storesPage = await browser.fetchStoresPage({ term: 'welcia', limit: 1 });
 assert.equal(storesPage.rows.length, 1);
 assert.equal(storesPage.hasMore, true);
@@ -131,6 +145,11 @@ assert.match(requests.at(-1), /\/rest\/v1\/stores/);
 assert.match(requests.at(-1), /limit=2/);
 assert.match(requests.at(-1), /offset=0/);
 assert.match(requests.at(-1), /chain_name\.ilike/);
+
+const normalizedStoresPage = await browser.fetchStoresPage({ term: '', limit: -5, offset: -10 });
+assert.equal(normalizedStoresPage.rows.length, 1);
+assert.match(requests.at(-1), /limit=2/);
+assert.match(requests.at(-1), /offset=0/);
 
 const draft = browser.parseJancodeProductDraft(
   [
@@ -154,6 +173,7 @@ assert.equal(draft?.category, '医薬品・コンタクト・介護 > 医薬品�
 const jancodeDraft = await browser.fetchJancodeProductDraft('4987240210733');
 assert.equal(jancodeDraft?.barcode, '4987240210733');
 assert.match(jancodeDraft?.name || '', /龍角散ダイレクトスティック ピーチ/);
+assert.equal(await browser.fetchJancodeProductDraft('4999999999999'), null);
 
 const requestsBeforeEmptyBarcode = requests.length;
 assert.equal(await browser.fetchProductByBarcode('not a barcode'), null);
@@ -237,6 +257,19 @@ assert.deepEqual(browser.fetchRecentViews(), []);
 assert.doesNotThrow(() => browser.recordRecentView({ id: 'safe-product', name: 'Safe Product' }));
 assert.doesNotThrow(() => browser.clearRecentViews());
 
+Object.defineProperty(globalThis, 'navigator', { configurable: true, value: {} });
+await assert.rejects(() => browser.geolocate(), /Geolocation unavailable/);
+Object.defineProperty(globalThis, 'navigator', {
+  configurable: true,
+  value: {
+  geolocation: {
+    getCurrentPosition(_success, failure) {
+      failure(new Error('permission denied'));
+    },
+  },
+  },
+});
+await assert.rejects(() => browser.geolocate(), /permission denied/);
 
 
 console.log('browser-runtime smoke test passed');

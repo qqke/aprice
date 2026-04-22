@@ -131,6 +131,58 @@ async function main() {
       assert.match(await failingPage.locator('#nearby-status').textContent(), /搜索失败后仍可重新尝试/);
       assert.ok(failingRequests.some((url) => url.includes('/rest/v1/products')));
 
+      const failureBranchesPage = await browser.newPage();
+      await failureBranchesPage.addInitScript(() => {
+        Object.defineProperty(navigator, 'geolocation', {
+          configurable: true,
+          value: {
+            getCurrentPosition(_success, failure) {
+              failure(new Error('forced location failure'));
+            },
+          },
+        });
+      });
+      await failureBranchesPage.route('**/rest/v1/**', async (route) => {
+        const requestUrl = route.request().url();
+        const url = new URL(requestUrl);
+        if (url.pathname.endsWith('/products')) {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify([{ id: 'xss-product', name: 'XSS Product <script>window.__homeXss = true</script>', brand: 'Safe <img src=x onerror=window.__homeXss=true>', pack: '1 pack', barcode: '4900000000001' }]),
+          });
+          return;
+        }
+        if (url.pathname.endsWith('/prices') && requestUrl.includes('product_id=eq.xss-product')) {
+          await route.fulfill({
+            status: 500,
+            contentType: 'text/plain; charset=utf-8',
+            body: 'forced price failure',
+          });
+          return;
+        }
+        if (url.pathname.endsWith('/prices')) {
+          await route.fulfill({
+            status: 500,
+            contentType: 'text/plain; charset=utf-8',
+            body: 'forced recent failure',
+          });
+          return;
+        }
+        await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+      });
+      await failureBranchesPage.goto(`${baseUrl}/aprice/`, { waitUntil: 'domcontentloaded' });
+      await failureBranchesPage.locator('#home-search').fill('xss');
+      await failureBranchesPage.locator('#home-search-button').click();
+      await failureBranchesPage.waitForFunction(() => String(document.querySelector('#nearby-status')?.textContent || '').includes('价格读取失败：forced price failure'));
+      assert.match(await failureBranchesPage.locator('#search-results').textContent(), /XSS Product/);
+      assert.equal(await failureBranchesPage.evaluate(() => window.__homeXss === true), false);
+      assert.equal(await failureBranchesPage.locator('#search-results script, #search-results img[onerror]').count(), 0);
+      await failureBranchesPage.locator('#geolocate-home').click();
+      await failureBranchesPage.waitForFunction(() => String(document.querySelector('#nearby-status')?.textContent || '').includes('定位失败：forced location failure'));
+      await failureBranchesPage.locator('#load-recent-prices').click();
+      await failureBranchesPage.waitForFunction(() => String(document.querySelector('#recent-status')?.textContent || '').includes('最近更新失败：forced recent failure'));
+
       console.log('home-page browser test passed');
     } finally {
       await browser.close();

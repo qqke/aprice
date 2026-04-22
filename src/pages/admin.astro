@@ -373,7 +373,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     }
 
     function optionHtml(items) {
-      return items.map((item) => `<option value="${item.id}">${item.name}</option>`).join('');
+      return items.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join('');
     }
 
     function escapeHtml(value = '') {
@@ -475,11 +475,11 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         ? products.map((item) => `
           <div class="list__item admin-record-item">
             <div>
-              <strong>${item.name}</strong>
-              <small>${item.barcode} · ${item.brand} · ${item.pack}</small>
+              <strong>${escapeHtml(item.name)}</strong>
+              <small>${escapeHtml(item.barcode)} · ${escapeHtml(item.brand)} · ${escapeHtml(item.pack)}</small>
             </div>
             <div class="pillrow admin-record-actions">
-              <button class="button button--ghost" data-delete-product="${item.id}" type="button">删除</button>
+              <button class="button button--ghost" data-delete-product="${escapeHtml(item.id)}" type="button">删除</button>
             </div>
           </div>
         `).join('')
@@ -492,12 +492,12 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         ? stores.map((item) => `
           <div class="list__item admin-record-item">
             <div>
-              <strong>${item.name}</strong>
-              <small>${item.city} · ${item.pref} · ${item.hours}</small>
+              <strong>${escapeHtml(item.name)}</strong>
+              <small>${escapeHtml(item.city)} · ${escapeHtml(item.pref)} · ${escapeHtml(item.hours)}</small>
             </div>
             <div class="pillrow admin-record-actions">
-              <button class="button button--ghost" data-edit-store="${item.id}" type="button">编辑</button>
-              <button class="button button--ghost" data-delete-store="${item.id}" type="button">删除</button>
+              <button class="button button--ghost" data-edit-store="${escapeHtml(item.id)}" type="button">编辑</button>
+              <button class="button button--ghost" data-delete-store="${escapeHtml(item.id)}" type="button">删除</button>
             </div>
           </div>
         `).join('')
@@ -510,13 +510,13 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         ? prices.map((item) => `
           <div class="list__item admin-record-item admin-record-item--price">
             <div>
-              <strong>${item.products?.name || 'Unknown product'}</strong>
-              <small>${item.stores?.name || 'Unknown store'} · ${item.stores?.city || ''} · ${item.is_member_price ? '会员价' : '公开价'}</small>
+              <strong>${escapeHtml(item.products?.name || 'Unknown product')}</strong>
+              <small>${escapeHtml(item.stores?.name || 'Unknown store')} · ${escapeHtml(item.stores?.city || '')} · ${item.is_member_price ? '会员价' : '公开价'}</small>
             </div>
             <div class="pillrow admin-record-actions admin-record-actions--price">
               <span class="price admin-record-price">¥${item.price_yen}</span>
-              <button class="button button--ghost" data-edit-price="${item.id}" type="button">编辑</button>
-              <button class="button button--ghost" data-delete-price="${item.id}" type="button">删除</button>
+              <button class="button button--ghost" data-edit-price="${escapeHtml(item.id)}" type="button">编辑</button>
+              <button class="button button--ghost" data-delete-price="${escapeHtml(item.id)}" type="button">删除</button>
             </div>
           </div>
         `).join('')
@@ -540,8 +540,8 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
               </div>
               <div class="pillrow admin-record-actions admin-record-actions--price">
                 <span class="price admin-record-price">¥${escapeHtml(item.price_yen)}</span>
-                <button class="button button--ghost" data-approve-submission="${item.id}" type="button">通过</button>
-                <button class="button button--ghost" data-reject-submission="${item.id}" type="button">拒绝</button>
+                <button class="button button--ghost" data-approve-submission="${escapeHtml(item.id)}" type="button">通过</button>
+                <button class="button button--ghost" data-reject-submission="${escapeHtml(item.id)}" type="button">拒绝</button>
               </div>
             </div>
           `;
@@ -741,10 +741,14 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       if (!button) return;
       const deleteId = button.dataset.deleteProduct;
       if (deleteId && window.confirm(`删除商品 ${deleteId} ?`)) {
-        await adminDeleteProduct(deleteId);
-        resetProductForm();
-        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deleteProductSuccess');
-        await loadData();
+        try {
+          await adminDeleteProduct(deleteId);
+          resetProductForm();
+          if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deleteProductSuccess');
+          await loadData();
+        } catch (error) {
+          if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deleteProductFailure', { message: error.message });
+        }
       }
     });
 
@@ -759,10 +763,14 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         populateStoreForm(stores.find((item) => item.id === editId));
       }
       if (deleteId && window.confirm(`删除门店 ${deleteId} ?`)) {
-        await adminDeleteStore(deleteId);
-        resetStoreForm();
-        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deleteStoreSuccess');
-        await loadData();
+        try {
+          await adminDeleteStore(deleteId);
+          resetStoreForm();
+          if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deleteStoreSuccess');
+          await loadData();
+        } catch (error) {
+          if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deleteStoreFailure', { message: error.message });
+        }
       }
     });
 
@@ -780,10 +788,14 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         }
       }
       if (deleteId && window.confirm(`删除价格记录 ${deleteId} ?`)) {
-        await adminDeletePrice(deleteId);
-        resetPriceForm();
-        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deletePriceSuccess');
-        await loadData();
+        try {
+          await adminDeletePrice(deleteId);
+          resetPriceForm();
+          if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deletePriceSuccess');
+          await loadData();
+        } catch (error) {
+          if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deletePriceFailure', { message: error.message });
+        }
       }
     });
 

@@ -19,6 +19,7 @@ async function main() {
       const pageErrors = [];
       const rpcCalls = [];
       let failNextProductInsert = false;
+      let failNextRpcPath = '';
 
       async function clickConfirmAndWait(selector, pathPart) {
         page.once('dialog', (dialog) => dialog.accept());
@@ -95,10 +96,43 @@ async function main() {
           return;
         }
 
+        if (failNextRpcPath && requestUrl.includes(failNextRpcPath)) {
+          failNextRpcPath = '';
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json; charset=utf-8',
+            body: 'not-json',
+          });
+          return;
+        }
+
+        const responseRows = makeAdminPageResponseForRequest(requestUrl, method);
+        if (requestUrl.includes('/rest/v1/products') && method === 'GET' && Array.isArray(responseRows) && responseRows[0]) {
+          responseRows[0] = {
+            ...responseRows[0],
+            name: `${responseRows[0].name} <script>window.__adminListXss = true</script>`,
+          };
+        }
+        if (requestUrl.includes('/rest/v1/prices') && method === 'GET' && Array.isArray(responseRows) && responseRows[0]?.stores) {
+          responseRows[0] = {
+            ...responseRows[0],
+            stores: {
+              ...responseRows[0].stores,
+              name: `${responseRows[0].stores.name} <img src=x onerror=window.__adminListXss=true>`,
+            },
+          };
+        }
+        if (requestUrl.includes('/rest/v1/user_price_logs') && method === 'GET' && Array.isArray(responseRows) && responseRows[0]) {
+          responseRows[0] = {
+            ...responseRows[0],
+            note: `${responseRows[0].note} <script>window.__adminListXss = true</script>`,
+          };
+        }
+
         await route.fulfill({
           status: 200,
           contentType: 'application/json; charset=utf-8',
-          body: JSON.stringify(makeAdminPageResponseForRequest(requestUrl, method)),
+          body: JSON.stringify(responseRows),
         });
       });
 
@@ -146,6 +180,8 @@ async function main() {
       assert.match(priceListText || '', /¥698/);
       assert.match(pendingPriceText || '', /front shelf community/);
       assert.match(pendingPriceText || '', /¥688/);
+      assert.equal(await page.evaluate(() => window.__adminListXss === true), false);
+      assert.equal(await page.locator('#admin-products script, #admin-products img[onerror], #admin-prices script, #admin-prices img[onerror], #admin-price-submissions script, #admin-price-submissions img[onerror]').count(), 0);
       assert.ok(productOptions.some((text) => text.includes('Loxonin S')));
       assert.ok(storeOptions.some((text) => text.includes('Sugi Pharmacy Hiroo')));
 
@@ -160,6 +196,10 @@ async function main() {
         ),
         `expected approve payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
       );
+
+      failNextRpcPath = '/rpc/admin_review_price_submission';
+      await page.locator('[data-approve-submission="11111111-1111-4111-8111-111111111111"]').click();
+      await waitForText(page, '#admin-status', '审核失败');
 
       await page.locator('[data-reject-submission="22222222-2222-4222-8222-222222222222"]').click();
       await waitForText(page, '#admin-status', '店头价已拒绝');
@@ -224,6 +264,9 @@ async function main() {
       assert.equal(await page.evaluate(() => window.__adminXss === true), false);
 
       await openPanel('#admin-panel-product');
+      failNextRpcPath = '/rpc/admin_delete_product';
+      await clickConfirmAndWait('#product-delete', '/rpc/admin_delete_product');
+      await waitForText(page, '#admin-status', '删除商品失败');
       await clickConfirmAndWait('#product-delete', '/rpc/admin_delete_product');
       assert.ok(rpcCalls.some((call) => call.url.includes('/rpc/admin_delete_product')),
         `expected admin_delete_product RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`);
@@ -246,6 +289,11 @@ async function main() {
         rpcCalls.some((call) => call.url.includes('/rpc/admin_upsert_store') && call.bodyJson?.id === 'admin-fixture-store' && call.bodyJson?.name === 'Admin Fixture Store' && call.bodyJson?.chain_name === 'Aprice'),
         `expected admin_upsert_store payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
       );
+
+      failNextRpcPath = '/rpc/admin_upsert_store';
+      await page.locator('#store-name').fill('Admin Fixture Store Failed');
+      await page.locator('#store-form button[type="submit"]').click();
+      await waitForText(page, '#admin-status', '保存门店失败');
 
       await openPanel('#admin-panel-price');
       await page.locator('#price-product').selectOption('loxonin-s');
@@ -270,12 +318,23 @@ async function main() {
         `expected admin_upsert_price payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
       );
 
+      failNextRpcPath = '/rpc/admin_upsert_price';
+      await page.locator('#price-yen').fill('689');
+      await page.locator('#price-form button[type="submit"]').click();
+      await waitForText(page, '#admin-status', '保存价格失败');
+
       await openPanel('#admin-panel-recent-stores');
+      failNextRpcPath = '/rpc/admin_delete_store';
+      await clickConfirmAndWait('[data-delete-store="welcia-shibuya"]', '/rpc/admin_delete_store');
+      await waitForText(page, '#admin-status', '删除门店失败');
       await clickConfirmAndWait('[data-delete-store="welcia-shibuya"]', '/rpc/admin_delete_store');
       assert.ok(rpcCalls.some((call) => call.url.includes('/rpc/admin_delete_store')),
         `expected admin_delete_store RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`);
 
       await openPanel('#admin-panel-recent-prices');
+      failNextRpcPath = '/rpc/admin_delete_price';
+      await clickConfirmAndWait('[data-delete-price="price-admin-1"]', '/rpc/admin_delete_price');
+      await waitForText(page, '#admin-status', '删除价格失败');
       await clickConfirmAndWait('[data-delete-price="price-admin-1"]', '/rpc/admin_delete_price');
       assert.ok(rpcCalls.some((call) => call.url.includes('/rpc/admin_delete_price')),
         `expected admin_delete_price RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`);
@@ -435,5 +494,3 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
-

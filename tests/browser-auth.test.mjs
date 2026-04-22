@@ -7,6 +7,8 @@ const testState = {
   signedIn: true,
   profileRoleRequestShouldFail: false,
   favoriteRows: [],
+  signOutError: null,
+  signInError: null,
 };
 
 globalThis.__APriceConfig = {
@@ -34,10 +36,14 @@ const patchedSource = source
               ? { data: { session: { user: { id: 'member-1', email: 'member@example.com' }, access_token: 'session-token' } }, error: null }
               : { data: { session: null }, error: null };
           },
-          async signOut(){ state.authCalls.push({ type: 'signOut' }); return { error: null }; },
-          onAuthStateChange(callback){ callback?.('SIGNED_IN', null); return { data: { subscription: { unsubscribe(){} } } }; },
+          async signOut(){ state.authCalls.push({ type: 'signOut' }); return { error: state.signOutError }; },
+          onAuthStateChange(callback){
+            state.authCalls.push({ type: 'onAuthStateChange' });
+            callback?.('SIGNED_IN', { user: { id: 'member-1' } });
+            return { data: { subscription: { unsubscribe(){ state.authCalls.push({ type: 'unsubscribe' }); } } } };
+          },
           async signUp(options){ state.authCalls.push({ type: 'signUp', options }); return { data: { user: { email: options.email } }, error: null }; },
-          async signInWithPassword(options){ state.authCalls.push({ type: 'signInWithPassword', options }); return { data: {}, error: null }; },
+          async signInWithPassword(options){ state.authCalls.push({ type: 'signInWithPassword', options }); return { data: {}, error: state.signInError }; },
           async resetPasswordForEmail(email, options){ state.authCalls.push({ type: 'resetPasswordForEmail', email, options }); return { error: null }; },
           async updateUser(options){ state.authCalls.push({ type: 'updateUser', options }); return { data: {}, error: null }; },
         },
@@ -132,5 +138,79 @@ testState.signedIn = false;
 await assert.rejects(() => auth.toggleFavorite('product', 'loxonin-s'), /Please sign in first/);
 assert.equal((await auth.fetchPersonalLogs('')).length, 0);
 assert.equal((await auth.fetchFavorites('')).length, 0);
+
+testState.signedIn = true;
+testState.restCalls = [];
+await assert.rejects(() => auth.savePersonalLog({ product_id: '', price_yen: 100 }), /product_id and price_yen are required/);
+await assert.rejects(() => auth.submitStorePrice({ product_id: 'p1', price_yen: 100 }), /product_id, store_id and price_yen are required/);
+
+await auth.savePersonalLog({ product_id: 'p1', store_id: 's1', price_yen: 701, note: 'personal note' });
+assert.ok(testState.restCalls.some((call) =>
+  call.type === 'insert' &&
+  call.path === 'user_price_logs' &&
+  call.body.user_id === 'member-1' &&
+  call.body.product_id === 'p1' &&
+  call.body.store_id === 's1' &&
+  call.body.price_yen === 701 &&
+  call.options.token === 'session-token'
+));
+
+await auth.submitStorePrice({ product_id: 'p1', store_id: 's2', price_yen: 702, share_to_public: true });
+assert.ok(testState.restCalls.some((call) =>
+  call.type === 'rpc' &&
+  call.name === 'submit_store_price' &&
+  call.body.payload.product_id === 'p1' &&
+  call.body.payload.store_id === 's2' &&
+  call.body.payload.price_yen === 702 &&
+  call.body.payload.share_to_public === true &&
+  call.options.token === 'session-token'
+));
+
+await auth.createProduct({ barcode: '4900000000000', name: 'Created Product' });
+assert.ok(testState.restCalls.some((call) =>
+  call.type === 'insert' &&
+  call.path === 'products' &&
+  call.body.id === '4900000000000' &&
+  call.body.barcode === '4900000000000' &&
+  call.body.name === 'Created Product' &&
+  call.options.token === 'session-token'
+));
+
+await auth.adminReviewPriceSubmission({ id: 'pending-1', action: 'approve', confidence_score: 80 });
+await auth.adminUpsertStore({ id: 'store-1', name: 'Store 1' });
+await auth.adminUpsertPrice({ product_id: 'p1', store_id: 's1', price_yen: 698 });
+await auth.adminDeleteProduct('p1');
+await auth.adminDeleteStore('s1');
+await auth.adminDeletePrice('price-1');
+assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_review_price_submission' && call.body.payload.id === 'pending-1'));
+assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_upsert_store' && call.body.id === 'store-1'));
+assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_upsert_price' && call.body.price_yen === 698));
+assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_delete_product' && call.body.target_id === 'p1'));
+assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_delete_store' && call.body.target_id === 's1'));
+assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_delete_price' && call.body.target_id === 'price-1'));
+
+await auth.signUpWithEmailPassword({ email: 'new@example.com', password: 'password123', redirect: '/aprice/me/' });
+const signUpCall = testState.authCalls.findLast((call) => call.type === 'signUp');
+assert.equal(signUpCall.options.options.emailRedirectTo, 'https://aprice.example/aprice/login/?redirect=%2Faprice%2Fme%2F');
+
+await auth.sendPasswordResetEmail({ email: 'reset@example.com', redirect: 'https://evil.example/aprice/me/' });
+const resetCall = testState.authCalls.findLast((call) => call.type === 'resetPasswordForEmail');
+assert.equal(resetCall.options.emailRedirectTo, 'https://aprice.example/aprice/login/?mode=reset');
+
+const authEvents = [];
+const unsubscribe = await auth.subscribeAuthState((event, session) => authEvents.push({ event, session }));
+assert.equal(authEvents[0].event, 'SIGNED_IN');
+unsubscribe();
+assert.ok(testState.authCalls.some((call) => call.type === 'unsubscribe'));
+
+await auth.signOut();
+assert.ok(testState.authCalls.some((call) => call.type === 'signOut'));
+testState.signOutError = new Error('sign out failed');
+await assert.rejects(() => auth.signOut(), /sign out failed/);
+testState.signOutError = null;
+
+testState.signInError = new Error('bad password');
+await assert.rejects(() => auth.signInWithEmailPassword({ email: 'member@example.com', password: 'bad' }), /bad password/);
+testState.signInError = null;
 
 console.log('browser-auth test passed');

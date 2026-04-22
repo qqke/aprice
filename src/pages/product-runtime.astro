@@ -9,11 +9,19 @@ const logPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
 <BaseLayout title="商品详情 - 搜比价" description="商品详情、门店价格与个人记录。" bodyClass="product-page">
   <section class="section section--first-workspace" id="product-runtime-page" data-base={base}>
     <div class="shell">
-      <div class="notice notice--compact">{logPrompt}</div>
+      <div class="notice notice--compact">正在打开商品详情...</div>
     </div>
   </section>
 
-  <script type="module" is:inline define:vars={{ base }}>
+  <script type="module" is:inline define:vars={{ base, logPrompt }}>
+    const runtimeBase = window.__APriceConfig?.baseUrl || base || '/';
+    const browserUrl = window.__APriceConfig?.browserJsUrl || `${runtimeBase}browser.js`;
+    const privatePageAuthUrl = window.__APriceConfig?.privatePageAuthJsUrl || `${runtimeBase}private-page-auth.js`;
+    const productRuntimeUrl = window.__APriceConfig?.productPageRuntimeJsUrl || `${runtimeBase}product-page-runtime.js`;
+    const { escapeAttribute, escapeHtml, resolveBase } = await import(browserUrl);
+    const { buildPrivatePageLoginUrl, getPrivatePageGateCopy, getPrivatePageStatusCopy } = await import(privatePageAuthUrl);
+    const { restGet } = await import(window.__APriceConfig?.supabaseRestJsUrl || `${runtimeBase}supabase-rest.js`);
+
     function readProductId() {
       const url = new URL(window.location.href);
       const fromQuery = String(url.searchParams.get('id') || '').trim();
@@ -22,13 +30,270 @@ const logPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       return match?.[1] ? decodeURIComponent(match[1]) : '';
     }
 
-    const productId = readProductId();
-    const basePath = base.endsWith('/') ? base.slice(0, -1) : base;
-    if (!productId) {
-      window.location.replace(`${basePath}/404/`);
-    } else {
+    function syncCanonicalUrl(productId) {
+      if (!productId || !window.history?.replaceState) return;
       const safeProductId = encodeURIComponent(productId).replaceAll('%2F', '');
-      window.location.replace(`${basePath}/product/${safeProductId}/`);
+      const target = new URL(resolveBase(`product/${safeProductId}/`), window.location.origin);
+      if (window.location.pathname !== target.pathname) {
+        window.history.replaceState({}, '', target.pathname);
+      }
+    }
+
+    function renderRuntimeError(message) {
+      const mount = document.querySelector('#product-runtime-page');
+      if (!mount) return;
+      mount.innerHTML = `
+        <div class="shell">
+          <div class="notice notice--warning">
+            <div class="stack">
+              <strong>商品页加载失败</strong>
+              <small>${escapeHtml(message)}</small>
+            </div>
+            <a class="button" href="${escapeAttribute(resolveBase('scan/'))}">去扫码</a>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderProductShell(product, loginUrl) {
+      const productGateCopy = getPrivatePageGateCopy('product');
+      const productLogPrompt = logPrompt || getPrivatePageStatusCopy('product', 'logPrompt');
+      const tone = product.tone || 'sunset';
+      const description = product.description || '查看该商品在不同门店的采样价格。';
+      const categoryPill = product.category
+        ? `<span class="pill product-hero__category" title="${escapeAttribute(product.category)}">${escapeHtml(product.category)}</span>`
+        : '';
+      const brandPill = product.brand
+        ? `<span class="pill product-hero__brand" title="${escapeAttribute(product.brand)}">${escapeHtml(product.brand)}</span>`
+        : '';
+
+      return `
+        <section class="section section--first-workspace" id="product-page"
+          data-product-id="${escapeAttribute(product.id)}"
+          data-product-name="${escapeAttribute(product.name)}"
+          data-product-brand="${escapeAttribute(product.brand || '')}"
+          data-product-pack="${escapeAttribute(product.pack || '')}"
+          data-product-barcode="${escapeAttribute(product.barcode || product.id)}"
+          data-product-tone="${escapeAttribute(tone)}">
+          <div class="shell">
+            <div class="eyebrow">商品</div>
+            <div class="product-hero tone-${escapeAttribute(tone)}">
+              <div class="product-hero__overlay">
+                <div class="pillrow product-hero__meta">
+                  ${categoryPill}
+                  <span class="pill product-hero__barcode">JAN ${escapeHtml(product.barcode || product.id)}</span>
+                  ${brandPill}
+                </div>
+                <h1 class="product-title">${escapeHtml(product.name || product.id)}</h1>
+                <p class="product-sub">${escapeHtml(description)}</p>
+                <div class="notice notice--compact product-hero__hint">先看最低价，再记买价。</div>
+                <div class="product-hero__actions" aria-label="商品页主要操作">
+                  <button class="button" id="hero-geo-sort" type="button">按当前位置排序</button>
+                  <a class="button button--ghost" href="#product-personal-record">记录买价</a>
+                </div>
+              </div>
+            </div>
+
+            <div class="notice notice--warning" id="product-auth-gate">
+              <div class="stack">
+                <strong>${escapeHtml(productGateCopy.title)}</strong>
+                <small>${escapeHtml(productGateCopy.description)}</small>
+              </div>
+              <a class="button" id="product-login-link" href="${escapeAttribute(loginUrl)}">${escapeHtml(productGateCopy.primaryButtonLabel)}</a>
+            </div>
+
+            <div class="grid product-grid-top">
+              <section class="tile tile--wide tile--flow" id="product-price-flow">
+                <div class="section__header section__header--tight">
+                  <div>
+                    <h2>价格流</h2>
+                    <p>同一商品在不同门店和会员条件下的参考价。</p>
+                  </div>
+                  <button class="button button--ghost" id="geo-sort" type="button">按当前位置排序</button>
+                </div>
+                <div class="product-price-flow__lead" aria-label="价格流摘要">
+                  <div class="product-price-flow__lead-copy">
+                    <span class="product-price-flow__lead-label">当前最低价</span>
+                    <strong id="price-flow-min-price">同步中</strong>
+                    <small id="price-flow-store">等待价格数据</small>
+                  </div>
+                  <div class="product-price-flow__lead-aside">
+                    <span class="pill" id="price-flow-gap-pill">等待价格</span>
+                    <small id="price-flow-gap-note">补上第一组门店价格后，会显示最低价和次低价差。</small>
+                  </div>
+                </div>
+                <div class="notice notice--compact" id="geo-status">${escapeHtml(getPrivatePageStatusCopy('product', 'geoStatus'))}</div>
+                <div class="feed" id="price-list">
+                  <div class="notice notice--compact">价格结果。</div>
+                </div>
+              </section>
+
+              <section class="tile tile--flow" id="product-nearby-stores">
+                <div class="section__header section__header--tight">
+                  <div>
+                    <h3>附近门店</h3>
+                    <p>价格流之外，也能快速扫到门店分布。</p>
+                  </div>
+                </div>
+                <div class="notice notice--compact" id="nearby-status">门店价格会显示在这里。</div>
+                <div class="feed" id="nearby-store-list">
+                  <div class="notice notice--compact">随价格更新。</div>
+                </div>
+              </section>
+            </div>
+
+            <section class="section">
+              <div class="grid">
+                <section class="tile tile--wide" id="product-summary">
+                  <div class="section__header section__header--tight">
+                    <h3>价格洞察</h3>
+                    <p>自动汇总最低价、门店覆盖和近期变化。</p>
+                  </div>
+                  <div class="feed">
+                    <div class="feed__item feed__item--featured product-summary__item">
+                      <div class="feed__copy">
+                        <div class="feed__kicker">价格结论</div>
+                        <div class="product-summary__lead">
+                          <span class="product-summary__lead-label">当前最低价</span>
+                          <strong id="summary-min-price">同步中</strong>
+                          <small id="summary-gain-label">等待价格数据</small>
+                        </div>
+                        <div class="product-summary__stats" aria-label="摘要数据">
+                          <div class="product-summary__stat">
+                            <small>门店数</small>
+                            <strong id="summary-store-count">同步中</strong>
+                          </div>
+                          <div class="product-summary__stat">
+                            <small>最新采样</small>
+                            <strong id="summary-latest-store">同步中</strong>
+                          </div>
+                          <div class="product-summary__stat">
+                            <small>近7天变化</small>
+                            <strong id="summary-trend-label">同步中</strong>
+                          </div>
+                        </div>
+                        <div class="pillrow" id="insight-pills">
+                          <span class="pill">摘要读取中...</span>
+                        </div>
+                      </div>
+                      <div class="product-summary__aside">
+                        <span class="price">洞察</span>
+                        <small>价格流下方保留一份完整读数。</small>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </section>
+
+            <section class="section">
+              <div class="grid">
+                <section class="tile" id="product-personal-record">
+                  <div class="section__header section__header--tight">
+                    <h3>记录店头价格</h3>
+                    <p>把实体店货架价记下来，也可以提交给公共比价审核。</p>
+                  </div>
+                  <div class="pillrow product-secondary-actions" aria-label="收藏操作">
+                    <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>
+                    <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button>
+                  </div>
+                  <div class="personal-record-layout">
+                    <div class="personal-store-panel">
+                      <div class="store-search">
+                        <label class="field store-search__input">
+                          <input id="personal-store-search" name="personal-store-search" type="search" inputmode="search" placeholder="搜索店名或连锁名" autocomplete="off" spellcheck="false" aria-label="搜索门店" />
+                        </label>
+                        <button class="button button--ghost store-search__clear" id="personal-store-search-clear" type="button" hidden>清空</button>
+                      </div>
+                      <div class="notice notice--compact" id="personal-store-status">按店名、连锁名或当前位置筛选门店。</div>
+                      <div class="feed" id="personal-store-list">
+                        <div class="notice notice--compact">正在加载门店...</div>
+                      </div>
+                      <button class="button button--ghost store-search__load-more" id="personal-store-load-more" type="button" hidden>加载更多</button>
+                    </div>
+                    <form class="form personal-log-form" id="personal-log-form">
+                      <input id="personal-store" type="hidden" value="" />
+                      <div class="personal-log-form__selected">
+                        <span>当前门店</span>
+                        <strong id="personal-selected-store-label">未选择门店</strong>
+                      </div>
+                      <div class="personal-log-form__action">
+                        <label class="field">
+                          <input id="personal-price" name="personal-price" type="number" inputmode="numeric" placeholder="你的购买价" />
+                        </label>
+                        <button class="button" type="submit" disabled>提交店头价格</button>
+                      </div>
+                      <div class="personal-log-form__secondary">
+                        <label class="field">
+                          <input id="personal-note" name="personal-note" placeholder="备注" />
+                        </label>
+                        <label class="field">
+                          <input id="personal-evidence-url" name="personal-evidence-url" type="url" placeholder="价签或小票图片链接（可选）" />
+                        </label>
+                        <label class="field field--inline">
+                          <input id="personal-share-public" type="checkbox" checked />
+                          <span>参与公共比价（提交后由管理员审核）</span>
+                        </label>
+                      </div>
+                      <div class="notice notice--compact" id="personal-status">${escapeHtml(productLogPrompt)}</div>
+                    </form>
+                  </div>
+                </section>
+              </div>
+            </section>
+
+            <section class="section">
+              <div class="grid">
+                <section class="tile tile--wide tile--flow" id="product-trend">
+                  <div class="section__header section__header--tight">
+                    <div>
+                      <h3>近期变化</h3>
+                      <p>最近几条采样按时间排。</p>
+                    </div>
+                  </div>
+                  <div class="feed" id="trend-list">
+                    <div class="notice notice--compact">最近变化会显示在这里。</div>
+                  </div>
+                </section>
+              </div>
+            </section>
+          </div>
+        </section>
+      `;
+    }
+
+    const productId = readProductId();
+    if (!productId) {
+      renderRuntimeError('URL 里没有商品 id，返回首页或扫码重新打开。');
+    } else {
+      try {
+        syncCanonicalUrl(productId);
+        const rows = await restGet('products', {
+          query: {
+            select: '*',
+            id: `eq.${productId}`,
+            limit: 1,
+          },
+        });
+        const product = rows?.[0] || null;
+        if (!product) {
+          renderRuntimeError(`商品 id: ${productId} 当前数据库里没有这条商品记录。`);
+        } else {
+          const loginUrl = buildPrivatePageLoginUrl({
+            origin: window.location.origin,
+            baseUrl: runtimeBase,
+            currentUrl: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+          });
+          document.title = `${product.name || product.id} - 搜比价`;
+          const mount = document.querySelector('#product-runtime-page');
+          if (!mount) throw new Error('商品页挂载点缺失');
+          mount.outerHTML = renderProductShell(product, loginUrl);
+          const { initProductPage } = await import(productRuntimeUrl);
+          await initProductPage({ loginUrl });
+        }
+      } catch (error) {
+        renderRuntimeError(error?.message || '商品详情暂时无法打开。');
+      }
     }
   </script>
 </BaseLayout>

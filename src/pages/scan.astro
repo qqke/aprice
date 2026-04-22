@@ -105,7 +105,7 @@ export const prerender = true;
   </section>
 
   <script type="module" is:inline>
-    const { fetchJancodeProductDraft, fetchProductByBarcode, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
+    const { escapeAttribute, escapeHtml, fetchJancodeProductDraft, fetchProductByBarcode, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
     const { createProduct, getCurrentUser } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { buildPrivatePageLoginUrl } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
 
@@ -173,10 +173,10 @@ export const prerender = true;
       }
 
       resultList.innerHTML = `
-        <a class="list__item" href="${resolveBase(`product/${product.id}/`)}">
+        <a class="list__item" href="${escapeAttribute(resolveBase(`product/${product.id}/`))}">
           <div>
-            <strong>${product.name}</strong>
-            <small>${product.brand || '品牌未知'} · ${product.pack || '规格未知'} · ${product.barcode || ''}</small>
+            <strong>${escapeHtml(product.name)}</strong>
+            <small>${escapeHtml(product.brand || '品牌未知')} · ${escapeHtml(product.pack || '规格未知')} · ${escapeHtml(product.barcode || '')}</small>
           </div>
           <span class="price">查看商品页</span>
         </a>

@@ -353,6 +353,57 @@ async function main() {
       );
       assert.equal(restCalls.some((call) => call.method === 'POST' && call.url.includes('/rest/v1/user_price_logs')), false);
 
+      const failurePage = await browser.newPage();
+      const failureErrors = [];
+      failurePage.on('pageerror', (error) => failureErrors.push(error.message));
+      failurePage.on('console', (message) => {
+        if (message.type() === 'error') failureErrors.push(message.text());
+      });
+      await failurePage.route('https://esm.sh/**', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/javascript; charset=utf-8',
+          body: makeEsmShimModuleBody(),
+        });
+      });
+      await failurePage.route('**/product-page-runtime.js', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/javascript; charset=utf-8',
+          body: productRuntimeBody,
+        });
+      });
+      await failurePage.route('**/rest/v1/**', async (route) => {
+        const requestUrl = route.request().url();
+        const url = new URL(requestUrl);
+        if (url.pathname.endsWith('/stores')) {
+          await route.fulfill({ status: 500, contentType: 'text/plain; charset=utf-8', body: 'forced stores failure' });
+          return;
+        }
+        if (url.pathname.endsWith('/prices')) {
+          await route.fulfill({ status: 500, contentType: 'text/plain; charset=utf-8', body: 'forced prices failure' });
+          return;
+        }
+        if (url.pathname.endsWith('/favorites')) {
+          await route.fulfill({ status: 500, contentType: 'text/plain; charset=utf-8', body: 'forced favorites failure' });
+          return;
+        }
+        if (url.pathname.endsWith('/user_price_logs')) {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+          return;
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(makeProductPageResponseForRequest(requestUrl)),
+        });
+      });
+      await failurePage.goto(productUrl, { waitUntil: 'domcontentloaded' });
+      await failurePage.locator('#product-page').waitFor({ state: 'attached', timeout: 10000 });
+      await failurePage.waitForFunction(() => String(document.querySelector('#geo-status')?.textContent || '').includes('价格加载失败：forced prices failure'));
+      await failurePage.waitForFunction(() => String(document.querySelector('#personal-store-status')?.textContent || '').includes('门店加载失败：forced stores failure'));
+      assert.equal(failureErrors.filter((message) => !message.includes('Failed to load resource')).length, 0, `failure page errors: ${failureErrors.join(' | ')}`);
+
       console.log('product-page browser test passed');
     } finally {
       await browser.close();
