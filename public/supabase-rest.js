@@ -83,32 +83,6 @@ export function escapeIlike(value) {
     .replace(/'/g, "''");
 }
 
-async function fetchPublicProducts({ limit = 20, offset = 0, order = 'updated_at.desc', select = '*' } = {}) {
-  return restGet('products', {
-    query: {
-      select,
-      order,
-      limit,
-      offset,
-    },
-  });
-}
-
-export async function fetchAllPublicProducts({ batchSize = 1000, order = 'id.asc', select = '*' } = {}) {
-  const allRows = [];
-  let offset = 0;
-
-  while (true) {
-    const rows = await fetchPublicProducts({ limit: batchSize, offset, order, select });
-    if (!rows?.length) break;
-    allRows.push(...rows);
-    if (rows.length < batchSize) break;
-    offset += rows.length;
-  }
-
-  return allRows;
-}
-
 export async function fetchPublicProductByBarcode(barcode) {
   const rows = await restGet('products', {
     query: {
