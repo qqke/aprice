@@ -21,7 +21,7 @@ function makeEsmShimModuleBody() {
 
 async function main() {
   const { server, baseUrl } = await startBuiltServer();
-  const browser = await launchChromiumForTest('product-page');
+  const browser = await launchChromiumForTest('product-runtime-entry');
 
   try {
     if (!browser) {
@@ -33,7 +33,8 @@ async function main() {
       const requests = [];
       const pageErrors = [];
       const productSlug = '9999999999999';
-      const productPath = `/aprice/product/${productSlug}/`;
+      const productPath = `/aprice/product-runtime/?id=${productSlug}`;
+      const expectedPath = `/aprice/product/${productSlug}/`;
       const personalLogs = makePersonalPriceLogs();
       const restCalls = [];
       const favoriteRows = [];
@@ -208,7 +209,7 @@ async function main() {
       assert.match(heroTitle || '', /\S/);
       assert.notEqual(heroSub, null);
       assert.equal(authGateHref.pathname, '/aprice/login/');
-      assert.equal(authGateHref.searchParams.get('redirect'), productPath);
+      assert.equal(authGateHref.searchParams.get('redirect'), expectedPath);
       assert.match(authGateText || '', /登录后可收藏商品、保存个人价格记录/);
       assert.match(priceListText || '', /Sugi Pharmacy Hiroo/);
       assert.match(nearbyListText || '', /Welcia Shibuya/);
@@ -317,7 +318,8 @@ async function main() {
       );
       assert.equal(restCalls.some((call) => call.method === 'POST' && call.url.includes('/rest/v1/user_price_logs')), false);
 
-      console.log('product-page browser test passed');
+      assert.equal(new URL(page.url()).pathname, expectedPath);
+      console.log('product-runtime entry browser test passed');
     } finally {
       await browser.close();
     }
