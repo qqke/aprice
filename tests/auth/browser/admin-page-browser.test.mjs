@@ -18,6 +18,7 @@ async function main() {
       const page = await browser.newPage();
       const pageErrors = [];
       const rpcCalls = [];
+      let failNextProductInsert = false;
 
       async function clickConfirmAndWait(selector, pathPart) {
         page.once('dialog', (dialog) => dialog.accept());
@@ -82,6 +83,16 @@ async function main() {
             bodyText,
             bodyJson,
           });
+        }
+
+        if (failNextProductInsert && requestUrl.includes('/rest/v1/products')) {
+          failNextProductInsert = false;
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json; charset=utf-8',
+            body: 'not-json',
+          });
+          return;
         }
 
         await route.fulfill({
@@ -202,6 +213,15 @@ async function main() {
       );
 
       assert.equal(await page.locator('[data-edit-product="eve-a"]').count(), 0);
+
+      await openPanel('#admin-panel-product');
+      failNextProductInsert = true;
+      await page.locator('#product-id').fill('admin-failing-product');
+      await page.locator('#product-barcode').fill('4990000000002');
+      await page.locator('#product-name').fill('Admin Failing Product <script>window.__adminXss = true</script>');
+      await page.locator('#product-form button[type="submit"]').click();
+      await waitForText(page, '#admin-status', '添加商品失败');
+      assert.equal(await page.evaluate(() => window.__adminXss === true), false);
 
       await openPanel('#admin-panel-product');
       await clickConfirmAndWait('#product-delete', '/rpc/admin_delete_product');
@@ -415,7 +435,5 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
-
 
 

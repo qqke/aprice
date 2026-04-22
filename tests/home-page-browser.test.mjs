@@ -113,6 +113,24 @@ async function main() {
         await ssrContext.close();
       }
 
+      const failingPage = await browser.newPage();
+      const failingRequests = [];
+      await failingPage.route('**/rest/v1/**', async (route) => {
+        failingRequests.push(route.request().url());
+        await route.fulfill({
+          status: 500,
+          contentType: 'text/plain; charset=utf-8',
+          body: 'forced search failure',
+        });
+      });
+      await failingPage.goto(`${baseUrl}/aprice/`, { waitUntil: 'domcontentloaded' });
+      await failingPage.locator('#home-search').fill('失敗');
+      await failingPage.locator('#home-search-button').click();
+      await failingPage.waitForFunction(() => String(document.querySelector('#search-status')?.textContent || '').includes('搜索失败：forced search failure'));
+      assert.match(await failingPage.locator('#search-results').textContent(), /搜索失败/);
+      assert.match(await failingPage.locator('#nearby-status').textContent(), /搜索失败后仍可重新尝试/);
+      assert.ok(failingRequests.some((url) => url.includes('/rest/v1/products')));
+
       console.log('home-page browser test passed');
     } finally {
       await browser.close();

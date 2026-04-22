@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
 import { launchChromiumForTest } from '../../_playwright-launch.mjs';
 import { makePersonalPriceLogs, makeProductPageResponseForRequest } from '../../_browser-test-fixtures.mjs';
@@ -38,6 +39,7 @@ async function main() {
       const personalLogs = makePersonalPriceLogs();
       const restCalls = [];
       const favoriteRows = [];
+      const productRuntimeBody = await readFile(new URL('../../../src/lib/product-page-runtime.js', import.meta.url), 'utf8');
 
       page.on('pageerror', (error) => pageErrors.push(error.message));
       page.on('console', (message) => {
@@ -67,6 +69,13 @@ async function main() {
           status: 200,
           contentType: 'text/javascript; charset=utf-8',
           body: makeEsmShimModuleBody(),
+        });
+      });
+      await page.route('**/product-page-runtime.js', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/javascript; charset=utf-8',
+          body: productRuntimeBody,
         });
       });
       await page.route('**/rest/v1/**', async (route) => {

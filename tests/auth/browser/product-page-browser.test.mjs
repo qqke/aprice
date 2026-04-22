@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
 import { launchChromiumForTest } from '../../_playwright-launch.mjs';
 import { makePersonalPriceLogs, makeProductPageResponseForRequest } from '../../_browser-test-fixtures.mjs';
@@ -37,6 +38,8 @@ async function main() {
       const personalLogs = makePersonalPriceLogs();
       const restCalls = [];
       const favoriteRows = [];
+      let failNextSubmitStorePrice = false;
+      const productRuntimeBody = await readFile(new URL('../../../src/lib/product-page-runtime.js', import.meta.url), 'utf8');
 
       page.on('pageerror', (error) => pageErrors.push(error.message));
       page.on('console', (message) => {
@@ -68,6 +71,13 @@ async function main() {
           body: makeEsmShimModuleBody(),
         });
       });
+      await page.route('**/product-page-runtime.js', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/javascript; charset=utf-8',
+          body: productRuntimeBody,
+        });
+      });
       await page.route('**/rest/v1/**', async (route) => {
         const requestUrl = route.request().url();
         const request = route.request();
@@ -77,6 +87,15 @@ async function main() {
 
         if (url.pathname.endsWith('/rpc/submit_store_price')) {
           if (request.method() === 'POST') {
+            if (failNextSubmitStorePrice) {
+              failNextSubmitStorePrice = false;
+              await route.fulfill({
+                status: 500,
+                contentType: 'text/plain; charset=utf-8',
+                body: 'forced submit failure',
+              });
+              return;
+            }
             const bodyJson = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
             const body = bodyJson.payload || bodyJson;
             const nextEntry = {
@@ -184,7 +203,19 @@ async function main() {
       }
       await page.locator('#product-auth-gate').waitFor({ state: 'attached' });
       await page.locator('.product-title').waitFor({ state: 'attached' });
-      await page.locator('#personal-store-list .store-picker__item').first().waitFor({ state: 'attached', timeout: 10000 });
+      try {
+        await page.locator('#personal-store-list .store-picker__item').first().waitFor({ state: 'attached', timeout: 10000 });
+      } catch (error) {
+        const debugState = await page.evaluate(() => ({
+          productText: document.querySelector('#product-page')?.textContent || '',
+          storeText: document.querySelector('#personal-store-list')?.textContent || '',
+          storeStatusText: document.querySelector('#personal-store-status')?.textContent || '',
+          personalStatusText: document.querySelector('#personal-status')?.textContent || '',
+        }));
+        throw new Error(
+          `${error.message}\ndebug: ${JSON.stringify(debugState)}\nrequests: ${requests.join('\n')}\npageErrors: ${pageErrors.join(' | ') || 'none'}`,
+        );
+      }
       try {
         await page.waitForFunction(() => String(document.querySelector('#personal-store-list')?.textContent || '').includes('我的价 ¥688'), null, { timeout: 10000 });
       } catch (error) {
@@ -299,6 +330,11 @@ async function main() {
 
       await page.locator('#personal-store-search-clear').click();
       await page.waitForFunction(() => String(document.querySelector('#personal-store-search')?.value || '') === '', null, { timeout: 10000 });
+
+      failNextSubmitStorePrice = true;
+      await page.locator('#personal-price').fill('721');
+      await page.locator('#personal-log-form button[type="submit"]').click();
+      await page.waitForFunction(() => String(document.querySelector('#personal-status')?.textContent || '').includes('记录失败：forced submit failure'), null, { timeout: 10000 });
 
       await page.locator('#personal-price').fill('722');
       await page.locator('#personal-note').fill('browser regression');

@@ -99,6 +99,8 @@ async function main() {
         { id: 'fav-product-1', user_id: 'member-1', entity_type: 'product', entity_id: 'loxonin-s', created_at: '2026-04-04T09:00:00.000Z' },
         { id: 'fav-store-1', user_id: 'member-1', entity_type: 'store', entity_id: 'welcia-shibuya', created_at: '2026-04-03T09:00:00.000Z' },
       ];
+      let failNextLogInsert = false;
+      let failNextFavoriteInsert = false;
 
       signedPage.on('pageerror', (error) => {
         throw error;
@@ -146,6 +148,15 @@ async function main() {
 
         if (url.pathname.endsWith('/user_price_logs')) {
           if (method === 'POST') {
+            if (failNextLogInsert) {
+              failNextLogInsert = false;
+              await route.fulfill({
+                status: 500,
+                contentType: 'text/plain; charset=utf-8',
+                body: 'forced log failure',
+              });
+              return;
+            }
             const nextLog = {
               id: `log-${logs.length + 1}`,
               user_id: bodyJson.user_id,
@@ -178,6 +189,15 @@ async function main() {
           }
 
           if (method === 'POST') {
+            if (failNextFavoriteInsert) {
+              failNextFavoriteInsert = false;
+              await route.fulfill({
+                status: 500,
+                contentType: 'text/plain; charset=utf-8',
+                body: 'forced favorite failure',
+              });
+              return;
+            }
             const nextFavorite = {
               id: `fav-${favorites.length + 1}`,
               user_id: bodyJson.user_id,
@@ -254,6 +274,19 @@ async function main() {
         ),
         `expected personal log insert, got ${restCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
       );
+
+      failNextLogInsert = true;
+      await signedPage.locator('#log-product').selectOption('eve-a');
+      await signedPage.locator('#log-store').selectOption('welcia-shibuya');
+      await signedPage.locator('#log-price').fill('819');
+      await signedPage.locator('#log-note').fill('me failure regression');
+      await signedPage.locator('#log-form button[type="submit"]').click();
+      await signedPage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('记录失败：forced log failure'));
+
+      failNextFavoriteInsert = true;
+      await signedPage.locator('#log-product').selectOption('eve-a');
+      await signedPage.locator('#favorite-product-button').click();
+      await signedPage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('收藏失败：forced favorite failure'));
 
       await signedPage.locator('#log-product').selectOption('eve-a');
       await signedPage.locator('#log-store').selectOption('welcia-shibuya');
