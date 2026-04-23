@@ -4469,5 +4469,15 @@ body.admin-page .admin-panel__summary {
 }
 
 body.admin-page .admin-panel__body {
+  display: grid;
+  gap: 12px;
   border-top-color: rgba(15, 23, 42, 0.08);
+}
+
+body.admin-page .admin-toolbar {
+  justify-content: flex-start;
+}
+
+body.login-page .section__header.section__header--tight {
+  margin-bottom: 10px;
 }
