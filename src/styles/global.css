@@ -3439,13 +3439,13 @@ body.admin-page .admin-record-actions--price {
 @media (max-width: 720px) {
   body.home-page .home-hero {
     min-height: auto;
-    padding: 6px 0 4px;
+    padding: 6px 0 2px;
   }
 
   body.home-page .home-hero__inner {
     justify-items: stretch;
     text-align: left;
-    gap: 8px;
+    gap: 6px;
   }
 
   body.home-page .home-brand {
@@ -3517,6 +3517,10 @@ body.admin-page .admin-record-actions--price {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     width: min(100%, 620px);
+  }
+
+  body.home-page .home-section:first-of-type {
+    padding-top: 8px;
   }
 
   body.home-page .home-mobile-shortcut {
