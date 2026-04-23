@@ -59,7 +59,7 @@ const logPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       const productGateCopy = getPrivatePageGateCopy('product');
       const productLogPrompt = logPrompt || getPrivatePageStatusCopy('product', 'logPrompt');
       const tone = product.tone || 'sunset';
-      const description = product.description || '查看该商品在不同门店的采样价格。';
+      const description = product.description || '先看可买到的最低价，再比较门店差异。';
       const brandPill = product.brand
         ? `<span class="pill product-hero__brand" title="${escapeAttribute(product.brand)}">${escapeHtml(product.brand)}</span>`
         : '';
@@ -81,10 +81,9 @@ const logPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
                 </div>
                 <h1 class="product-title">${escapeHtml(product.name || product.id)}</h1>
                 <p class="product-sub">${escapeHtml(description)}</p>
-                <div class="notice notice--compact product-hero__hint">先看最低价，再记买价。</div>
                 <div class="product-hero__actions" aria-label="商品页主要操作">
                   <button class="button" id="hero-geo-sort" type="button">按当前位置排序</button>
-                  <a class="button button--ghost" href="#product-personal-record">记录买价</a>
+                  <a class="button button--ghost" href="#product-personal-record">记录店头价</a>
                 </div>
               </div>
             </div>
@@ -102,7 +101,7 @@ const logPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
                 <div class="section__header section__header--tight">
                   <div>
                     <h2>价格流</h2>
-                    <p>同一商品在不同门店和会员条件下的参考价。</p>
+                    <p>先看可买到的最低价，再比较门店差异。</p>
                   </div>
                   <button class="button button--ghost" id="geo-sort" type="button">按当前位置排序</button>
                 </div>
@@ -127,7 +126,7 @@ const logPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
                 <div class="section__header section__header--tight">
                   <div>
                     <h3>附近门店</h3>
-                    <p>价格流之外，也能快速扫到门店分布。</p>
+                    <p>快速查看附近门店价格分布。</p>
                   </div>
                 </div>
                 <div class="notice notice--compact" id="nearby-status">门店价格会显示在这里。</div>
@@ -142,7 +141,7 @@ const logPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
                 <section class="tile tile--wide" id="product-summary">
                   <div class="section__header section__header--tight">
                     <h3>价格洞察</h3>
-                    <p>自动汇总最低价、门店覆盖和近期变化。</p>
+                    <p>汇总最低价、门店覆盖和近7天变化。</p>
                   </div>
                   <div class="feed">
                     <div class="feed__item feed__item--featured product-summary__item">
@@ -171,10 +170,6 @@ const logPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
                           <span class="pill">摘要读取中...</span>
                         </div>
                       </div>
-                      <div class="product-summary__aside">
-                        <span class="price">洞察</span>
-                        <small>价格流下方保留一份完整读数。</small>
-                      </div>
                     </div>
                   </div>
                 </section>
@@ -186,7 +181,7 @@ const logPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
                 <section class="tile" id="product-personal-record">
                   <div class="section__header section__header--tight">
                     <h3>记录店头价格</h3>
-                    <p>把实体店货架价记下来，也可以提交给公共比价审核。</p>
+                    <p>记录你在门店看到的价格，可选择提交公共比价。</p>
                   </div>
                   <div class="pillrow product-secondary-actions" aria-label="收藏操作">
                     <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>

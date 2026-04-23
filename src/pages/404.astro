@@ -103,25 +103,17 @@ const base = import.meta.env.BASE_URL || '/';
           <div class="eyebrow">搜比价 · 404</div>
           <h1 class="headline">这个页面不在当前路径里。</h1>
           <p class="lead">
-            你可以回首页继续搜索，去扫码查价，或者直接打开个人页。
+            回首页继续搜索，或直接扫码查价。
           </p>
           <div class="hero__actions hero__actions--tight">
             <a class="button" href={`${base}`}>返回首页</a>
             <a class="button button--ghost" href={`${base}scan/`}>去扫码</a>
-            <a class="button button--ghost" href={`${base}me/`}>打开个人页</a>
           </div>
         </div>
       </div>
 
-      <div class="stack">
-        <div class="home-links" aria-label="可继续的入口">
-          <a class="home-link" href={`${base}`}>首页搜索</a>
-          <a class="home-link" href={`${base}scan/`}>扫码查价</a>
-          <a class="home-link" href={`${base}login/`}>账号入口</a>
-        </div>
-        <div class="notice notice--compact">
-          路径未命中时，先回首页或直接扫码继续。
-        </div>
+      <div class="notice notice--compact">
+        路径未命中时，优先回首页或扫码继续。
       </div>
     </div>
   </section>

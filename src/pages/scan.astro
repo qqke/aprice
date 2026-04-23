@@ -8,9 +8,9 @@ export const prerender = true;
     <div class="shell">
       <div class="hero-banner">
         <div class="hero-banner__inner">
-          <h1 class="product-title">打开页面就自动扫，识别到就停。</h1>
+          <h1 class="product-title">打开即扫描，识别后直达商品。</h1>
           <p class="product-sub">
-            相机、条码识别和手动输入统一在一个页面里。找到商品会停下相机并显示结果，没找到也会保留条码直接补录。
+            优先自动识别 JAN 码；识别失败时可手动输入并继续补录。
           </p>
         </div>
       </div>
@@ -28,13 +28,13 @@ export const prerender = true;
               <button class="button button--ghost" id="stop-scan" type="button">停止</button>
               <button class="button button--ghost" id="snap-scan" type="button">尝试识别当前帧</button>
             </div>
-            <div class="notice notice--compact">页面加载后会自动启动后置相机。相机模式需要 HTTPS。</div>
+            <div class="notice notice--compact">页面加载后会自动启动后置相机（需 HTTPS）。</div>
           </div>
         </section>
         <section class="tile">
           <div class="section__header">
             <h3>手动输入</h3>
-            <p>扫不到就直接输条码。</p>
+            <p>扫码失败时再输入条码。</p>
           </div>
           <div class="form">
             <label class="field" for="barcode-input">
@@ -50,7 +50,7 @@ export const prerender = true;
         <div class="section__header">
           <div>
             <h2>扫描结果</h2>
-            <p>识别成功后会停下相机。若商品不存在，会显示条码并展开补录表单。</p>
+            <p>识别成功会停下相机；未命中则保留条码并展开补录。</p>
           </div>
         </div>
         <div class="tile tile--wide">
@@ -69,7 +69,7 @@ export const prerender = true;
           <div class="section__header section__header--tight">
             <div>
               <h3>未找到商品</h3>
-              <p>条码已经保留下来，直接补录商品信息。</p>
+              <p>条码已保留，可直接补录商品信息。</p>
             </div>
             <span class="pill" id="missing-product-code-pill"></span>
           </div>

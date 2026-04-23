@@ -9,21 +9,10 @@ const base = import.meta.env.BASE_URL || '/';
   <section class="home-hero">
     <div class="shell home-hero__inner">
       <div class="home-brand">搜比价 · 日本药店比价</div>
-      <h1 class="home-title">搜比价</h1>
+      <h1 class="home-title">先搜商品，再看附近最低价</h1>
       <p class="home-copy">
-        输入商品名、品牌或 JAN 码，快速找到附近门店价格。
+        输入商品名、品牌或 JAN 码，优先拿到可比价格。
       </p>
-
-      <div class="home-signals" aria-label="支持的搜索类型">
-        <span class="home-signal">JAN 码</span>
-        <span class="home-signal">商品名</span>
-        <span class="home-signal">品牌</span>
-      </div>
-
-      <div class="home-actions" aria-label="快速入口">
-        <a class="button button--ghost" href={`${base}scan/`}>扫码查价</a>
-        <a class="button button--ghost" href={`${base}me/`}>个人页</a>
-      </div>
 
       <form class="home-search" id="home-search-form">
         <label class="field home-search__field" for="home-search">
@@ -43,10 +32,15 @@ const base = import.meta.env.BASE_URL || '/';
         <button class="button home-search__button" id="home-search-button" type="submit">搜索</button>
       </form>
 
+      <div class="home-actions" aria-label="快速入口">
+        <a class="button" href={`${base}scan/`}>扫码查价</a>
+        <a class="button button--ghost" href={`${base}me/`}>个人页</a>
+      </div>
+
       <div class="home-mobile-shortcuts" aria-label="手机快捷方式">
         <button class="home-mobile-shortcut home-mobile-shortcut--primary" id="focus-search-shortcut" type="button">
           <span class="home-mobile-shortcut__label">搜索直达</span>
-          <span class="home-mobile-shortcut__meta">直达输入框</span>
+          <span class="home-mobile-shortcut__meta">聚焦输入框</span>
         </button>
       </div>
 
@@ -55,7 +49,7 @@ const base = import.meta.env.BASE_URL || '/';
         <button class="home-link" id="load-recent-prices" type="button">查看最近采样</button>
       </div>
 
-      <p class="home-meta">支持商品名、品牌、假名片段和 JAN 条码。快捷键 <code>Ctrl+K</code> 或 <code>/</code> 可直达搜索框。</p>
+      <p class="home-meta">支持商品名、品牌和 JAN 条码。快捷键 <code>Ctrl+K</code> 或 <code>/</code> 可直达搜索框。</p>
     </div>
   </section>
 
@@ -64,7 +58,7 @@ const base = import.meta.env.BASE_URL || '/';
       <div class="section__header section__header--tight">
         <div>
           <h2>搜索结果</h2>
-          <p id="search-status">输入关键词后显示匹配商品。</p>
+          <p id="search-status">输入关键词后显示可选商品。</p>
         </div>
       </div>
       <div class="home-panel">
@@ -80,7 +74,7 @@ const base = import.meta.env.BASE_URL || '/';
       <div class="section__header section__header--tight">
         <div>
           <h2>附近比价</h2>
-          <p>已选中的商品会在这里显示门店价格，可再按当前位置排序。</p>
+          <p>选中商品后，这里显示门店价格并支持位置排序。</p>
         </div>
       </div>
       <div class="home-panel">
@@ -101,7 +95,7 @@ const base = import.meta.env.BASE_URL || '/';
       <div class="section__header section__header--tight">
         <div>
           <h2>最近采样</h2>
-          <p>最近更新的价格。</p>
+          <p>最近更新价格。</p>
         </div>
       </div>
       <div class="home-panel">
