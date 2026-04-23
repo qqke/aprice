@@ -94,6 +94,26 @@ async function main() {
       const focusedElementAfterDelay = await page.evaluate(() => document.activeElement?.id || '');
       assert.equal(focusedElementAfterDelay, 'home-search', 'mobile homepage search input should keep focus after tap');
 
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await page.waitForTimeout(120);
+      const preShortcutScrollY = await page.evaluate(() => window.scrollY);
+      assert.ok(preShortcutScrollY > 0, 'mobile scenario should be scrolled before shortcut tap');
+
+      await page.locator('#focus-search-shortcut').click();
+      await page.waitForTimeout(350);
+      const shortcutFocusState = await page.evaluate(() => {
+        const search = document.querySelector('#home-search');
+        const rect = search?.getBoundingClientRect?.();
+        return {
+          activeId: document.activeElement?.id || '',
+          isVisibleInViewport: Boolean(rect && rect.top >= 0 && rect.bottom <= window.innerHeight),
+          scrollY: window.scrollY,
+        };
+      });
+      assert.equal(shortcutFocusState.activeId, 'home-search', 'mobile shortcut should focus the search input');
+      assert.equal(shortcutFocusState.isVisibleInViewport, true, 'mobile shortcut should bring search input into viewport');
+      assert.ok(shortcutFocusState.scrollY < preShortcutScrollY, 'mobile shortcut should move viewport toward search input');
+
       const ssrContext = await browser.newContext({ javaScriptEnabled: false });
       try {
         const ssrPage = await ssrContext.newPage();

@@ -514,9 +514,17 @@ const base = import.meta.env.BASE_URL || '/';
     });
 
     focusSearchShortcut?.addEventListener('click', () => {
-      input?.focus({ preventScroll: true });
-      input?.select();
-      status.textContent = '搜索框已聚焦，可以直接输入。';
+      const reduceMotion = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      input?.scrollIntoView({
+        block: 'center',
+        inline: 'nearest',
+        behavior: reduceMotion ? 'auto' : 'smooth',
+      });
+      requestAnimationFrame(() => {
+        input?.focus({ preventScroll: true });
+        input?.select();
+      });
+      status.textContent = '搜索框已聚焦并已移动到可见位置，可以直接输入。';
     });
 
     loadRecentButton?.addEventListener('click', () => {
