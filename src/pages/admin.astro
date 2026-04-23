@@ -18,7 +18,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       <div class="section__header section__header--tight">
         <div>
           <div class="eyebrow">管理</div>
-          <h1 class="product-title">商品、门店、价格，一屏维护。</h1>
+          <h1 class="product-title">运营后台，一页完成核心维护。</h1>
           <p class="product-sub">{getPrivatePageStatusCopy('admin', 'pageSub')}</p>
         </div>
         <div class="pillrow">
@@ -44,7 +44,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         <div class="section__header section__header--tight">
           <div>
             <h3>当前权限</h3>
-            <p>登录后检查权限并加载后台数据。</p>
+            <p>确认账号级别后加载后台数据。</p>
           </div>
         </div>
         <div class="admin-access-panel__body">
@@ -55,13 +55,21 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         </div>
       </section>
 
+      <div class="pillrow" aria-label="管理区导航">
+        <a class="button button--ghost" href="#admin-panel-submissions">待审核</a>
+        <a class="button button--ghost" href="#admin-panel-price">价格</a>
+        <a class="button button--ghost" href="#admin-panel-product">商品</a>
+        <a class="button button--ghost" href="#admin-panel-store">门店</a>
+        <a class="button button--ghost" href="#admin-panel-recent-prices">最近价格</a>
+      </div>
+
       <div class="admin-panels">
         <details class="tile tile--wide tile--flow admin-panel" id="admin-panel-submissions" open>
           <summary class="admin-panel__summary">
             <span class="admin-panel__chevron" aria-hidden="true"></span>
             <span class="admin-panel__title">
-              <strong>待审核店头价</strong>
-              <small>用户提交的实体店价格，通过后才会进入公共比价。</small>
+              <strong>待审核提交</strong>
+              <small>先审后发，确保公共比价可信。</small>
             </span>
             <span class="pill" id="admin-submissions-summary-count">待审核 0 条</span>
             <span class="meta" id="admin-submissions-summary-status">读取中</span>
@@ -75,8 +83,8 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
           <summary class="admin-panel__summary">
             <span class="admin-panel__chevron" aria-hidden="true"></span>
             <span class="admin-panel__title">
-              <strong>价格</strong>
-              <small>录入公开价格或会员价，或删除最近采样。</small>
+              <strong>价格录入</strong>
+              <small>维护公开价与会员价。</small>
             </span>
             <span class="pill" id="admin-price-summary-count">最近价格 0 条</span>
             <span class="meta" id="admin-price-summary-status">未选择</span>
@@ -112,8 +120,8 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
           <summary class="admin-panel__summary">
             <span class="admin-panel__chevron" aria-hidden="true"></span>
             <span class="admin-panel__title">
-              <strong>商品</strong>
-              <small>新增或删除产品基础信息。</small>
+              <strong>商品档案</strong>
+              <small>新增与清理商品基础信息。</small>
             </span>
             <span class="pill" id="admin-product-summary-count">商品 0 条</span>
             <span class="meta" id="admin-product-summary-status">未加载</span>
@@ -155,8 +163,8 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
           <summary class="admin-panel__summary">
             <span class="admin-panel__chevron" aria-hidden="true"></span>
             <span class="admin-panel__title">
-              <strong>门店</strong>
-              <small>新增、更新或删除门店坐标与营业信息。</small>
+              <strong>门店资料</strong>
+              <small>维护门店位置与营业信息。</small>
             </span>
             <span class="pill" id="admin-store-summary-count">门店 0 条</span>
             <span class="meta" id="admin-store-summary-status">未加载</span>
@@ -196,7 +204,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
             <span class="admin-panel__chevron" aria-hidden="true"></span>
             <span class="admin-panel__title">
               <strong>最近商品</strong>
-              <small>点击可回填到表单。</small>
+              <small>点击即可回填。</small>
             </span>
             <span class="pill" id="admin-recent-products-summary-count">商品 0 条</span>
             <span class="meta" id="admin-recent-products-summary-status">未加载</span>
@@ -211,7 +219,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
             <span class="admin-panel__chevron" aria-hidden="true"></span>
             <span class="admin-panel__title">
               <strong>最近门店</strong>
-              <small>点击可回填到表单。</small>
+              <small>点击即可回填。</small>
             </span>
             <span class="pill" id="admin-recent-stores-summary-count">门店 0 条</span>
             <span class="meta" id="admin-recent-stores-summary-status">未加载</span>
@@ -226,7 +234,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
             <span class="admin-panel__chevron" aria-hidden="true"></span>
             <span class="admin-panel__title">
               <strong>最近价格</strong>
-              <small>可用于快速检查录入结果。</small>
+              <small>用于快速复核录入结果。</small>
             </span>
             <span class="pill" id="admin-recent-prices-summary-count">价格 0 条</span>
             <span class="meta" id="admin-recent-prices-summary-status">未加载</span>
