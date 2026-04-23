@@ -53,11 +53,9 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
 <BaseLayout title={`${product.name} - 搜比价`} description={`${product.name} 的门店价格、附近比价和个人记录。`} bodyClass="product-page">
   <section class="section section--first-workspace" id="product-page" data-product-id={product.id} data-product-name={product.name} data-product-brand={product.brand} data-product-pack={product.pack} data-product-barcode={product.barcode} data-product-tone={product.tone}>
     <div class="shell">
-      <div class="eyebrow">商品</div>
       <div class={`product-hero tone-${product.tone || 'sunset'}`} >
         <div class="product-hero__overlay" >
           <div class="pillrow product-hero__meta">
-            {product.category && <span class="pill product-hero__category" title={product.category}>{product.category}</span>}
             <span class="pill product-hero__barcode">JAN {product.barcode}</span>
             {product.brand && <span class="pill product-hero__brand" title={product.brand}>{product.brand}</span>}
           </div>

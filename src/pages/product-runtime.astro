@@ -60,9 +60,6 @@ const logPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       const productLogPrompt = logPrompt || getPrivatePageStatusCopy('product', 'logPrompt');
       const tone = product.tone || 'sunset';
       const description = product.description || '查看该商品在不同门店的采样价格。';
-      const categoryPill = product.category
-        ? `<span class="pill product-hero__category" title="${escapeAttribute(product.category)}">${escapeHtml(product.category)}</span>`
-        : '';
       const brandPill = product.brand
         ? `<span class="pill product-hero__brand" title="${escapeAttribute(product.brand)}">${escapeHtml(product.brand)}</span>`
         : '';
@@ -76,11 +73,9 @@ const logPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
           data-product-barcode="${escapeAttribute(product.barcode || product.id)}"
           data-product-tone="${escapeAttribute(tone)}">
           <div class="shell">
-            <div class="eyebrow">商品</div>
             <div class="product-hero tone-${escapeAttribute(tone)}">
               <div class="product-hero__overlay">
                 <div class="pillrow product-hero__meta">
-                  ${categoryPill}
                   <span class="pill product-hero__barcode">JAN ${escapeHtml(product.barcode || product.id)}</span>
                   ${brandPill}
                 </div>

@@ -8,7 +8,6 @@ export const prerender = true;
     <div class="shell">
       <div class="hero-banner">
         <div class="hero-banner__inner">
-          <div class="hero-banner__eyebrow">扫码</div>
           <h1 class="product-title">打开页面就自动扫，识别到就停。</h1>
           <p class="product-sub">
             相机、条码识别和手动输入统一在一个页面里。找到商品会停下相机并显示结果，没找到也会保留条码直接补录。
@@ -72,9 +71,7 @@ export const prerender = true;
               <h3>未找到商品</h3>
               <p>条码已经保留下来，直接补录商品信息。</p>
             </div>
-            <div class="pillrow">
-              <span class="pill" id="missing-product-code-pill"></span>
-            </div>
+            <span class="pill" id="missing-product-code-pill"></span>
           </div>
           <div class="notice notice--warning" id="missing-product-summary">请填写商品信息后直接添加。</div>
           <form class="form admin-form" id="missing-product-form">

@@ -52,7 +52,6 @@ const base = import.meta.env.BASE_URL || '/';
 
       <div class="home-links" aria-label="辅助入口">
         <button class="home-link" id="geolocate-home" type="button">用当前位置找附近价格</button>
-        <span class="home-links__dot" aria-hidden="true">·</span>
         <button class="home-link" id="load-recent-prices" type="button">查看最近采样</button>
       </div>
 
@@ -67,7 +66,6 @@ const base = import.meta.env.BASE_URL || '/';
           <h2>搜索结果</h2>
           <p id="search-status">输入关键词后显示匹配商品。</p>
         </div>
-        <span class="pill">搜索</span>
       </div>
       <div class="home-panel">
         <div class="list home-results" id="search-results" role="listbox" aria-live="polite" aria-label="搜索结果列表">
@@ -84,7 +82,6 @@ const base = import.meta.env.BASE_URL || '/';
           <h2>附近比价</h2>
           <p>已选中的商品会在这里显示门店价格，可再按当前位置排序。</p>
         </div>
-        <span class="pill">附近</span>
       </div>
       <div class="home-panel">
         <div class="home-selection" aria-live="polite">
@@ -106,7 +103,6 @@ const base = import.meta.env.BASE_URL || '/';
           <h2>最近采样</h2>
           <p>最近更新的价格。</p>
         </div>
-        <span class="pill">采样</span>
       </div>
       <div class="home-panel">
         <div class="notice notice--compact home-status" id="recent-status">点一下加载最近更新。</div>

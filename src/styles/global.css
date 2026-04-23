@@ -4275,3 +4275,199 @@ body.admin-page .admin-record-actions--price {
     line-height: 1.45;
   }
 }
+
+/* Commercial UI v1 final overrides (must stay at file end). */
+:root {
+  --bg: #f3f5f8;
+  --bg-elevated: #ffffff;
+  --surface: #ffffff;
+  --surface-soft: #f7f9fc;
+  --border: rgba(15, 23, 42, 0.1);
+  --text: #111827;
+  --muted: rgba(17, 24, 39, 0.68);
+  --muted-strong: rgba(17, 24, 39, 0.84);
+  --accent: #1f4fd8;
+  --accent-2: #1f4fd8;
+  --accent-3: #1f4fd8;
+  --danger: #c92f3a;
+  --shadow: 0 10px 26px rgba(15, 23, 42, 0.07);
+  --radius-xl: 20px;
+  --radius-lg: 16px;
+  --radius-md: 12px;
+  --radius-sm: 10px;
+  color-scheme: light;
+}
+
+body,
+body.home-page {
+  background:
+    radial-gradient(circle at 10% -20%, rgba(31, 79, 216, 0.07), transparent 40%),
+    linear-gradient(180deg, #f8fafc 0%, #f3f5f8 100%);
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.topbar__inner {
+  border-radius: 18px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+}
+
+.nav a,
+.nav button,
+.chip,
+.pill,
+.home-link,
+.footer__links a {
+  border-radius: 999px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: #ffffff;
+}
+
+.nav a[aria-current='page'] {
+  border-color: rgba(31, 79, 216, 0.25);
+  background: rgba(31, 79, 216, 0.08);
+  color: #123aa7;
+}
+
+.button {
+  min-height: 42px;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: linear-gradient(180deg, #2a5fe8, #1f4fd8);
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(31, 79, 216, 0.2);
+}
+
+.button--ghost {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.14);
+  color: #0f274f;
+}
+
+.button--active {
+  border-color: rgba(31, 79, 216, 0.24);
+  background: rgba(31, 79, 216, 0.1);
+  color: #123aa7;
+}
+
+.field,
+.notice,
+.tile,
+.list__item,
+.feed__item {
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+}
+
+.field:focus-within {
+  border-color: rgba(31, 79, 216, 0.34);
+  box-shadow:
+    0 0 0 4px rgba(31, 79, 216, 0.12),
+    0 8px 22px rgba(15, 23, 42, 0.06);
+}
+
+.notice--warning {
+  border-color: rgba(201, 47, 58, 0.2);
+  background: rgba(201, 47, 58, 0.06);
+}
+
+.hero-banner,
+.product-hero,
+.hero__panel,
+.home-panel {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: var(--shadow);
+}
+
+.home-brand,
+.eyebrow,
+.feed__kicker {
+  color: #123aa7;
+}
+
+.headline,
+.product-title,
+.home-title {
+  letter-spacing: -0.03em;
+  color: #0f172a;
+}
+
+.lead,
+.product-sub,
+.home-copy,
+.section__header p,
+.meta,
+.muted {
+  color: var(--muted);
+}
+
+.pill {
+  border-color: rgba(31, 79, 216, 0.2);
+  background: rgba(31, 79, 216, 0.06);
+  color: #123aa7;
+  font-weight: 700;
+}
+
+.list__item:hover,
+.feed__item:hover,
+.button--ghost:hover {
+  transform: translateY(-1px);
+  border-color: rgba(31, 79, 216, 0.2);
+  background: #ffffff;
+}
+
+body.home-page .home-hero {
+  padding-top: 20px;
+  padding-bottom: 14px;
+}
+
+body.home-page .home-hero::before,
+body.home-page .home-hero::after {
+  opacity: 0.48;
+}
+
+body.home-page .home-signals {
+  gap: 8px;
+}
+
+body.home-page .home-signal {
+  background: rgba(31, 79, 216, 0.08);
+  border-color: rgba(31, 79, 216, 0.2);
+  color: #123aa7;
+}
+
+body.scan-page .hero-banner__inner,
+body.product-page .product-hero__overlay {
+  gap: 10px;
+}
+
+body.scan-page .section__header .pill,
+body.product-page .section__header .pill,
+body.error-page .home-links__dot {
+  display: none;
+}
+
+body.product-page .product-hero__meta {
+  gap: 8px;
+}
+
+body.product-page .product-hero__brand,
+body.product-page .product-hero__barcode {
+  background: rgba(31, 79, 216, 0.06);
+  border-color: rgba(31, 79, 216, 0.2);
+}
+
+body.admin-page .admin-panel__summary {
+  min-height: 52px;
+  padding-block: 12px;
+}
+
+body.admin-page .admin-panel__body {
+  border-top-color: rgba(15, 23, 42, 0.08);
+}
