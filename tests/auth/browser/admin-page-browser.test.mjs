@@ -145,6 +145,7 @@ async function main() {
       await page.locator('#admin-stores').waitFor({ state: 'attached' });
       await page.locator('#admin-prices').waitFor({ state: 'attached' });
       await page.locator('#admin-price-submissions').waitFor({ state: 'attached' });
+      await page.locator('#admin-panel-telemetry').waitFor({ state: 'attached' });
       await page.locator('#admin-panel-submissions').waitFor({ state: 'attached' });
       await page.locator('#admin-panel-product').waitFor({ state: 'attached' });
       await page.locator('#admin-product-summary-count').waitFor({ state: 'attached' });
@@ -163,6 +164,7 @@ async function main() {
       const storeSummaryText = await page.locator('#admin-panel-store').textContent();
       const priceSummaryText = await page.locator('#admin-panel-price').textContent();
       const submissionsSummaryText = await page.locator('#admin-panel-submissions').textContent();
+      const telemetrySummaryText = await page.locator('#admin-panel-telemetry').textContent();
       const productOptions = await page.locator('#price-product option').allTextContents();
       const storeOptions = await page.locator('#price-store option').allTextContents();
 
@@ -172,6 +174,8 @@ async function main() {
       assert.equal(await page.locator('#admin-panel-product').evaluate((el) => el.open), false);
       assert.match(submissionsSummaryText || '', /待审核店头价/);
       assert.match(submissionsSummaryText || '', /待审核 2 条/);
+      assert.match(telemetrySummaryText || '', /事件看板/);
+      assert.match(telemetrySummaryText || '', /事件 0 条/);
       assert.match(productSummaryText || '', /商品 2 条/);
       assert.match(storeSummaryText || '', /门店 2 条/);
       assert.match(priceSummaryText || '', /最近价格 2 条/);
