@@ -61,6 +61,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         <a class="button button--ghost" href="#admin-panel-product">商品</a>
         <a class="button button--ghost" href="#admin-panel-store">门店</a>
         <a class="button button--ghost" href="#admin-panel-recent-prices">最近价格</a>
+        <a class="button button--ghost" href="#admin-panel-telemetry">事件看板</a>
       </div>
 
       <div class="admin-panels">
@@ -243,13 +244,29 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
             <div class="list" id="admin-prices"></div>
           </div>
         </details>
+
+        <details class="tile tile--wide tile--flow admin-panel" id="admin-panel-telemetry">
+          <summary class="admin-panel__summary">
+            <span class="admin-panel__chevron" aria-hidden="true"></span>
+            <span class="admin-panel__title">
+              <strong>事件看板</strong>
+              <small>近 7 天关键行为概览。</small>
+            </span>
+            <span class="pill" id="admin-telemetry-summary-count">事件 0 条</span>
+            <span class="meta" id="admin-telemetry-summary-status">未加载</span>
+          </summary>
+          <div class="admin-panel__body">
+            <div class="list" id="admin-telemetry-summary"></div>
+            <div class="list" id="admin-telemetry-recent"></div>
+          </div>
+        </details>
       </div>
     </div>
   </section>
 
   <script type="module" is:inline define:vars={{ loginUrl }}>
     const { fetchAllProducts, fetchAllStores, fetchRecentPrices } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
-    const { adminDeletePrice, adminDeleteProduct, adminDeleteStore, adminReviewPriceSubmission, adminUpsertPrice, adminUpsertStore, createProduct, fetchCurrentProfile, fetchPendingPriceSubmissions, getCurrentUser, signOut } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+    const { adminDeletePrice, adminDeleteProduct, adminDeleteStore, adminFetchTelemetryRecent, adminFetchTelemetrySummary, adminReviewPriceSubmission, adminUpsertPrice, adminUpsertStore, createProduct, fetchCurrentProfile, fetchPendingPriceSubmissions, getCurrentUser, signOut } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { applyPrivatePageGateCopy, getPrivatePageGateCopy, getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
 
     const status = document.querySelector('#admin-status');
@@ -273,6 +290,8 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     const storeList = document.querySelector('#admin-stores');
     const priceList = document.querySelector('#admin-prices');
     const priceSubmissionList = document.querySelector('#admin-price-submissions');
+    const telemetrySummaryList = document.querySelector('#admin-telemetry-summary');
+    const telemetryRecentList = document.querySelector('#admin-telemetry-recent');
     const productReset = document.querySelector('#product-reset');
     const storeReset = document.querySelector('#store-reset');
     const priceReset = document.querySelector('#price-reset');
@@ -294,6 +313,8 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       recentStoresStatus: document.querySelector('#admin-recent-stores-summary-status'),
       recentPricesCount: document.querySelector('#admin-recent-prices-summary-count'),
       recentPricesStatus: document.querySelector('#admin-recent-prices-summary-status'),
+      telemetryCount: document.querySelector('#admin-telemetry-summary-count'),
+      telemetryStatus: document.querySelector('#admin-telemetry-summary-status'),
     };
 
     const productFields = {
@@ -333,6 +354,8 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     let stores = [];
     let prices = [];
     let priceSubmissions = [];
+    let telemetrySummary = { days: 7, total_events: 0, active_users: 0, top_events: [] };
+    let telemetryItems = [];
     let selectedPriceId = '';
 
     function elValue(field) {
@@ -394,6 +417,8 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       setSummaryText('recentPricesStatus', prices.length ? '可检查' : '暂无数据');
       setSummaryText('submissionsCount', `待审核 ${priceSubmissions.length} 条`);
       setSummaryText('submissionsStatus', priceSubmissions.length ? `最新 ${priceSubmissions[0]?.products?.name || priceSubmissions[0]?.product_id || '提交'}` : '暂无数据');
+      setSummaryText('telemetryCount', `事件 ${telemetrySummary?.total_events || 0} 条`);
+      setSummaryText('telemetryStatus', telemetryItems.length ? '已加载' : '暂无数据');
     }
 
     function refreshSelectors() {
@@ -527,6 +552,35 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         : '<div class="list__item"><div><strong>暂无待审核店头价</strong><small>用户公开提交后会出现在这里。</small></div><span class="meta">0</span></div>';
     }
 
+    function renderTelemetry() {
+      if (telemetrySummaryList) {
+        const topEvents = Array.isArray(telemetrySummary?.top_events) ? telemetrySummary.top_events : [];
+        telemetrySummaryList.innerHTML = `
+          <div class="list__item">
+            <div>
+              <strong>近 ${escapeHtml(telemetrySummary?.days || 7)} 天总事件 ${escapeHtml(telemetrySummary?.total_events || 0)} 条</strong>
+              <small>活跃用户 ${escapeHtml(telemetrySummary?.active_users || 0)} 人 · Top 事件：${escapeHtml(topEvents.slice(0, 3).map((item) => `${item.event_name}(${item.total})`).join(' / ') || '暂无')}</small>
+            </div>
+            <span class="meta">telemetry</span>
+          </div>
+        `;
+      }
+
+      if (telemetryRecentList) {
+        telemetryRecentList.innerHTML = telemetryItems.length
+          ? telemetryItems.slice(0, 12).map((item) => `
+            <div class="list__item">
+              <div>
+                <strong>${escapeHtml(item.event_name || 'unknown')}</strong>
+                <small>${escapeHtml(item.email || item.user_id || 'anonymous')} · ${formatAdminDate(item.occurred_at)} · ${escapeHtml(JSON.stringify(item.payload || {}))}</small>
+              </div>
+              <span class="meta">event</span>
+            </div>
+          `).join('')
+          : '<div class="list__item"><div><strong>暂无事件</strong><small>启用 telemetry 后会在这里展示最新行为。</small></div><span class="meta">0</span></div>';
+      }
+    }
+
     syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: false });
     switchAccountLink?.setAttribute('href', loginUrl);
 
@@ -577,18 +631,32 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         fetchRecentPrices(12),
         fetchPendingPriceSubmissions(20),
       ]);
+      let telemetrySummaryResult = { days: 7, total_events: 0, active_users: 0, top_events: [] };
+      let telemetryRecentResult = { items: [] };
+      try {
+        [telemetrySummaryResult, telemetryRecentResult] = await Promise.all([
+          adminFetchTelemetrySummary({ days: 7 }),
+          adminFetchTelemetryRecent({ limit: 30 }),
+        ]);
+      } catch {
+        telemetrySummaryResult = { days: 7, total_events: 0, active_users: 0, top_events: [] };
+        telemetryRecentResult = { items: [] };
+      }
       syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: false });
       if (logoutButton) logoutButton.hidden = false;
       products = productItems;
       stores = storeItems;
       prices = priceItems;
       priceSubmissions = pendingItems;
+      telemetrySummary = telemetrySummaryResult || { days: 7, total_events: 0, active_users: 0, top_events: [] };
+      telemetryItems = Array.isArray(telemetryRecentResult?.items) ? telemetryRecentResult.items : [];
 
       refreshSelectors();
       renderProducts();
       renderStores();
       renderPrices();
       renderPriceSubmissions();
+      renderTelemetry();
       updateAdminSummaries();
       if (submissionsPanel && priceSubmissions.length) submissionsPanel.open = true;
       if (status) status.textContent = getPrivatePageStatusCopy('admin', 'loaded', { email: profile.email || user.email });

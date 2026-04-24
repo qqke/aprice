@@ -851,6 +851,80 @@ as $$
   );
 $$;
 
+create or replace function admin_fetch_telemetry_summary(payload jsonb default '{}'::jsonb)
+returns jsonb
+language sql
+security definer
+set search_path = public
+as $$
+  with args as (
+    select greatest(1, least(90, coalesce((nullif(payload->>'days', ''))::integer, 7))) as days_window
+  ),
+  scoped as (
+    select t.*
+    from public.telemetry_events t
+    cross join args a
+    where t.occurred_at >= now() - make_interval(days => a.days_window)
+  ),
+  top_events as (
+    select event_name, count(*)::integer as total
+    from scoped
+    group by event_name
+    order by total desc, event_name asc
+    limit 8
+  )
+  select jsonb_build_object(
+    'days', (select days_window from args),
+    'total_events', coalesce((select count(*)::integer from scoped), 0),
+    'active_users', coalesce((select count(distinct user_id)::integer from scoped where user_id is not null), 0),
+    'top_events', coalesce((select jsonb_agg(jsonb_build_object('event_name', event_name, 'total', total)) from top_events), '[]'::jsonb)
+  );
+$$;
+
+create or replace function admin_fetch_telemetry_recent(payload jsonb default '{}'::jsonb)
+returns jsonb
+language sql
+security definer
+set search_path = public
+as $$
+  with args as (
+    select greatest(1, least(200, coalesce((nullif(payload->>'limit', ''))::integer, 30))) as row_limit
+  ),
+  rows as (
+    select
+      t.id,
+      t.user_id,
+      t.event_name,
+      t.payload,
+      t.occurred_at,
+      p.email
+    from public.telemetry_events t
+    left join public.profiles p on p.id = t.user_id
+    order by t.occurred_at desc, t.id desc
+    limit (select row_limit from args)
+  )
+  select jsonb_build_object(
+    'items',
+    coalesce(
+      (
+        select jsonb_agg(
+          jsonb_build_object(
+            'id', r.id,
+            'user_id', r.user_id,
+            'email', coalesce(r.email, ''),
+            'event_name', r.event_name,
+            'payload', r.payload,
+            'occurred_at', r.occurred_at
+          )
+          order by r.occurred_at desc, r.id desc
+        )
+        from rows r
+      ),
+      '[]'::jsonb
+    )
+  );
+$$;
+
 create or replace function handle_new_user()
 returns trigger
 language plpgsql

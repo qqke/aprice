@@ -274,6 +274,21 @@ export async function adminReviewPriceSubmission(payload) {
   return result;
 }
 
+export async function adminFetchTelemetrySummary(payload = {}) {
+  const session = await requireSession();
+  const result = await restRpc('admin_fetch_telemetry_summary', { payload }, { token: session.access_token });
+  const summary = Array.isArray(result) ? result[0] : result;
+  return summary && typeof summary === 'object' ? summary : { days: 7, total_events: 0, active_users: 0, top_events: [] };
+}
+
+export async function adminFetchTelemetryRecent(payload = {}) {
+  const session = await requireSession();
+  const result = await restRpc('admin_fetch_telemetry_recent', { payload }, { token: session.access_token });
+  const rows = Array.isArray(result) ? result[0] : result;
+  const items = Array.isArray(rows?.items) ? rows.items : [];
+  return { items };
+}
+
 export async function fetchFavorites(userId) {
   if (!userId) return [];
   const session = await requireSession();
