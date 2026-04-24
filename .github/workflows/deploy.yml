@@ -38,6 +38,8 @@ jobs:
       PUBLIC_SITE_URL: ${{ secrets.PUBLIC_SITE_URL }}
       PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
       PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+      PUBLIC_USE_SERVER_PRICE_RPC: ${{ secrets.PUBLIC_USE_SERVER_PRICE_RPC }}
+      PUBLIC_ENABLE_TELEMETRY_RPC: ${{ secrets.PUBLIC_ENABLE_TELEMETRY_RPC }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -86,6 +88,8 @@ jobs:
     env:
       PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
       PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+      PUBLIC_USE_SERVER_PRICE_RPC: ${{ vars.PUBLIC_USE_SERVER_PRICE_RPC }}
+      PUBLIC_ENABLE_TELEMETRY_RPC: ${{ vars.PUBLIC_ENABLE_TELEMETRY_RPC }}
       BENCH_PRODUCT_ID: ${{ inputs.bench_product_id }}
       BENCH_LIMIT: "120"
       BENCH_SINCE_DAYS: "45"

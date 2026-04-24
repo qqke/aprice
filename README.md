@@ -78,6 +78,7 @@ PUBLIC_ENABLE_TELEMETRY_RPC=0
 
 工作流位于 `.github/workflows/deploy.yml`，默认把 `main` 分支构建后的 `dist/client` 作为 GitHub Pages artifact 发布。
 如果需要自定义域名，使用 GitHub Secret `PUBLIC_SITE_URL`（例如 `https://outlets.stbf.online`）；工作流会在构建阶段自动生成 `dist/client/CNAME`，无需在仓库提交 `public/CNAME`。
+功能开关建议使用 GitHub Variables：`PUBLIC_USE_SERVER_PRICE_RPC`、`PUBLIC_ENABLE_TELEMETRY_RPC`（值用 `0/1`）。
 
 ## 备注
 
