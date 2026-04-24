@@ -22,6 +22,24 @@ create table if not exists products (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists product_submissions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  barcode text not null,
+  name text not null,
+  brand text not null default '',
+  pack text not null default '',
+  category text not null default '',
+  tone text not null default 'sunset',
+  description text not null default '',
+  review_status text not null default 'pending' check (review_status in ('pending', 'approved', 'rejected')),
+  review_note text not null default '',
+  promoted_product_id text references products(id) on delete set null,
+  reviewed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists stores (
   id text primary key,
   name text not null,
@@ -89,6 +107,8 @@ create table if not exists telemetry_events (
 create index if not exists products_name_trgm_idx on products using gin (name gin_trgm_ops);
 create index if not exists products_brand_trgm_idx on products using gin (brand gin_trgm_ops);
 create index if not exists products_barcode_idx on products (barcode);
+create index if not exists product_submissions_review_idx on product_submissions (review_status, created_at desc);
+create index if not exists product_submissions_user_idx on product_submissions (user_id, created_at desc);
 create index if not exists stores_city_idx on stores (city);
 create index if not exists prices_product_store_idx on prices (product_id, store_id);
 create index if not exists prices_product_collected_idx on prices (product_id, collected_at desc);
@@ -119,6 +139,11 @@ create trigger stores_updated_at
 before update on stores
 for each row execute function set_updated_at();
 
+drop trigger if exists product_submissions_updated_at on product_submissions;
+create trigger product_submissions_updated_at
+before update on product_submissions
+for each row execute function set_updated_at();
+
 drop trigger if exists prices_updated_at on prices;
 create trigger prices_updated_at
 before update on prices
@@ -136,6 +161,7 @@ for each row execute function set_updated_at();
 
 alter table profiles enable row level security;
 alter table products enable row level security;
+alter table product_submissions enable row level security;
 alter table stores enable row level security;
 alter table prices enable row level security;
 alter table user_price_logs enable row level security;
@@ -147,11 +173,12 @@ create policy "profiles insert own" on profiles for insert with check (auth.uid(
 create policy "profiles update own" on profiles for update using (auth.uid() = id) with check (auth.uid() = id);
 
 create policy "products public read" on products for select using (true);
-create policy "products authenticated insert" on products for insert with check (auth.uid() is not null);
 create policy "stores public read" on stores for select using (true);
 create policy "prices public read" on prices for select using (true);
 
 create policy "products admin write" on products for all using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
+create policy "product submissions owner read" on product_submissions for select using (auth.uid() = user_id);
+create policy "product submissions owner insert" on product_submissions for insert with check (auth.uid() = user_id);
 create policy "stores admin write" on stores for all using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
 create policy "prices admin write" on prices for all using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
 
@@ -209,6 +236,10 @@ drop policy if exists "logs admin read" on user_price_logs;
 create policy "logs admin read" on user_price_logs for select using (is_admin_user());
 drop policy if exists "logs admin update" on user_price_logs;
 create policy "logs admin update" on user_price_logs for update using (is_admin_user()) with check (is_admin_user());
+drop policy if exists "product submissions admin read" on product_submissions;
+create policy "product submissions admin read" on product_submissions for select using (is_admin_user());
+drop policy if exists "product submissions admin update" on product_submissions;
+create policy "product submissions admin update" on product_submissions for update using (is_admin_user()) with check (is_admin_user());
 
 create or replace function create_product(payload jsonb)
 returns products
@@ -219,7 +250,7 @@ as $$
 declare
   result products;
 begin
-  perform require_authenticated_user();
+  perform require_admin_user();
 
   if coalesce(payload->>'barcode', '') = '' then
     raise exception 'barcode is required';
@@ -255,6 +286,144 @@ begin
 exception
   when unique_violation then
     raise exception 'product already exists';
+end;
+$$;
+
+create or replace function submit_product_submission(payload jsonb)
+returns product_submissions
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result product_submissions;
+  target_barcode text;
+begin
+  perform require_authenticated_user();
+
+  target_barcode := regexp_replace(coalesce(payload->>'barcode', payload->>'id', ''), '\D', '', 'g');
+  if target_barcode !~ '^(\d{8}|\d{12,14})$' then
+    raise exception 'jan_code is required';
+  end if;
+
+  if coalesce(payload->>'name', '') = '' then
+    raise exception 'name is required';
+  end if;
+
+  if exists(select 1 from public.products where barcode = target_barcode or id = coalesce(nullif(payload->>'id', ''), target_barcode)) then
+    raise exception 'product already exists';
+  end if;
+
+  insert into public.product_submissions (
+    user_id,
+    barcode,
+    name,
+    brand,
+    pack,
+    category,
+    tone,
+    description
+  )
+  values (
+    auth.uid(),
+    target_barcode,
+    coalesce(payload->>'name', ''),
+    coalesce(payload->>'brand', ''),
+    coalesce(payload->>'pack', ''),
+    coalesce(payload->>'category', ''),
+    coalesce(nullif(payload->>'tone', ''), 'sunset'),
+    coalesce(payload->>'description', '')
+  )
+  returning * into result;
+
+  return result;
+end;
+$$;
+
+create or replace function admin_review_product_submission(payload jsonb)
+returns product_submissions
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target_submission product_submissions;
+  result product_submissions;
+  action text;
+  next_product_id text;
+begin
+  perform require_admin_user();
+
+  action := coalesce(payload->>'action', '');
+  if action not in ('approve', 'reject') then
+    raise exception 'review action must be approve or reject';
+  end if;
+
+  select *
+  into target_submission
+  from public.product_submissions
+  where id = nullif(payload->>'id', '')::uuid
+  for update;
+
+  if not found then
+    raise exception 'product submission not found';
+  end if;
+
+  if target_submission.review_status <> 'pending' then
+    raise exception 'product submission is not pending';
+  end if;
+
+  if action = 'approve' then
+    next_product_id := coalesce(nullif(payload->>'product_id', ''), target_submission.barcode);
+    insert into public.products (
+      id,
+      barcode,
+      name,
+      brand,
+      pack,
+      category,
+      tone,
+      description
+    )
+    values (
+      next_product_id,
+      target_submission.barcode,
+      target_submission.name,
+      target_submission.brand,
+      target_submission.pack,
+      target_submission.category,
+      target_submission.tone,
+      target_submission.description
+    )
+    on conflict (id) do update
+      set barcode = excluded.barcode,
+          name = excluded.name,
+          brand = excluded.brand,
+          pack = excluded.pack,
+          category = excluded.category,
+          tone = excluded.tone,
+          description = excluded.description,
+          updated_at = now();
+
+    update public.product_submissions
+    set review_status = 'approved',
+        review_note = coalesce(payload->>'review_note', ''),
+        promoted_product_id = next_product_id,
+        reviewed_at = now(),
+        updated_at = now()
+    where id = target_submission.id
+    returning * into result;
+  else
+    update public.product_submissions
+    set review_status = 'rejected',
+        review_note = coalesce(payload->>'review_note', ''),
+        reviewed_at = now(),
+        updated_at = now()
+    where id = target_submission.id
+    returning * into result;
+  end if;
+
+  return result;
 end;
 $$;
 

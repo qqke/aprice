@@ -266,7 +266,7 @@ async function main() {
       const logPostCountBeforeInvalid = restCalls.filter((call) => call.method === 'POST' && call.url.includes('/rest/v1/user_price_logs')).length;
       await signedPage.locator('#log-price').fill('0');
       await signedPage.locator('#log-form button[type="submit"]').click();
-      await signedPage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('请输入有效的价格。'));
+      await signedPage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('请输入有效的日元价格。'));
       assert.equal(restCalls.filter((call) => call.method === 'POST' && call.url.includes('/rest/v1/user_price_logs')).length, logPostCountBeforeInvalid);
 
       await signedPage.locator('#log-product').selectOption('eve-a');

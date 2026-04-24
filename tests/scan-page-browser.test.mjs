@@ -74,17 +74,19 @@ async function main() {
           }
         }
 
-        if (url.pathname.endsWith('/products') && request.method() === 'POST') {
+        if (url.pathname.includes('/rpc/submit_product_submission') && request.method() === 'POST') {
           const body = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
+          const payload = body.payload || body;
           const savedProduct = {
-            id: body.id || body.barcode,
-            barcode: body.barcode || '',
-            name: body.name || '',
-            brand: body.brand || '',
-            pack: body.pack || '',
-            category: body.category || '',
-            tone: body.tone || 'sunset',
-            description: body.description || '',
+            id: 'submission-1',
+            barcode: payload.barcode || '',
+            name: payload.name || '',
+            brand: payload.brand || '',
+            pack: payload.pack || '',
+            category: payload.category || '',
+            tone: payload.tone || 'sunset',
+            description: payload.description || '',
+            review_status: 'pending',
           };
           await route.fulfill({
             status: 200,
@@ -158,17 +160,19 @@ async function main() {
         const url = new URL(requestUrl);
         foundRequests.push({ method: request.method(), url: requestUrl, body: request.postData() || '' });
 
-        if (url.pathname.endsWith('/products') && request.method() === 'POST') {
+        if (url.pathname.includes('/rpc/submit_product_submission') && request.method() === 'POST') {
           const body = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
+          const payload = body.payload || body;
           const savedProduct = {
-            id: body.id || body.barcode,
-            barcode: body.barcode || '',
-            name: body.name || '',
-            brand: body.brand || '',
-            pack: body.pack || '',
-            category: body.category || '',
-            tone: body.tone || 'sunset',
-            description: body.description || '',
+            id: 'submission-1',
+            barcode: payload.barcode || '',
+            name: payload.name || '',
+            brand: payload.brand || '',
+            pack: payload.pack || '',
+            category: payload.category || '',
+            tone: payload.tone || 'sunset',
+            description: payload.description || '',
+            review_status: 'pending',
           };
           await route.fulfill({
             status: 200,
@@ -195,17 +199,19 @@ async function main() {
           return;
         }
 
-        if (url.pathname.includes('/rpc/create_product')) {
+        if (url.pathname.includes('/rpc/submit_product_submission')) {
           const body = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
+          const payload = body.payload || body;
           const savedProduct = {
-            id: body.id || body.barcode,
-            barcode: body.barcode || '',
-            name: body.name || '',
-            brand: body.brand || '',
-            pack: body.pack || '',
-            category: body.category || '',
-            tone: body.tone || 'sunset',
-            description: body.description || '',
+            id: 'submission-1',
+            barcode: payload.barcode || '',
+            name: payload.name || '',
+            brand: payload.brand || '',
+            pack: payload.pack || '',
+            category: payload.category || '',
+            tone: payload.tone || 'sunset',
+            description: payload.description || '',
+            review_status: 'pending',
           };
           await route.fulfill({
             status: 200,
@@ -226,20 +232,18 @@ async function main() {
       await foundPage.locator('#barcode-input').fill('4987240210733');
       await foundPage.locator('#barcode-search').click();
       await waitForRequestMatch(foundRequests, (call) => call.url.includes('/rest/v1/products') && call.url.includes('barcode=eq.4987240210733'));
-      await waitForHidden(foundPage, '#missing-product-panel');
-      await foundPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('商品已自动添加'));
+      await foundPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('商品补录已提交审核'));
 
       assert.equal(await foundPage.locator('#barcode-input').inputValue(), '4987240210733');
-      assert.match(await foundPage.locator('#scan-result-list').textContent(), /龍角散ダイレクトスティック ピーチ/);
-      assert.equal(await foundPage.locator('#scan-result-list a').getAttribute('href'), '/aprice/product/4987240210733/');
-      await waitForRequestMatch(foundRequests, (call) => call.url.includes('/rest/v1/products') && call.method === 'POST');
+      assert.match(await foundPage.locator('#missing-product-name').inputValue(), /龍角散ダイレクトスティック ピーチ/);
+      await waitForRequestMatch(foundRequests, (call) => call.url.includes('/rpc/submit_product_submission') && call.method === 'POST');
       assert.ok(
-        foundRequests.some((call) => call.url.includes('/rest/v1/products') && call.method === 'POST'),
-        `expected products insert, got ${foundRequests.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
+        foundRequests.some((call) => call.url.includes('/rpc/submit_product_submission') && call.method === 'POST'),
+        `expected product submission RPC, got ${foundRequests.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
       );
       assert.ok(
-        foundRequests.some((call) => call.url.includes('/rest/v1/products') && call.method === 'POST' && call.body.includes('"id":"4987240210733"') && call.body.includes('"barcode":"4987240210733"') && call.body.includes('"name":"龍角散ダイレクトスティック ピーチ(16包)"') && call.body.includes('"brand":"株式会社龍角散"')),
-        `expected products insert payload, got ${foundRequests.map((call) => call.body).join(' | ')}`,
+        foundRequests.some((call) => call.url.includes('/rpc/submit_product_submission') && call.method === 'POST' && call.body.includes('"barcode":"4987240210733"') && call.body.includes('"name":"龍角散ダイレクトスティック ピーチ(16包)"') && call.body.includes('"brand":"株式会社龍角散"')),
+        `expected product submission payload, got ${foundRequests.map((call) => call.body).join(' | ')}`,
       );
 
       const guestPage = await browser.newPage();
@@ -301,7 +305,7 @@ async function main() {
       await guestPage.waitForURL('**/aprice/login/**', { timeout: 10000 });
       assert.equal(new URL(guestPage.url()).pathname, '/aprice/login/');
       assert.equal(new URL(guestPage.url()).searchParams.get('redirect'), '/aprice/scan/');
-      assert.equal(guestRequests.some((call) => call.url.includes('/rest/v1/products') && call.method === 'POST'), false);
+      assert.equal(guestRequests.some((call) => call.url.includes('/rpc/submit_product_submission') && call.method === 'POST'), false);
 
       const manualPage = await browser.newPage();
       const manualRequests = [];
@@ -329,12 +333,13 @@ async function main() {
         const url = new URL(requestUrl);
         manualRequests.push({ method: request.method(), url: requestUrl, body: request.postData() || '' });
 
-        if (url.pathname.endsWith('/products') && request.method() === 'POST') {
+        if (url.pathname.includes('/rpc/submit_product_submission') && request.method() === 'POST') {
           const body = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
+          const payload = body.payload || body;
           await route.fulfill({
             status: 200,
             contentType: 'application/json; charset=utf-8',
-            body: JSON.stringify([{ ...body, id: body.id || body.barcode }]),
+            body: JSON.stringify([{ ...payload, id: 'submission-1', review_status: 'pending' }]),
           });
           return;
         }
@@ -350,7 +355,7 @@ async function main() {
       await manualPage.locator('#barcode-input').fill('4900000000000');
       await manualPage.locator('#barcode-search').click();
       await manualPage.locator('#missing-product-panel').waitFor({ state: 'visible', timeout: 10000 });
-      await manualPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('可以手动填写后添加。'));
+      await manualPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('可以手动填写后提交审核。'));
       assert.equal(await manualPage.locator('#missing-product-save').isEnabled(), true);
       assert.equal(await manualPage.locator('#missing-product-barcode').inputValue(), '4900000000000');
 
@@ -361,11 +366,11 @@ async function main() {
       await manualPage.locator('#missing-product-tone').selectOption('azure');
       await manualPage.locator('#missing-product-description').fill('Added by browser test');
       await manualPage.locator('#missing-product-form button[type="submit"]').click();
-      await manualPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('商品已添加：Manual Missing Product'));
+      await manualPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('商品补录已提交审核：Manual Missing Product'));
       assert.ok(
         manualRequests.some((call) =>
           call.method === 'POST' &&
-          call.url.includes('/rest/v1/products') &&
+          call.url.includes('/rpc/submit_product_submission') &&
           call.body.includes('"barcode":"4900000000000"') &&
           call.body.includes('"name":"Manual Missing Product"') &&
           call.body.includes('"brand":"Manual Brand"') &&
@@ -374,7 +379,7 @@ async function main() {
           call.body.includes('"tone":"azure"') &&
           call.body.includes('"description":"Added by browser test"')
         ),
-        `expected manual product insert payload, got ${manualRequests.map((call) => call.body).join(' | ')}`,
+        `expected manual product submission payload, got ${manualRequests.map((call) => call.body).join(' | ')}`,
       );
 
       const failureManualPage = await browser.newPage();
@@ -418,7 +423,7 @@ async function main() {
       });
       await failureManualPage.locator('#missing-product-name').fill('Unsafe <script>window.__scanXss = true</script>');
       await failureManualPage.locator('#missing-product-form button[type="submit"]').click();
-      await failureManualPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('添加失败：forced manual save failure'));
+      await failureManualPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('提交失败：forced manual save failure'));
 
       const xssPage = await browser.newPage();
       xssPage.on('pageerror', (error) => pageErrors.push(error.message));

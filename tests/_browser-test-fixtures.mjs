@@ -359,6 +359,28 @@ export function makePendingPriceSubmissions() {
   ];
 }
 
+export function makePendingProductSubmissions() {
+  return [
+    {
+      id: '33333333-3333-4333-8333-333333333333',
+      user_id: 'member-1',
+      barcode: '4900000000001',
+      name: 'Submitted Supplement',
+      brand: 'Aprice',
+      pack: '20 tabs',
+      category: 'test-fixture',
+      tone: 'mint',
+      description: 'Submitted from scan',
+      review_status: 'pending',
+      review_note: '',
+      promoted_product_id: null,
+      reviewed_at: null,
+      created_at: '2026-04-05T06:00:00.000Z',
+      updated_at: '2026-04-05T06:00:00.000Z',
+    },
+  ];
+}
+
 export function makeHomePageResponseForRequest(requestUrl) {
   const url = new URL(requestUrl);
   if (url.pathname.endsWith('/products')) {
@@ -431,6 +453,7 @@ export function makeAdminPageResponseForRequest(requestUrl, method) {
   if (url.pathname.endsWith('/stores')) return makeAdminStores();
   if (url.pathname.endsWith('/prices')) return makeAdminPrices();
   if (url.pathname.endsWith('/user_price_logs')) return makePendingPriceSubmissions();
+  if (url.pathname.endsWith('/product_submissions')) return makePendingProductSubmissions();
   if (url.pathname.includes('/rpc/')) return [{ ok: true, method }];
   return [];
 }

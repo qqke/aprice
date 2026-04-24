@@ -88,7 +88,7 @@ const STATUS_COPY = {
     deletePriceSuccess: '价格已删除。',
     reviewApproveSuccess: '店头价已通过，已进入公共比价。',
     reviewRejectSuccess: '店头价已拒绝。',
-    saveProductFailure: ({ message } = {}) => `添加商品失败：${message}`,
+    saveProductFailure: ({ message } = {}) => `保存商品失败：${message}`,
     saveStoreFailure: ({ message } = {}) => `保存门店失败：${message}`,
     savePriceFailure: ({ message } = {}) => `保存价格失败：${message}`,
     deleteProductFailure: ({ message } = {}) => `删除商品失败：${message}`,

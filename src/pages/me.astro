@@ -85,6 +85,19 @@ const meGateCopy = getPrivatePageGateCopy('me');
           </div>
         </section>
 
+        <section class="tile tile--flow">
+          <div class="section__header section__header--tight">
+            <div>
+              <h3>公开提交</h3>
+              <p>价格与商品补录审核状态。</p>
+              <small class="muted" id="public-submissions-summary">读取提交状态中...</small>
+            </div>
+          </div>
+          <div class="feed" id="public-submissions">
+            <div class="notice notice--compact">公开提交记录。</div>
+          </div>
+        </section>
+
         <section class="tile tile--wide">
           <div class="section__header section__header--tight">
             <div>
@@ -125,8 +138,9 @@ const meGateCopy = getPrivatePageGateCopy('me');
 
   <script type="module" is:inline define:vars={{ loginUrl }}>
     const { clearRecentViews, escapeAttribute, escapeHtml, fetchAllProducts, fetchAllStores, fetchRecentViews, formatDateTime, formatYen, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
-    const { fetchFavorites, fetchPersonalLogs, getCurrentUser, savePersonalLog, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+    const { fetchFavorites, fetchMyProductSubmissions, fetchPersonalLogs, formatDataError, getCurrentUser, savePersonalLog, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
+    const { validatePositiveYen } = await import(window.__APriceConfig?.formValidationJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'form-validation.js');
 
     const loginLink = document.querySelector('#me-login-link');
     const authGate = document.querySelector('#me-auth-gate');
@@ -135,6 +149,8 @@ const meGateCopy = getPrivatePageGateCopy('me');
     const clearRecentViewsButton = document.querySelector('#clear-recent-views');
     const favsEl = document.querySelector('#my-favorites');
     const favoritesSummary = document.querySelector('#favorites-summary');
+    const publicSubmissionsEl = document.querySelector('#public-submissions');
+    const publicSubmissionsSummary = document.querySelector('#public-submissions-summary');
     const favoriteFilterButtons = document.querySelectorAll('[data-favorite-filter]');
     const favoriteSortButtons = document.querySelectorAll('[data-favorite-sort]');
     const form = document.querySelector('#log-form');
@@ -150,6 +166,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
     let products = [];
     let stores = [];
     let favorites = [];
+    let productSubmissions = [];
     let favoriteFilter = 'all';
     let favoriteSort = 'recent';
 
@@ -276,6 +293,64 @@ const meGateCopy = getPrivatePageGateCopy('me');
         `;
     }
 
+    function reviewLabel(value) {
+      return {
+        private: '个人记录',
+        pending: '待审核',
+        approved: '已通过',
+        rejected: '已拒绝',
+      }[value] || value || '未知';
+    }
+
+    function renderPublicSubmissions(logs = [], submissionRows = []) {
+      if (!publicSubmissionsEl) return;
+      const publicLogs = logs.filter((log) => log.share_to_public || ['pending', 'approved', 'rejected'].includes(log.review_status));
+      const rows = [
+        ...publicLogs.map((log) => ({
+          type: '公开价格',
+          title: lookupName(products, log.product_id),
+          meta: `${lookupName(stores, log.store_id)} · ${formatYen(log.price_yen)} · ${reviewLabel(log.review_status)}${log.review_note ? ` · ${log.review_note}` : ''}`,
+          time: log.created_at || log.purchased_at || '',
+          status: log.review_status || 'private',
+        })),
+        ...submissionRows.map((item) => ({
+          type: '商品补录',
+          title: item.name || item.barcode,
+          meta: `JAN ${item.barcode || ''} · ${reviewLabel(item.review_status)}${item.review_note ? ` · ${item.review_note}` : ''}`,
+          time: item.created_at || '',
+          status: item.review_status || 'pending',
+        })),
+      ].sort((a, b) => new Date(b.time || 0).getTime() - new Date(a.time || 0).getTime());
+
+      if (publicSubmissionsSummary) {
+        const pendingCount = rows.filter((row) => row.status === 'pending').length;
+        publicSubmissionsSummary.textContent = rows.length ? `共 ${rows.length} 条公开提交，待审核 ${pendingCount} 条。` : '暂无公开提交。';
+      }
+
+      publicSubmissionsEl.innerHTML = rows.length
+        ? rows.map((item) => `
+          <div class="feed__item">
+            <div>
+              <strong>${escapeHtml(item.title || '提交记录')}</strong>
+              <small>${escapeHtml(item.type)} · ${escapeHtml(item.meta)}</small>
+            </div>
+            <div class="feed__meta">
+              <span class="price">${escapeHtml(reviewLabel(item.status))}</span>
+              <small>${item.time ? formatDateTime(item.time) : ''}</small>
+            </div>
+          </div>
+        `).join('')
+        : `
+          <div class="feed__item">
+            <div>
+              <strong>暂无公开提交</strong>
+              <small>提交公共价格或商品补录后会显示审核状态。</small>
+            </div>
+            <span class="price">暂无</span>
+          </div>
+        `;
+    }
+
     function renderLoggedOutState() {
       syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
       logsEl.innerHTML = `
@@ -296,6 +371,8 @@ const meGateCopy = getPrivatePageGateCopy('me');
           <span class="price">offline</span>
         </div>
       `;
+      renderPublicSubmissions([], []);
+      if (publicSubmissionsSummary) publicSubmissionsSummary.textContent = '登录后可见。';
       status.textContent = getPrivatePageStatusCopy('me', 'loggedOutStatus');
       setControlsDisabled(true);
     }
@@ -316,26 +393,31 @@ const meGateCopy = getPrivatePageGateCopy('me');
       let loadedStores;
       let logs;
       let loadedFavorites;
+      let loadedProductSubmissions;
       try {
-        [loadedProducts, loadedStores, logs, loadedFavorites] = await Promise.all([
+        [loadedProducts, loadedStores, logs, loadedFavorites, loadedProductSubmissions] = await Promise.all([
           fetchAllProducts(),
           fetchAllStores(),
           fetchPersonalLogs(user.id),
           fetchFavorites(user.id),
+          fetchMyProductSubmissions(user.id),
         ]);
       } catch (error) {
         products = [];
         stores = [];
         favorites = [];
+        productSubmissions = [];
         renderLogs([]);
         renderFavorites([]);
+        renderPublicSubmissions([], []);
         setControlsDisabled(true);
-        status.textContent = getPrivatePageStatusCopy('me', 'saveFailure', { message: error.message });
+        status.textContent = getPrivatePageStatusCopy('me', 'saveFailure', { message: formatDataError(error) });
         return;
       }
       products = loadedProducts;
       stores = loadedStores;
       favorites = loadedFavorites;
+      productSubmissions = loadedProductSubmissions;
 
       if (productInput) {
         productInput.innerHTML = products.length
@@ -350,6 +432,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
 
       renderLogs(logs);
       renderFavorites(favorites);
+      renderPublicSubmissions(logs, productSubmissions);
       status.textContent = getPrivatePageStatusCopy('me', 'syncSummary', { logsCount: logs.length, favoritesCount: favorites.length });
     }
 
@@ -368,15 +451,15 @@ const meGateCopy = getPrivatePageGateCopy('me');
           status.textContent = getPrivatePageStatusCopy('me', 'saveSelectionRequired');
           return;
         }
-        const priceValue = Number(priceInput.value);
-        if (!Number.isFinite(priceValue) || priceValue <= 0) {
-          status.textContent = '请输入有效的价格。';
+        const priceValue = validatePositiveYen(priceInput.value);
+        if (!priceValue.ok) {
+          status.textContent = priceValue.message;
           return;
         }
         await savePersonalLog({
           product_id: productInput.value,
           store_id: storeInput.value || null,
-          price_yen: priceValue,
+          price_yen: priceValue.value,
           note: noteInput.value.trim(),
           purchased_at: new Date().toISOString().slice(0, 10),
         });
@@ -385,7 +468,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
         noteInput.value = '';
         await refresh();
       } catch (error) {
-        status.textContent = getPrivatePageStatusCopy('me', 'saveFailure', { message: error.message });
+        status.textContent = getPrivatePageStatusCopy('me', 'saveFailure', { message: formatDataError(error) });
       }
     });
 

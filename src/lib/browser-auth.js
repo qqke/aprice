@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { restDelete, restGet, restInsert, restRpc } from './supabase-rest.js';
 import { normalizeInternalRedirectTarget } from './auth-redirect.js';
 import { resolveBase } from './browser.js';
+import { friendlyDataError, validateJanCode, validateOptionalHttpUrl, validatePositiveYen } from './form-validation.js';
 
 const runtimeConfig = globalThis.__APriceConfig || {};
 const SUPABASE_URL = String(runtimeConfig.supabaseUrl || '').trim();
@@ -211,14 +212,16 @@ export function indexLatestPersonalPricesByStore(logs = [], productId = '') {
 }
 
 export async function savePersonalLog(entry) {
-  if (!entry?.product_id || !entry?.price_yen) {
-    throw new Error('product_id and price_yen are required');
+  const price = validatePositiveYen(entry?.price_yen);
+  if (!entry?.product_id || !price.ok) {
+    throw new Error(!entry?.product_id ? 'product_id and price_yen are required' : price.message);
   }
   const session = await requireSession();
   const result = await restInsert(
     'user_price_logs',
     {
       ...entry,
+      price_yen: price.value,
       user_id: session.user.id,
     },
     { token: session.access_token },
@@ -232,11 +235,22 @@ export async function savePersonalLog(entry) {
 }
 
 export async function submitStorePrice(entry) {
-  if (!entry?.product_id || !entry?.store_id || !entry?.price_yen) {
-    throw new Error('product_id, store_id and price_yen are required');
+  const price = validatePositiveYen(entry?.price_yen);
+  const evidence = validateOptionalHttpUrl(entry?.evidence_url || '');
+  if (!entry?.product_id || !entry?.store_id || !price.ok) {
+    throw new Error(!entry?.product_id || !entry?.store_id ? 'product_id, store_id and price_yen are required' : price.message);
+  }
+  if (!evidence.ok) {
+    throw new Error(evidence.message);
   }
   const session = await requireSession();
-  const result = await restRpc('submit_store_price', { payload: entry }, { token: session.access_token });
+  const result = await restRpc('submit_store_price', {
+    payload: {
+      ...entry,
+      price_yen: price.value,
+      evidence_url: evidence.value,
+    },
+  }, { token: session.access_token });
   trackEvent('submit_price', {
     product_id: entry?.product_id || '',
     store_id: entry?.store_id || '',
@@ -265,11 +279,47 @@ export async function fetchPendingPriceSubmissions(limit = 20) {
   });
 }
 
+export async function fetchProductSubmissions(limit = 20) {
+  const session = await requireSession();
+  return restGet('product_submissions', {
+    query: {
+      select: '*',
+      review_status: 'eq.pending',
+      order: 'created_at.desc',
+      limit,
+    },
+    token: session.access_token,
+  });
+}
+
+export async function fetchMyProductSubmissions(userId, limit = 20) {
+  if (!userId) return [];
+  const session = await requireSession();
+  return restGet('product_submissions', {
+    query: {
+      select: '*',
+      user_id: `eq.${userId}`,
+      order: 'created_at.desc',
+      limit,
+    },
+    token: session.access_token,
+  });
+}
+
 export async function adminReviewPriceSubmission(payload) {
   const session = await requireSession();
   const result = await restRpc('admin_review_price_submission', { payload }, { token: session.access_token });
   if (payload?.action === 'approve') {
     trackEvent('review_approved', { id: payload?.id || '' });
+  }
+  return result;
+}
+
+export async function adminReviewProductSubmission(payload) {
+  const session = await requireSession();
+  const result = await restRpc('admin_review_product_submission', { payload }, { token: session.access_token });
+  if (payload?.action === 'approve') {
+    trackEvent('product_review_approved', { id: payload?.id || '' });
   }
   return result;
 }
@@ -341,16 +391,43 @@ export async function toggleFavorite(entityType, entityId) {
 
 export async function createProduct(payload) {
   const session = await requireSession();
+  const barcode = validateJanCode(payload?.barcode || payload?.id || '');
+  if (!barcode.ok) throw new Error(barcode.message);
   const normalizedPayload = {
     ...payload,
-    id: payload?.id || payload?.barcode,
+    id: payload?.id || barcode.value,
+    barcode: barcode.value,
   };
-  return restInsert('products', normalizedPayload, { token: session.access_token });
+  try {
+    return await restRpc('admin_upsert_product', normalizedPayload, { token: session.access_token });
+  } catch (error) {
+    throw new Error(friendlyDataError(error));
+  }
+}
+
+export async function submitProductSubmission(payload) {
+  const session = await requireSession();
+  const barcode = validateJanCode(payload?.barcode || payload?.id || '');
+  if (!barcode.ok) throw new Error(barcode.message);
+  if (!String(payload?.name || '').trim()) throw new Error('请填写商品名称。');
+  const result = await restRpc('submit_product_submission', {
+    payload: {
+      ...payload,
+      id: payload?.id || barcode.value,
+      barcode: barcode.value,
+    },
+  }, { token: session.access_token });
+  trackEvent('submit_product', { barcode: barcode.value });
+  return result;
 }
 
 export async function adminUpsertStore(payload) {
   const session = await requireSession();
   return restRpc('admin_upsert_store', payload, { token: session.access_token });
+}
+
+export function formatDataError(error) {
+  return friendlyDataError(error);
 }
 
 export async function adminUpsertPrice(payload) {

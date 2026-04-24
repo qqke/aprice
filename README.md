@@ -42,6 +42,7 @@ PUBLIC_ENABLE_TELEMETRY_RPC=0
 5. 登录和找回密码邮件会回到登录页，并保留原页面回跳参数
 6. 需要后台写权限时，把对应用户的 `profiles.role` 设为 `admin`
 7. 建议优先执行 `supabase/migrations`（包含社区价审核、遥测入库、价格查询 RPC），`supabase/schema.sql` 作为新环境基线快照
+8. 普通用户扫码未命中的商品会写入 `product_submissions`，管理员审核通过后才进入 `products`
 
 ## Feature Flags & Rollback
 
@@ -73,6 +74,15 @@ PUBLIC_ENABLE_TELEMETRY_RPC=0
   - `next_cursor`: 下一页游标（`{ collected_at, id }`）或 `null`
 - 前端封装：`fetchProductPricesPage(productId, { limit, sinceDays, cursor, lat, lng, radiusKm })`
 - 当 `PUBLIC_USE_SERVER_PRICE_RPC=0` 时，自动回退到现有 `fetchPricesForProduct` 行为。
+
+## 上线检查
+
+- Supabase migrations 已全部执行，尤其是 `product_submissions`、价格审核和 telemetry RPC。
+- 至少一个维护账号在 `profiles.role` 中设置为 `admin`。
+- GitHub Secrets 已配置 `PUBLIC_SUPABASE_URL`、`PUBLIC_SUPABASE_ANON_KEY`、`PUBLIC_SITE_URL`。
+- GitHub Variables 或 Secrets 已确认 `PUBLIC_USE_SERVER_PRICE_RPC`、`PUBLIC_ENABLE_TELEMETRY_RPC` 的开关值。
+- 发布前本地运行 `npm run check`、`npm test`、`npm run build`；线上冒烟可运行 `npm run verify:live:suite` 或 `npm run verify:live:add-product`。
+- 如果价格流为空，先确认 `prices` 有当前商品记录，再看管理页“运行配置”里的 RPC/遥测状态。
 
 ## GitHub Pages
 

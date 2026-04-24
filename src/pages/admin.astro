@@ -57,6 +57,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
 
       <div class="pillrow" aria-label="管理区导航">
         <a class="button button--ghost" href="#admin-panel-submissions">待审核</a>
+        <a class="button button--ghost" href="#admin-panel-product-submissions">商品补录</a>
         <a class="button button--ghost" href="#admin-panel-price">价格</a>
         <a class="button button--ghost" href="#admin-panel-product">商品</a>
         <a class="button button--ghost" href="#admin-panel-store">门店</a>
@@ -77,6 +78,21 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
           </summary>
           <div class="admin-panel__body">
             <div class="list" id="admin-price-submissions"></div>
+          </div>
+        </details>
+
+        <details class="tile tile--wide tile--flow admin-panel" id="admin-panel-product-submissions">
+          <summary class="admin-panel__summary">
+            <span class="admin-panel__chevron" aria-hidden="true"></span>
+            <span class="admin-panel__title">
+              <strong>待审核商品补录</strong>
+              <small>用户扫码未命中的商品先提交到这里。</small>
+            </span>
+            <span class="pill" id="admin-product-submissions-summary-count">商品补录 0 条</span>
+            <span class="meta" id="admin-product-submissions-summary-status">读取中</span>
+          </summary>
+          <div class="admin-panel__body">
+            <div class="list" id="admin-product-submissions"></div>
           </div>
         </details>
 
@@ -256,6 +272,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
             <span class="meta" id="admin-telemetry-summary-status">未加载</span>
           </summary>
           <div class="admin-panel__body">
+            <div class="list" id="admin-runtime-config"></div>
             <div class="list" id="admin-telemetry-summary"></div>
             <div class="list" id="admin-telemetry-recent"></div>
           </div>
@@ -266,8 +283,9 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
 
   <script type="module" is:inline define:vars={{ loginUrl }}>
     const { fetchAllProducts, fetchAllStores, fetchRecentPrices } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
-    const { adminDeletePrice, adminDeleteProduct, adminDeleteStore, adminFetchTelemetryRecent, adminFetchTelemetrySummary, adminReviewPriceSubmission, adminUpsertPrice, adminUpsertStore, createProduct, fetchCurrentProfile, fetchPendingPriceSubmissions, getCurrentUser, signOut } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+    const { adminDeletePrice, adminDeleteProduct, adminDeleteStore, adminFetchTelemetryRecent, adminFetchTelemetrySummary, adminReviewPriceSubmission, adminReviewProductSubmission, adminUpsertPrice, adminUpsertStore, createProduct, fetchCurrentProfile, fetchPendingPriceSubmissions, fetchProductSubmissions, formatDataError, getCurrentUser, signOut } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { applyPrivatePageGateCopy, getPrivatePageGateCopy, getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
+    const { validateCoordinate, validateJanCode, validatePositiveYen } = await import(window.__APriceConfig?.formValidationJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'form-validation.js');
 
     const status = document.querySelector('#admin-status');
     const authGate = document.querySelector('#admin-auth-gate');
@@ -284,12 +302,15 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     const storePanel = document.querySelector('#admin-panel-store');
     const pricePanel = document.querySelector('#admin-panel-price');
     const submissionsPanel = document.querySelector('#admin-panel-submissions');
+    const productSubmissionsPanel = document.querySelector('#admin-panel-product-submissions');
     const productSelect = document.querySelector('#price-product');
     const storeSelect = document.querySelector('#price-store');
     const productList = document.querySelector('#admin-products');
     const storeList = document.querySelector('#admin-stores');
     const priceList = document.querySelector('#admin-prices');
     const priceSubmissionList = document.querySelector('#admin-price-submissions');
+    const productSubmissionList = document.querySelector('#admin-product-submissions');
+    const runtimeConfigList = document.querySelector('#admin-runtime-config');
     const telemetrySummaryList = document.querySelector('#admin-telemetry-summary');
     const telemetryRecentList = document.querySelector('#admin-telemetry-recent');
     const productReset = document.querySelector('#product-reset');
@@ -301,6 +322,8 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     const summaryEls = {
       submissionsCount: document.querySelector('#admin-submissions-summary-count'),
       submissionsStatus: document.querySelector('#admin-submissions-summary-status'),
+      productSubmissionsCount: document.querySelector('#admin-product-submissions-summary-count'),
+      productSubmissionsStatus: document.querySelector('#admin-product-submissions-summary-status'),
       productCount: document.querySelector('#admin-product-summary-count'),
       productStatus: document.querySelector('#admin-product-summary-status'),
       storeCount: document.querySelector('#admin-store-summary-count'),
@@ -354,6 +377,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     let stores = [];
     let prices = [];
     let priceSubmissions = [];
+    let productSubmissions = [];
     let telemetrySummary = { days: 7, total_events: 0, active_users: 0, top_events: [] };
     let telemetryItems = [];
     let selectedPriceId = '';
@@ -417,6 +441,8 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       setSummaryText('recentPricesStatus', prices.length ? '可检查' : '暂无数据');
       setSummaryText('submissionsCount', `待审核 ${priceSubmissions.length} 条`);
       setSummaryText('submissionsStatus', priceSubmissions.length ? `最新 ${priceSubmissions[0]?.products?.name || priceSubmissions[0]?.product_id || '提交'}` : '暂无数据');
+      setSummaryText('productSubmissionsCount', `商品补录 ${productSubmissions.length} 条`);
+      setSummaryText('productSubmissionsStatus', productSubmissions.length ? `最新 ${productSubmissions[0]?.name || productSubmissions[0]?.barcode || '提交'}` : '暂无数据');
       setSummaryText('telemetryCount', `事件 ${telemetrySummary?.total_events || 0} 条`);
       setSummaryText('telemetryStatus', telemetryItems.length ? '已加载' : '暂无数据');
     }
@@ -470,6 +496,20 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       selectedPriceId = '';
       resetFields(priceFields);
       updateAdminSummaries();
+    }
+
+    function renderRuntimeConfig() {
+      if (!runtimeConfigList) return;
+      const config = window.__APriceConfig || {};
+      runtimeConfigList.innerHTML = `
+        <div class="list__item">
+          <div>
+            <strong>运行配置</strong>
+            <small>价格 RPC ${config.useServerPriceRpc ? '已启用' : '未启用'} · 遥测 RPC ${config.enableTelemetryRpc ? '已启用' : '未启用'} · 近 ${escapeHtml(telemetrySummary?.days || 7)} 天事件 ${escapeHtml(telemetrySummary?.total_events || 0)} 条</small>
+          </div>
+          <span class="meta">${config.useServerPriceRpc ? 'rpc:on' : 'rpc:off'}</span>
+        </div>
+      `;
     }
 
     function renderProducts() {
@@ -552,6 +592,25 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         : '<div class="list__item"><div><strong>暂无待审核店头价</strong><small>用户公开提交后会出现在这里。</small></div><span class="meta">0</span></div>';
     }
 
+    function renderProductSubmissions() {
+      if (!productSubmissionList) return;
+      productSubmissionList.innerHTML = productSubmissions.length
+        ? productSubmissions.map((item) => `
+          <div class="list__item admin-record-item">
+            <div>
+              <strong>${escapeHtml(item.name || item.barcode || '未命名商品')}</strong>
+              <small>JAN ${escapeHtml(item.barcode || '')} · ${escapeHtml(item.brand || '品牌未知')} · ${escapeHtml(item.category || '未分类')} · ${formatAdminDate(item.created_at)}</small>
+              <small>提交人 ${escapeHtml(item.user_id || '')} · 状态 ${escapeHtml(item.review_status || 'pending')}</small>
+            </div>
+            <div class="pillrow admin-record-actions">
+              <button class="button button--ghost" data-approve-product-submission="${escapeHtml(item.id)}" type="button">通过</button>
+              <button class="button button--ghost" data-reject-product-submission="${escapeHtml(item.id)}" type="button">拒绝</button>
+            </div>
+          </div>
+        `).join('')
+        : '<div class="list__item"><div><strong>暂无待审核商品补录</strong><small>用户扫码未命中并提交后会出现在这里。</small></div><span class="meta">0</span></div>';
+    }
+
     function renderTelemetry() {
       if (telemetrySummaryList) {
         const topEvents = Array.isArray(telemetrySummary?.top_events) ? telemetrySummary.top_events : [];
@@ -579,6 +638,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
           `).join('')
           : '<div class="list__item"><div><strong>暂无事件</strong><small>启用 telemetry 后会在这里展示最新行为。</small></div><span class="meta">0</span></div>';
       }
+      renderRuntimeConfig();
     }
 
     syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: false });
@@ -625,11 +685,12 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         return false;
       }
 
-      const [productItems, storeItems, priceItems, pendingItems] = await Promise.all([
+      const [productItems, storeItems, priceItems, pendingItems, pendingProductItems] = await Promise.all([
         fetchAllProducts(),
         fetchAllStores(),
         fetchRecentPrices(12),
         fetchPendingPriceSubmissions(20),
+        fetchProductSubmissions(20),
       ]);
       let telemetrySummaryResult = { days: 7, total_events: 0, active_users: 0, top_events: [] };
       let telemetryRecentResult = { items: [] };
@@ -648,6 +709,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       stores = storeItems;
       prices = priceItems;
       priceSubmissions = pendingItems;
+      productSubmissions = pendingProductItems;
       telemetrySummary = telemetrySummaryResult || { days: 7, total_events: 0, active_users: 0, top_events: [] };
       telemetryItems = Array.isArray(telemetryRecentResult?.items) ? telemetryRecentResult.items : [];
 
@@ -656,9 +718,11 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       renderStores();
       renderPrices();
       renderPriceSubmissions();
+      renderProductSubmissions();
       renderTelemetry();
       updateAdminSummaries();
       if (submissionsPanel && priceSubmissions.length) submissionsPanel.open = true;
+      if (productSubmissionsPanel && productSubmissions.length) productSubmissionsPanel.open = true;
       if (status) status.textContent = getPrivatePageStatusCopy('admin', 'loaded', { email: profile.email || user.email });
       if (accessState) {
         accessState.innerHTML = `
@@ -677,9 +741,14 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     productForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
       try {
+        const barcode = validateJanCode(elValue(productFields.barcode));
+        if (!barcode.ok) {
+          if (status) status.textContent = barcode.message;
+          return;
+        }
         await createProduct({
           id: elValue(productFields.id),
-          barcode: elValue(productFields.barcode),
+          barcode: barcode.value,
           name: elValue(productFields.name),
           brand: elValue(productFields.brand),
           pack: elValue(productFields.pack),
@@ -690,13 +759,19 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         if (status) status.textContent = getPrivatePageStatusCopy('admin', 'saveProductSuccess');
         await loadData();
       } catch (error) {
-        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'saveProductFailure', { message: error.message });
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'saveProductFailure', { message: formatDataError(error) });
       }
     });
 
     storeForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
       try {
+        const lat = validateCoordinate(elValue(storeFields.lat), { label: '纬度', min: -90, max: 90 });
+        const lng = validateCoordinate(elValue(storeFields.lng), { label: '经度', min: -180, max: 180 });
+        if (!lat.ok || !lng.ok) {
+          if (status) status.textContent = !lat.ok ? lat.message : lng.message;
+          return;
+        }
         await adminUpsertStore({
           id: elValue(storeFields.id),
           name: elValue(storeFields.name),
@@ -704,25 +779,30 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
           address: elValue(storeFields.address),
           city: elValue(storeFields.city),
           pref: elValue(storeFields.pref),
-          lat: elValue(storeFields.lat),
-          lng: elValue(storeFields.lng),
+          lat: String(lat.value),
+          lng: String(lng.value),
           hours: elValue(storeFields.hours),
         });
         if (status) status.textContent = getPrivatePageStatusCopy('admin', 'saveStoreSuccess');
         await loadData();
       } catch (error) {
-        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'saveStoreFailure', { message: error.message });
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'saveStoreFailure', { message: formatDataError(error) });
       }
     });
 
     priceForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
       try {
+        const price = validatePositiveYen(elValue(priceFields.price_yen));
+        if (!price.ok) {
+          if (status) status.textContent = price.message;
+          return;
+        }
         await adminUpsertPrice({
           id: selectedPriceId,
           product_id: elValue(priceFields.product_id),
           store_id: elValue(priceFields.store_id),
-          price_yen: elValue(priceFields.price_yen),
+          price_yen: String(price.value),
           source: elValue(priceFields.source),
           note: elValue(priceFields.note),
           collected_at: elValue(priceFields.collected_at),
@@ -731,7 +811,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         if (status) status.textContent = getPrivatePageStatusCopy('admin', 'savePriceSuccess');
         await loadData();
       } catch (error) {
-        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'savePriceFailure', { message: error.message });
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'savePriceFailure', { message: formatDataError(error) });
       }
     });
 
@@ -865,6 +945,28 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         if (status) status.textContent = getPrivatePageStatusCopy('admin', approveId ? 'reviewApproveSuccess' : 'reviewRejectSuccess');
       } catch (error) {
         if (status) status.textContent = getPrivatePageStatusCopy('admin', 'reviewFailure', { message: error.message });
+      }
+    });
+
+    productSubmissionList?.addEventListener('click', async (event) => {
+      const target = event.target;
+      const button = target instanceof Element ? target.closest('button') : null;
+      if (!button) return;
+      const approveId = button.dataset.approveProductSubmission;
+      const rejectId = button.dataset.rejectProductSubmission;
+      const submissionId = approveId || rejectId;
+      if (!submissionId) return;
+
+      try {
+        await adminReviewProductSubmission({
+          id: submissionId,
+          action: approveId ? 'approve' : 'reject',
+          review_note: approveId ? 'approved in admin' : 'rejected in admin',
+        });
+        await loadData();
+        if (status) status.textContent = approveId ? '商品补录已通过。' : '商品补录已拒绝。';
+      } catch (error) {
+        if (status) status.textContent = `商品补录审核失败：${formatDataError(error)}`;
       }
     });
 

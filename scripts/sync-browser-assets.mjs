@@ -30,6 +30,7 @@ const loginPageStateSource = await readFile(resolve(root, 'src/lib/login-page-st
 const privatePageAuthSource = await readFile(resolve(root, 'src/lib/private-page-auth.js'), 'utf8');
 const productPageRuntimeSource = await readFile(resolve(root, 'src/lib/product-page-runtime.js'), 'utf8');
 const restSource = await readFile(resolve(root, 'src/lib/supabase-rest.js'), 'utf8');
+const formValidationSource = await readFile(resolve(root, 'src/lib/form-validation.js'), 'utf8');
 
 ensureNoImportMetaEnv(browserSource, 'browser.js source');
 ensureNoImportMetaEnv(authSource, 'browser-auth.js source');
@@ -41,4 +42,5 @@ await writeFile(resolve(root, 'public/login-page-state.js'), normalize(loginPage
 await writeFile(resolve(root, 'public/private-page-auth.js'), normalize(privatePageAuthSource));
 await writeFile(resolve(root, 'public/product-page-runtime.js'), normalize(productPageRuntimeSource));
 await writeFile(resolve(root, 'public/supabase-rest.js'), makeBrowserRestJs(restSource));
+await writeFile(resolve(root, 'public/form-validation.js'), normalize(formValidationSource));
 

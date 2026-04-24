@@ -1,8 +1,9 @@
 export async function initProductPage({ loginUrl }) {
 
 const { escapeAttribute, escapeHtml, recordRecentView, resolveBase, fetchNearbyPrices, fetchProductPricesPage, fetchStoresPage, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
-const { fetchFavorites, fetchPersonalLogs, getCurrentUser, indexLatestPersonalPricesByStore, submitStorePrice, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+const { fetchFavorites, fetchPersonalLogs, formatDataError, getCurrentUser, indexLatestPersonalPricesByStore, submitStorePrice, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
 const { getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
+const { validateOptionalHttpUrl, validatePositiveYen } = await import(window.__APriceConfig?.formValidationJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'form-validation.js');
 
 const page = document.querySelector('#product-page');
 const productId = page?.dataset.productId || '';
@@ -329,7 +330,10 @@ async function syncStoreLocation({ announce = false } = {}) {
     }
     return location;
   } catch {
-    if (announce && geoStatus) geoStatus.textContent = '定位失败：未获取当前位置。';
+    storeLocation = null;
+    renderStorePicker();
+    renderStoreSelectionStatus(storeRows.length);
+    if (announce && geoStatus) geoStatus.textContent = '定位失败，门店已按名称排序。';
     return null;
   }
 }
@@ -860,14 +864,23 @@ form?.addEventListener('submit', async (event) => {
       status.textContent = '请选择门店后记录价格。';
       return;
     }
-    const submittedPrice = Number(price.value);
+    const priceValidation = validatePositiveYen(price.value);
+    if (!priceValidation.ok) {
+      status.textContent = priceValidation.message;
+      return;
+    }
+    const evidenceValidation = validateOptionalHttpUrl(evidenceUrl?.value?.trim?.() || '');
+    if (!evidenceValidation.ok) {
+      status.textContent = evidenceValidation.message;
+      return;
+    }
     const shouldShare = sharePublic instanceof HTMLInputElement ? sharePublic.checked : false;
     await submitStorePrice({
       product_id: productId,
       store_id: store?.value || selectedStoreId || null,
-      price_yen: submittedPrice,
+      price_yen: priceValidation.value,
       note: note.value.trim(),
-      evidence_url: evidenceUrl?.value?.trim?.() || '',
+      evidence_url: evidenceValidation.value,
       share_to_public: shouldShare,
       purchased_at: new Date().toISOString().slice(0, 10),
     });
@@ -875,9 +888,11 @@ form?.addEventListener('submit', async (event) => {
     note.value = '';
     if (evidenceUrl) evidenceUrl.value = '';
     await refreshPersonalPriceState({ preserveSelection: true });
-    status.textContent = getPrivatePageStatusCopy('product', shouldShare ? 'sharedLogSuccess' : 'logSuccess', { price: formatYen(submittedPrice) });
+    status.textContent = shouldShare
+      ? `已提交 ${formatYen(priceValidation.value)}，审核后会进入公共比价。`
+      : getPrivatePageStatusCopy('product', 'logSuccess', { price: formatYen(priceValidation.value) });
   } catch (error) {
-    status.textContent = getPrivatePageStatusCopy('product', 'logFailure', { message: error.message });
+    status.textContent = getPrivatePageStatusCopy('product', 'logFailure', { message: formatDataError(error) });
   }
 });
 

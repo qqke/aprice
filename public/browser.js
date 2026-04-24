@@ -4,16 +4,13 @@ import {
   restGet,
   restRpc,
 } from './supabase-rest.js';
+import { cleanJanCode } from './form-validation.js';
 
 const runtimeConfig = globalThis.__APriceConfig || {};
 const BASE_URL = String(runtimeConfig.baseUrl || '/').trim() || '/';
 const RECENT_VIEWS_KEY = 'aprice:recent-views';
 const TELEMETRY_QUEUE_KEY = 'aprice:telemetry-events';
 const USE_SERVER_PRICE_RPC = Boolean(runtimeConfig.useServerPriceRpc);
-
-function cleanBarcode(value) {
-  return String(value || '').replace(/\D/g, '').trim();
-}
 
 function distanceKm(lat1, lng1, lat2, lng2) {
   const r = 6371;
@@ -109,7 +106,7 @@ export async function searchProducts(term = '') {
   if (!q) return fetchAllProducts();
 
   const pattern = `%${escapeIlike(q)}%`;
-  const barcode = cleanBarcode(q);
+  const barcode = cleanJanCode(q);
   const orParts = [
     `name.ilike.${pattern}`,
     `brand.ilike.${pattern}`,
@@ -124,13 +121,25 @@ export async function searchProducts(term = '') {
     barcode_like: Boolean(barcode),
   });
 
-  return restGet('products', {
+  const rows = await restGet('products', {
     query: {
       select: '*',
       or: `(${orParts.join(',')})`,
       order: 'updated_at.desc',
       limit: 20,
     },
+  });
+  if (!barcode) return rows;
+  return rows.slice().sort((a, b) => {
+    const aBarcode = cleanJanCode(a?.barcode);
+    const bBarcode = cleanJanCode(b?.barcode);
+    const aExact = aBarcode === barcode ? 0 : 1;
+    const bExact = bBarcode === barcode ? 0 : 1;
+    if (aExact !== bExact) return aExact - bExact;
+    const aStarts = aBarcode.startsWith(barcode) ? 0 : 1;
+    const bStarts = bBarcode.startsWith(barcode) ? 0 : 1;
+    if (aStarts !== bStarts) return aStarts - bStarts;
+    return String(a?.name || '').localeCompare(String(b?.name || ''), 'ja-JP');
   });
 }
 
@@ -196,7 +205,7 @@ export async function fetchRecentPrices(limit = 10) {
 }
 
 export async function fetchProductByBarcode(barcode) {
-  const cleaned = cleanBarcode(barcode);
+  const cleaned = cleanJanCode(barcode);
   if (!cleaned) return null;
   return fetchPublicProductByBarcode(cleaned);
 }
@@ -219,7 +228,7 @@ function extractJancodeTableValue(markdown, label) {
 }
 
 export function parseJancodeProductDraft(markdown, barcode) {
-  const cleanedBarcode = cleanBarcode(barcode);
+  const cleanedBarcode = cleanJanCode(barcode);
   const h2Match = String(markdown || '').match(/^##\s*(.+)$/m);
   const titleMatch = String(markdown || '').match(/^Title:\s*(.+)$/m);
   const name = stripJancodeMarkup(h2Match?.[1] || extractJancodeTableValue(markdown, '商品名'));
@@ -243,7 +252,7 @@ export function parseJancodeProductDraft(markdown, barcode) {
 }
 
 export async function fetchJancodeProductDraft(barcode) {
-  const cleaned = cleanBarcode(barcode);
+  const cleaned = cleanJanCode(barcode);
   if (!cleaned) return null;
 
   const response = await fetch(`https://r.jina.ai/http://www.jancode.xyz/${cleaned}/`, {

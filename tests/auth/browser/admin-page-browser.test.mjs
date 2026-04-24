@@ -18,7 +18,6 @@ async function main() {
       const page = await browser.newPage();
       const pageErrors = [];
       const rpcCalls = [];
-      let failNextProductInsert = false;
       let failNextRpcPath = '';
 
       async function clickConfirmAndWait(selector, pathPart) {
@@ -86,16 +85,6 @@ async function main() {
           });
         }
 
-        if (failNextProductInsert && requestUrl.includes('/rest/v1/products')) {
-          failNextProductInsert = false;
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json; charset=utf-8',
-            body: 'not-json',
-          });
-          return;
-        }
-
         if (failNextRpcPath && requestUrl.includes(failNextRpcPath)) {
           failNextRpcPath = '';
           await route.fulfill({
@@ -145,6 +134,7 @@ async function main() {
       await page.locator('#admin-stores').waitFor({ state: 'attached' });
       await page.locator('#admin-prices').waitFor({ state: 'attached' });
       await page.locator('#admin-price-submissions').waitFor({ state: 'attached' });
+      await page.locator('#admin-product-submissions').waitFor({ state: 'attached' });
       await page.locator('#admin-panel-telemetry').waitFor({ state: 'attached' });
       await page.locator('#admin-panel-submissions').waitFor({ state: 'attached' });
       await page.locator('#admin-panel-product').waitFor({ state: 'attached' });
@@ -164,6 +154,7 @@ async function main() {
       const storeSummaryText = await page.locator('#admin-panel-store').textContent();
       const priceSummaryText = await page.locator('#admin-panel-price').textContent();
       const submissionsSummaryText = await page.locator('#admin-panel-submissions').textContent();
+      const productSubmissionsSummaryText = await page.locator('#admin-panel-product-submissions').textContent();
       const telemetrySummaryText = await page.locator('#admin-panel-telemetry').textContent();
       const productOptions = await page.locator('#price-product option').allTextContents();
       const storeOptions = await page.locator('#price-store option').allTextContents();
@@ -174,8 +165,12 @@ async function main() {
       assert.equal(await page.locator('#admin-panel-product').evaluate((el) => el.open), false);
       assert.match(submissionsSummaryText || '', /待审核店头价/);
       assert.match(submissionsSummaryText || '', /待审核 2 条/);
+      assert.match(productSubmissionsSummaryText || '', /待审核商品补录/);
+      assert.match(productSubmissionsSummaryText || '', /商品补录 1 条/);
+      assert.match(productSubmissionsSummaryText || '', /Submitted Supplement/);
       assert.match(telemetrySummaryText || '', /事件看板/);
       assert.match(telemetrySummaryText || '', /事件 0 条/);
+      assert.match(telemetrySummaryText || '', /价格 RPC 未启用/);
       assert.match(productSummaryText || '', /商品 2 条/);
       assert.match(storeSummaryText || '', /门店 2 条/);
       assert.match(priceSummaryText || '', /最近价格 2 条/);
@@ -216,6 +211,17 @@ async function main() {
         `expected reject payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
       );
 
+      await page.locator('[data-approve-product-submission="33333333-3333-4333-8333-333333333333"]').click();
+      await waitForText(page, '#admin-status', '商品补录已通过');
+      assert.ok(
+        rpcCalls.some((call) =>
+          call.url.includes('/rpc/admin_review_product_submission') &&
+          call.bodyJson?.payload?.id === '33333333-3333-4333-8333-333333333333' &&
+          call.bodyJson?.payload?.action === 'approve'
+        ),
+        `expected product submission approve payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
+      );
+
       await openPanel('#admin-panel-recent-stores');
       await page.locator('[data-edit-store="welcia-shibuya"]').click();
       assert.equal(await page.locator('#store-id').inputValue(), 'welcia-shibuya');
@@ -248,23 +254,23 @@ async function main() {
       });
 
       assert.ok(
-        rpcCalls.some((call) => call.url.includes('/rest/v1/products') && call.method === 'POST'),
-        `expected products insert, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
+        rpcCalls.some((call) => call.url.includes('/rpc/admin_upsert_product') && call.method === 'POST'),
+        `expected admin_upsert_product RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
       );
       assert.ok(
-        rpcCalls.some((call) => call.url.includes('/rest/v1/products') && call.method === 'POST' && call.bodyJson?.id === 'admin-fixture-product' && call.bodyJson?.name === 'Admin Fixture Product'),
-        `expected products insert payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
+        rpcCalls.some((call) => call.url.includes('/rpc/admin_upsert_product') && call.method === 'POST' && call.bodyJson?.id === 'admin-fixture-product' && call.bodyJson?.name === 'Admin Fixture Product'),
+        `expected admin_upsert_product payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
       );
 
       assert.equal(await page.locator('[data-edit-product="eve-a"]').count(), 0);
 
       await openPanel('#admin-panel-product');
-      failNextProductInsert = true;
+      failNextRpcPath = '/rpc/admin_upsert_product';
       await page.locator('#product-id').fill('admin-failing-product');
       await page.locator('#product-barcode').fill('4990000000002');
       await page.locator('#product-name').fill('Admin Failing Product <script>window.__adminXss = true</script>');
       await page.locator('#product-form button[type="submit"]').click();
-      await waitForText(page, '#admin-status', '添加商品失败');
+      await waitForText(page, '#admin-status', '保存商品失败');
       assert.equal(await page.evaluate(() => window.__adminXss === true), false);
 
       await openPanel('#admin-panel-product');

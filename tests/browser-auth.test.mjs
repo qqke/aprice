@@ -101,6 +101,29 @@ const patchedSource = source
   .replace(
     "import { resolveBase } from './browser.js';",
     `function resolveBase(pathname = '') { return '/aprice/' + String(pathname || '').replace(/^\\//, ''); }`,
+  )
+  .replace(
+    "import { friendlyDataError, validateJanCode, validateOptionalHttpUrl, validatePositiveYen } from './form-validation.js';",
+    `function validateJanCode(value) {
+      const barcode = String(value || '').replace(/\\D/g, '').trim();
+      return /^\\d{8}$|^\\d{12,14}$/.test(barcode)
+        ? { ok: true, value: barcode, message: '' }
+        : { ok: false, value: barcode, message: '请输入 8 位或 12-14 位 JAN 条码。' };
+    }
+    function validatePositiveYen(value) {
+      const price = Number(value);
+      return Number.isInteger(price) && price > 0 && price <= 9999999
+        ? { ok: true, value: price, message: '' }
+        : { ok: false, value: price, message: '请输入有效的日元价格。' };
+    }
+    function validateOptionalHttpUrl(value = '') {
+      const trimmed = String(value || '').trim();
+      if (!trimmed) return { ok: true, value: '', message: '' };
+      return /^https?:\\/\\//.test(trimmed)
+        ? { ok: true, value: trimmed, message: '' }
+        : { ok: false, value: trimmed, message: '请输入有效的证据链接。' };
+    }
+    function friendlyDataError(error) { return String(error?.message || error || '请求失败，请稍后再试。'); }`,
   );
 
 const moduleUrl = `data:text/javascript;base64,${Buffer.from(patchedSource).toString('base64')}`;
@@ -168,21 +191,32 @@ assert.ok(testState.restCalls.some((call) =>
 
 await auth.createProduct({ barcode: '4900000000000', name: 'Created Product' });
 assert.ok(testState.restCalls.some((call) =>
-  call.type === 'insert' &&
-  call.path === 'products' &&
+  call.type === 'rpc' &&
+  call.name === 'admin_upsert_product' &&
   call.body.id === '4900000000000' &&
   call.body.barcode === '4900000000000' &&
   call.body.name === 'Created Product' &&
   call.options.token === 'session-token'
 ));
 
+await auth.submitProductSubmission({ barcode: '4900000000001', name: 'Submitted Product' });
+assert.ok(testState.restCalls.some((call) =>
+  call.type === 'rpc' &&
+  call.name === 'submit_product_submission' &&
+  call.body.payload.barcode === '4900000000001' &&
+  call.body.payload.name === 'Submitted Product' &&
+  call.options.token === 'session-token'
+));
+
 await auth.adminReviewPriceSubmission({ id: 'pending-1', action: 'approve', confidence_score: 80 });
+await auth.adminReviewProductSubmission({ id: 'product-pending-1', action: 'approve' });
 await auth.adminUpsertStore({ id: 'store-1', name: 'Store 1' });
 await auth.adminUpsertPrice({ product_id: 'p1', store_id: 's1', price_yen: 698 });
 await auth.adminDeleteProduct('p1');
 await auth.adminDeleteStore('s1');
 await auth.adminDeletePrice('price-1');
 assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_review_price_submission' && call.body.payload.id === 'pending-1'));
+assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_review_product_submission' && call.body.payload.id === 'product-pending-1'));
 assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_upsert_store' && call.body.id === 'store-1'));
 assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_upsert_price' && call.body.price_yen === 698));
 assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_delete_product' && call.body.target_id === 'p1'));
