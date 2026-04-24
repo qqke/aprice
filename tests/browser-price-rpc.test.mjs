@@ -80,4 +80,39 @@ assert.equal(rows.length, 1);
 assert.equal(rows[0].store_id, 'welcia-shibuya');
 assert.ok(requests.some((request) => request.url.includes('/rest/v1/rpc/fetch_product_prices')));
 
+globalThis.__APriceConfig = {
+  ...globalThis.__APriceConfig,
+  useServerPriceRpc: false,
+};
+const fallbackRequests = [];
+globalThis.fetch = async (input) => {
+  const url = String(input);
+  fallbackRequests.push(url);
+  if (url.includes('/rest/v1/prices')) {
+    return new Response(
+      JSON.stringify([
+        {
+          id: '00000000-0000-0000-0000-000000000004',
+          product_id: 'loxonin-s',
+          store_id: 'kokokara-shibuya',
+          price_yen: 710,
+          is_member_price: false,
+          source: 'manual',
+          note: '',
+          collected_at: '2026-04-24T00:00:00.000Z',
+          stores: { id: 'kokokara-shibuya', name: 'Kokokara Shibuya' },
+          products: { id: 'loxonin-s', name: 'Loxonin S' },
+        },
+      ]),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+  return new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } });
+};
+const browserFallback = await import(`../src/lib/browser.js?fallback=${Date.now()}`);
+const fallbackPage = await browserFallback.fetchProductPricesPage('loxonin-s', { limit: 10, sinceDays: 14 });
+assert.equal(fallbackPage.items.length, 1);
+assert.equal(fallbackPage.nextCursor, null);
+assert.ok(fallbackRequests.some((url) => url.includes('/rest/v1/prices')));
+
 console.log('browser-price-rpc test passed');

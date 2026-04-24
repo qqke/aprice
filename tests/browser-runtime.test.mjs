@@ -4,6 +4,7 @@ globalThis.__APriceConfig = {
   baseUrl: '/aprice/',
   supabaseUrl: 'https://example.supabase.co',
   supabaseAnonKey: 'anon-key',
+  enableTelemetryRpc: true,
 };
 
 const requests = [];
@@ -256,6 +257,24 @@ globalThis.window = {
 assert.deepEqual(browser.fetchRecentViews(), []);
 assert.doesNotThrow(() => browser.recordRecentView({ id: 'safe-product', name: 'Safe Product' }));
 assert.doesNotThrow(() => browser.clearRecentViews());
+
+const telemetryStore = new Map();
+globalThis.window = {
+  dispatchEvent() {},
+  CustomEvent: globalThis.CustomEvent,
+  localStorage: {
+    getItem(key) {
+      return telemetryStore.has(key) ? telemetryStore.get(key) : null;
+    },
+    setItem(key, value) {
+      telemetryStore.set(key, String(value));
+    },
+  },
+};
+browser.trackEvent('favorite', { action: 'added' });
+assert.ok((telemetryStore.get('aprice:telemetry-events') || '').includes('"name":"favorite"'));
+await browser.flushTrackedEvents({ force: true });
+assert.match(requests.join('\n'), /\/rest\/v1\/rpc\/submit_telemetry_events/);
 
 Object.defineProperty(globalThis, 'navigator', { configurable: true, value: {} });
 await assert.rejects(() => browser.geolocate(), /Geolocation unavailable/);
