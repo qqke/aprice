@@ -315,7 +315,7 @@ const base = import.meta.env.BASE_URL || '/';
       if (!product || !nearbyResults || !nearbyStatus) return;
       nearbyStatus.textContent = `${product.name} 价格读取中...`;
       try {
-        const prices = await fetchPricesForProduct(product.id);
+        const prices = await fetchPricesForProduct(product.id, { limit: 80, sinceDays: 45 });
         if (!prices.length) {
           renderEmptyList(nearbyResults, product.name, '当前还没有价格记录。', '暂无');
           nearbyStatus.textContent = `${product.name} 暂无门店价格。`;
@@ -392,6 +392,8 @@ const base = import.meta.env.BASE_URL || '/';
           lat: location.lat,
           lng: location.lng,
           radiusKm: 20,
+          limit: 160,
+          sinceDays: 45,
         });
 
         if (!rows.length) {

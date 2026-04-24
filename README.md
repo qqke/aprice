@@ -27,6 +27,8 @@ PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 PUBLIC_SITE_URL=https://outlets.stbf.online
 ASTRO_BASE_PATH=/
+PUBLIC_USE_SERVER_PRICE_RPC=0
+PUBLIC_ENABLE_TELEMETRY_RPC=0
 ```
 
 如果你要部署到 GitHub Pages 的项目子路径，`ASTRO_BASE_PATH` 仍然要改回仓库名路径；如果是像 `outlets.stbf.online` 这样的自定义域名根路径，就用 `/`。
@@ -39,6 +41,38 @@ ASTRO_BASE_PATH=/
 4. 把站点地址加入邮件回调允许列表
 5. 登录和找回密码邮件会回到登录页，并保留原页面回跳参数
 6. 需要后台写权限时，把对应用户的 `profiles.role` 设为 `admin`
+7. 建议优先执行 `supabase/migrations`（包含社区价审核、遥测入库、价格查询 RPC），`supabase/schema.sql` 作为新环境基线快照
+
+## Feature Flags & Rollback
+
+- `PUBLIC_USE_SERVER_PRICE_RPC=1`
+  - 启用后：`fetchPricesForProduct` 优先走 `fetch_product_prices` RPC（失败自动回退到 `rest/v1/prices`）。
+  - 回滚：改回 `0` 并重新部署。
+- `PUBLIC_ENABLE_TELEMETRY_RPC=1`
+  - 启用后：前端事件队列会在页面隐藏时尝试批量提交到 `submit_telemetry_events` RPC。
+  - 回滚：改回 `0` 并重新部署。
+
+## Schema Parity Check
+
+- `npm run check:schema`
+  - 校验 `supabase/migrations` 中新增的关键表/函数/`user_price_logs` 列是否已纳入 `supabase/schema.sql`。
+  - 建议在 CI 中加入该命令，防止基线 schema 漂移。
+
+## Price Path Benchmark
+
+- `npm run benchmark:price`
+  - 对比 REST 查询与 `fetch_product_prices` RPC 的耗时、返回字节数、行数。
+  - 需要环境变量：`PUBLIC_SUPABASE_URL`、`PUBLIC_SUPABASE_ANON_KEY`、`BENCH_PRODUCT_ID`。
+  - 可选环境变量：`BENCH_LAT`、`BENCH_LNG`、`BENCH_LIMIT`、`BENCH_SINCE_DAYS`、`BENCH_RADIUS_KM`。
+- `workflow_dispatch` 可勾选 `run_benchmark`，并通过 `bench_product_id` 指定商品。
+
+## Price Pagination RPC
+
+- 新增 `fetch_product_prices_page(payload)`，返回：
+  - `items`: 本页价格数组
+  - `next_cursor`: 下一页游标（`{ collected_at, id }`）或 `null`
+- 前端封装：`fetchProductPricesPage(productId, { limit, sinceDays, cursor, lat, lng, radiusKm })`
+- 当 `PUBLIC_USE_SERVER_PRICE_RPC=0` 时，自动回退到现有 `fetchPricesForProduct` 行为。
 
 ## GitHub Pages
 

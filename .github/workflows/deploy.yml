@@ -6,6 +6,17 @@ on:
       - main
       - master
   workflow_dispatch:
+    inputs:
+      run_benchmark:
+        description: Run price path benchmark
+        required: false
+        default: "false"
+        type: boolean
+      bench_product_id:
+        description: Product ID for benchmark
+        required: false
+        default: "loxonin-s"
+        type: string
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -40,6 +51,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Validate project
+        run: npm run check
+
       - name: Build site
         run: npm run build
 
@@ -65,3 +79,29 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+  benchmark:
+    if: github.event_name == 'workflow_dispatch' && inputs.run_benchmark == true
+    runs-on: ubuntu-latest
+    env:
+      PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+      PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+      BENCH_PRODUCT_ID: ${{ inputs.bench_product_id }}
+      BENCH_LIMIT: "120"
+      BENCH_SINCE_DAYS: "45"
+      BENCH_RADIUS_KM: "20"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Benchmark price fetch paths
+        run: npm run benchmark:price

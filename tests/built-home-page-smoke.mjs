@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const html = await readFile(new URL('../dist/client/index.html', import.meta.url), 'utf8');
-assert.ok(html.includes('window.__APriceConfig = { baseUrl, supabaseUrl, supabaseAnonKey };'), 'config injection missing from dist/client/index.html');
+assert.ok(
+  html.includes('window.__APriceConfig = { baseUrl, supabaseUrl, supabaseAnonKey, useServerPriceRpc, enableTelemetryRpc };'),
+  'config injection missing from dist/client/index.html',
+);
 
 const startMarker = html.indexOf('fetchNearbyPrices');
 assert.ok(startMarker >= 0, 'home module script not found in dist/client/index.html');

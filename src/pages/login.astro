@@ -32,7 +32,7 @@ export const prerender = true;
                 <strong id="signed-in-label">当前账号</strong>
                 <small id="signed-in-subtitle">可打开个人页。</small>
               </div>
-              <span class="meta" id="signed-in-role">member</span>
+              <span class="meta" id="signed-in-role">user</span>
             </div>
             <div class="pillrow login-state__actions">
               <a class="button" id="signed-in-action" href={resolveBase('me/')}>打开个人页</a>
@@ -207,7 +207,7 @@ export const prerender = true;
               <strong>已登录</strong>
               <small>已登录。</small>
             </div>
-            <span class="meta">member</span>
+            <span class="meta">user</span>
           </div>
         `;
       }
@@ -217,7 +217,7 @@ export const prerender = true;
       if (signedInMessage) signedInMessage.textContent = '账号已登录。';
       if (signedInLabel) signedInLabel.textContent = '当前账号';
       if (signedInSubtitle) signedInSubtitle.textContent = redirectTarget ? '可返回原页面。' : '可打开个人页。';
-      if (signedInRole) signedInRole.textContent = 'member';
+      if (signedInRole) signedInRole.textContent = 'user';
       if (signedInAction) {
         signedInAction.textContent = redirectTarget ? '继续访问' : '打开个人页';
         signedInAction.href = redirectTarget || resolveBase('me/');
@@ -261,7 +261,7 @@ export const prerender = true;
         }
 
         const profile = await fetchCurrentProfile();
-        const role = profile?.role || 'member';
+        const role = profile?.role || 'user';
         const isAdmin = role === 'admin';
         const label = profile?.full_name || session.user.email || '已登录用户';
         const actionLabel = redirectTarget ? '继续访问' : isAdmin ? '打开管理页' : '打开个人页';

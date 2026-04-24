@@ -1,6 +1,6 @@
 export async function initProductPage({ loginUrl }) {
 
-const { escapeAttribute, escapeHtml, recordRecentView, resolveBase, fetchNearbyPrices, fetchPricesForProduct, fetchStoresPage, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
+const { escapeAttribute, escapeHtml, recordRecentView, resolveBase, fetchNearbyPrices, fetchProductPricesPage, fetchStoresPage, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
 const { fetchFavorites, fetchPersonalLogs, getCurrentUser, indexLatestPersonalPricesByStore, submitStorePrice, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
 const { getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
 
@@ -56,6 +56,7 @@ const summaryLatestStore = document.querySelector('#summary-latest-store');
 const summaryTrendLabel = document.querySelector('#summary-trend-label');
 const summaryGainLabel = document.querySelector('#summary-gain-label');
 const trendList = document.querySelector('#trend-list');
+const trendLoadMoreButton = document.querySelector('#trend-load-more');
 
 const STORE_PAGE_SIZE = 10;
 let storeRows = [];
@@ -73,6 +74,9 @@ let storeLocation = null;
 let activeStoreId = '';
 let favoriteProductIds = new Set();
 let favoriteStoreIds = new Set();
+let loadedPriceRows = [];
+let priceNextCursor = null;
+let pricePageLoading = false;
 
 async function syncAuthGate() {
   const user = await getCurrentUser();
@@ -631,20 +635,61 @@ function renderInsights(rows) {
   }
 }
 
+function syncTrendLoadMoreButton() {
+  if (!(trendLoadMoreButton instanceof HTMLButtonElement)) return;
+  trendLoadMoreButton.hidden = !priceNextCursor && !pricePageLoading;
+  trendLoadMoreButton.disabled = pricePageLoading;
+  trendLoadMoreButton.textContent = pricePageLoading ? '加载中...' : '加载更多历史';
+}
+
 async function loadPrices() {
   try {
-    const rows = await fetchPricesForProduct(productId);
-    renderPrices(rows);
-    renderNearbyStores(rows);
-    renderInsights(rows);
-    if (geoStatus) geoStatus.textContent = rows.length ? `已加载 ${rows.length} 条价格记录。` : `当前还没有 ${productName} 的价格记录。`;
-    if (nearbyStatus) nearbyStatus.textContent = rows.length ? `已显示 ${rows.length} 条门店价格。` : '补第一条价格再看门店流。';
+    const page = await fetchProductPricesPage(productId, { limit: 90, sinceDays: 60 });
+    loadedPriceRows = page.items || [];
+    priceNextCursor = page.nextCursor || null;
+    renderPrices(loadedPriceRows);
+    renderNearbyStores(loadedPriceRows);
+    renderInsights(loadedPriceRows);
+    syncTrendLoadMoreButton();
+    if (geoStatus) geoStatus.textContent = loadedPriceRows.length ? `已加载 ${loadedPriceRows.length} 条价格记录。` : `当前还没有 ${productName} 的价格记录。`;
+    if (nearbyStatus) nearbyStatus.textContent = loadedPriceRows.length ? `已显示 ${loadedPriceRows.length} 条门店价格。` : '补第一条价格再看门店流。';
   } catch (error) {
+    loadedPriceRows = [];
+    priceNextCursor = null;
     renderPrices([]);
     renderNearbyStores([]);
     renderInsights([]);
+    syncTrendLoadMoreButton();
     if (geoStatus) geoStatus.textContent = `价格加载失败：${error.message}`;
     if (nearbyStatus) nearbyStatus.textContent = '价格加载失败后仍可选择门店记录个人价格。';
+  }
+}
+
+async function loadMoreTrendRows() {
+  if (!priceNextCursor || pricePageLoading) return;
+  pricePageLoading = true;
+  syncTrendLoadMoreButton();
+  try {
+    const page = await fetchProductPricesPage(productId, {
+      limit: 90,
+      sinceDays: 60,
+      cursor: priceNextCursor,
+    });
+    const deduped = new Map(loadedPriceRows.map((row) => [row.id, row]));
+    for (const row of page.items || []) {
+      deduped.set(row.id, row);
+    }
+    loadedPriceRows = Array.from(deduped.values()).sort((a, b) => {
+      const at = toTime(a?.collected_at);
+      const bt = toTime(b?.collected_at);
+      if (bt !== at) return bt - at;
+      return String(b?.id || '').localeCompare(String(a?.id || ''));
+    });
+    priceNextCursor = page.nextCursor || null;
+    renderInsights(loadedPriceRows);
+  } finally {
+    pricePageLoading = false;
+    syncTrendLoadMoreButton();
   }
 }
 
@@ -779,7 +824,7 @@ geoButton?.addEventListener('click', async () => {
   try {
     const location = await syncStoreLocation({ announce: true });
     if (!location) return;
-    const rows = await fetchNearbyPrices({ productId, lat: location.lat, lng: location.lng, radiusKm: 20 });
+    const rows = await fetchNearbyPrices({ productId, lat: location.lat, lng: location.lng, radiusKm: 20, limit: 220, sinceDays: 60 });
     renderPrices(rows);
     renderNearbyStores(rows);
     renderInsights(rows);
@@ -794,6 +839,10 @@ geoButton?.addEventListener('click', async () => {
 heroGeoButton?.addEventListener('click', () => {
   document.querySelector('#product-price-flow')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   geoButton?.click();
+});
+
+trendLoadMoreButton?.addEventListener('click', () => {
+  void loadMoreTrendRows();
 });
 
 form?.addEventListener('submit', async (event) => {

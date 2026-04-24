@@ -122,8 +122,8 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
         </nav>
       </div>
     </header>
-    <script is:inline define:vars={{ baseUrl: base, supabaseUrl: import.meta.env.PUBLIC_SUPABASE_URL || '', supabaseAnonKey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '', sessionHintKey: SESSION_HINT_KEY }}>
-      window.__APriceConfig = { baseUrl, supabaseUrl, supabaseAnonKey };
+    <script is:inline define:vars={{ baseUrl: base, supabaseUrl: import.meta.env.PUBLIC_SUPABASE_URL || '', supabaseAnonKey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '', sessionHintKey: SESSION_HINT_KEY, useServerPriceRpc: (import.meta.env.PUBLIC_USE_SERVER_PRICE_RPC || '') === '1', enableTelemetryRpc: (import.meta.env.PUBLIC_ENABLE_TELEMETRY_RPC || '') === '1' }}>
+      window.__APriceConfig = { baseUrl, supabaseUrl, supabaseAnonKey, useServerPriceRpc, enableTelemetryRpc };
       window.__APriceConfig.browserJsUrl = `${baseUrl}browser.js`;
       window.__APriceConfig.browserAuthJsUrl = `${baseUrl}browser-auth.js`;
       window.__APriceConfig.supabaseRestJsUrl = `${baseUrl}supabase-rest.js`;
@@ -161,7 +161,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
     </footer>
     <script type="module" is:inline>
       const runtimeBase = window.__APriceConfig?.baseUrl || '/';
-      const { resolveBase } = await import(window.__APriceConfig?.browserJsUrl || `${runtimeBase}browser.js`);
+      const { flushTrackedEvents, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || `${runtimeBase}browser.js`);
       const authRedirectUrl = window.__APriceConfig?.authRedirectJsUrl || `${runtimeBase}auth-redirect.js`;
       const { buildLoginUrl } = await import(authRedirectUrl);
       const loginStateUrl = window.__APriceConfig?.loginPageStateJsUrl || `${runtimeBase}login-page-state.js`;
@@ -318,6 +318,13 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
         unsubscribeAuth?.();
         clearSessionRefreshTimer();
       });
+      if (window.__APriceConfig?.enableTelemetryRpc) {
+        window.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'hidden') {
+            void flushTrackedEvents();
+          }
+        });
+      }
     </script>
   </body>
 </html>

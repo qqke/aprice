@@ -10,6 +10,22 @@ const SUPABASE_ANON_KEY = String(runtimeConfig.supabaseAnonKey || '').trim();
 
 let supabaseClientPromise = null;
 
+function trackEvent(name, payload = {}) {
+  const event = {
+    name: String(name || 'unknown'),
+    payload: payload && typeof payload === 'object' ? payload : { value: payload },
+    at: new Date().toISOString(),
+  };
+  try {
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof window.CustomEvent === 'function') {
+      window.dispatchEvent(new CustomEvent('aprice:track', { detail: event }));
+    }
+  } catch {
+    // Ignore telemetry failures for auth flows.
+  }
+  return event;
+}
+
 function ensureConfigured() {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     throw new Error('Missing Supabase environment variables');
@@ -144,7 +160,7 @@ export async function fetchCurrentProfile() {
     if (code === '42703' || message.includes('profiles.role does not exist')) {
       const profile = await fetchProfileRow(session, false);
       if (profile && !('role' in profile)) {
-        profile.role = 'member';
+        profile.role = 'user';
       }
       return profile;
     }
@@ -199,7 +215,7 @@ export async function savePersonalLog(entry) {
     throw new Error('product_id and price_yen are required');
   }
   const session = await requireSession();
-  return restInsert(
+  const result = await restInsert(
     'user_price_logs',
     {
       ...entry,
@@ -207,6 +223,12 @@ export async function savePersonalLog(entry) {
     },
     { token: session.access_token },
   );
+  trackEvent('submit_price', {
+    product_id: entry?.product_id || '',
+    store_id: entry?.store_id || '',
+    source: 'personal_log',
+  });
+  return result;
 }
 
 export async function submitStorePrice(entry) {
@@ -214,7 +236,19 @@ export async function submitStorePrice(entry) {
     throw new Error('product_id, store_id and price_yen are required');
   }
   const session = await requireSession();
-  return restRpc('submit_store_price', { payload: entry }, { token: session.access_token });
+  const result = await restRpc('submit_store_price', { payload: entry }, { token: session.access_token });
+  trackEvent('submit_price', {
+    product_id: entry?.product_id || '',
+    store_id: entry?.store_id || '',
+    source: 'store_price',
+  });
+  if (entry?.share_to_public) {
+    trackEvent('share_public', {
+      product_id: entry?.product_id || '',
+      store_id: entry?.store_id || '',
+    });
+  }
+  return result;
 }
 
 export async function fetchPendingPriceSubmissions(limit = 20) {
@@ -233,7 +267,11 @@ export async function fetchPendingPriceSubmissions(limit = 20) {
 
 export async function adminReviewPriceSubmission(payload) {
   const session = await requireSession();
-  return restRpc('admin_review_price_submission', { payload }, { token: session.access_token });
+  const result = await restRpc('admin_review_price_submission', { payload }, { token: session.access_token });
+  if (payload?.action === 'approve') {
+    trackEvent('review_approved', { id: payload?.id || '' });
+  }
+  return result;
 }
 
 export async function fetchFavorites(userId) {
@@ -268,6 +306,7 @@ export async function toggleFavorite(entityType, entityId) {
       query: { id: `eq.${existing[0].id}` },
       token: session.access_token,
     });
+    trackEvent('favorite', { action: 'removed', entity_type: entityType, entity_id: entityId });
     return { action: 'removed' };
   }
 
@@ -280,6 +319,7 @@ export async function toggleFavorite(entityType, entityId) {
     },
     { token: session.access_token },
   );
+  trackEvent('favorite', { action: 'added', entity_type: entityType, entity_id: entityId });
 
   return { action: 'added' };
 }

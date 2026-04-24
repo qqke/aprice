@@ -2,11 +2,14 @@ import {
   escapeIlike,
   fetchPublicProductByBarcode,
   restGet,
+  restRpc,
 } from './supabase-rest.js';
 
 const runtimeConfig = globalThis.__APriceConfig || {};
 const BASE_URL = String(runtimeConfig.baseUrl || '/').trim() || '/';
 const RECENT_VIEWS_KEY = 'aprice:recent-views';
+const TELEMETRY_QUEUE_KEY = 'aprice:telemetry-events';
+const USE_SERVER_PRICE_RPC = Boolean(runtimeConfig.useServerPriceRpc);
 
 function cleanBarcode(value) {
   return String(value || '').replace(/\D/g, '').trim();
@@ -28,6 +31,64 @@ export function resolveBase(pathname = '') {
   const cleanPath = String(pathname || '').replace(/^\//, '');
   if (!cleanPath) return base;
   return `${base.replace(/\/$/, '')}/${cleanPath}`;
+}
+
+export function trackEvent(name, payload = {}) {
+  const event = {
+    name: String(name || 'unknown'),
+    payload: payload && typeof payload === 'object' ? payload : { value: payload },
+    at: new Date().toISOString(),
+  };
+
+  try {
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof window.CustomEvent === 'function') {
+      window.dispatchEvent(new CustomEvent('aprice:track', { detail: event }));
+    }
+  } catch {
+    // Ignore event dispatch errors in constrained environments.
+  }
+
+  try {
+    if (typeof window === 'undefined') return event;
+    const raw = window.localStorage.getItem(TELEMETRY_QUEUE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    const queue = Array.isArray(parsed) ? parsed : [];
+    queue.push(event);
+    window.localStorage.setItem(TELEMETRY_QUEUE_KEY, JSON.stringify(queue.slice(-200)));
+  } catch {
+    // Ignore storage failures.
+  }
+
+  return event;
+}
+
+export async function flushTrackedEvents({ force = false } = {}) {
+  if (!force && !runtimeConfig.enableTelemetryRpc) return { sent: 0, skipped: true };
+  if (typeof window === 'undefined') return { sent: 0, skipped: true };
+
+  let queue = [];
+  try {
+    const raw = window.localStorage.getItem(TELEMETRY_QUEUE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    queue = Array.isArray(parsed) ? parsed : [];
+  } catch {
+    queue = [];
+  }
+
+  if (!queue.length) return { sent: 0, skipped: true };
+
+  const batch = queue.slice(-100);
+  try {
+    await restRpc('submit_telemetry_events', batch);
+    try {
+      window.localStorage.setItem(TELEMETRY_QUEUE_KEY, JSON.stringify(queue.slice(0, Math.max(0, queue.length - batch.length))));
+    } catch {
+      // Ignore storage failures after successful submit.
+    }
+    return { sent: batch.length, skipped: false };
+  } catch {
+    return { sent: 0, skipped: false };
+  }
 }
 
 export function escapeHtml(value = '') {
@@ -57,6 +118,11 @@ export async function searchProducts(term = '') {
   if (barcode) {
     orParts.push(`barcode.ilike.%${barcode}%`);
   }
+
+  trackEvent('search', {
+    query: q.slice(0, 120),
+    barcode_like: Boolean(barcode),
+  });
 
   return restGet('products', {
     query: {
@@ -192,20 +258,98 @@ export async function fetchJancodeProductDraft(barcode) {
   return parseJancodeProductDraft(markdown, cleaned);
 }
 
-export async function fetchPricesForProduct(productId) {
+async function fetchPricesForProductRpc(productId, options = {}) {
+  const rows = await restRpc('fetch_product_prices', {
+    payload: {
+      product_id: productId,
+      limit: options.limit,
+      since_days: options.sinceDays,
+      lat: options.lat,
+      lng: options.lng,
+      radius_km: options.radiusKm,
+    },
+  });
+  return Array.isArray(rows) ? rows : [];
+}
+
+async function fetchPricesPageRpc(productId, options = {}) {
+  const payload = {
+    product_id: productId,
+    limit: options.limit,
+    since_days: options.sinceDays,
+    lat: options.lat,
+    lng: options.lng,
+    radius_km: options.radiusKm,
+    cursor: options.cursor || null,
+  };
+  const result = await restRpc('fetch_product_prices_page', { payload });
+  const page = Array.isArray(result) ? result[0] : result;
+  const items = Array.isArray(page?.items) ? page.items : [];
+  const nextCursor = page?.next_cursor && typeof page.next_cursor === 'object' ? page.next_cursor : null;
+  return { items, nextCursor };
+}
+
+export async function fetchPricesForProduct(productId, options = {}) {
   if (!productId) return [];
+  const limit = Math.max(1, Math.min(Number(options.limit) || 120, 500));
+  const sinceDays = Number(options.sinceDays);
+  const collectedSince =
+    Number.isFinite(sinceDays) && sinceDays > 0
+      ? new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000).toISOString()
+      : '';
+
+  if (USE_SERVER_PRICE_RPC) {
+    try {
+      return await fetchPricesForProductRpc(productId, {
+        limit,
+        sinceDays,
+        lat: options.lat,
+        lng: options.lng,
+        radiusKm: options.radiusKm,
+      });
+    } catch {
+      // Fall back to direct table query when RPC is not deployed.
+    }
+  }
+
   return restGet('prices', {
     query: {
       select:
         'id, product_id, store_id, price_yen, is_member_price, source, collected_at, note, stores:store_id (id, name, chain_name, address, city, pref, lat, lng, hours), products:product_id (id, name, barcode, brand, pack, tone)',
       product_id: `eq.${productId}`,
       order: 'collected_at.desc',
+      limit,
+      ...(collectedSince ? { collected_at: `gte.${collectedSince}` } : {}),
     },
   });
 }
 
-export async function fetchNearbyPrices({ productId, lat, lng, radiusKm = 8 }) {
-  const rows = await fetchPricesForProduct(productId);
+export async function fetchProductPricesPage(productId, options = {}) {
+  if (!productId) return { items: [], nextCursor: null };
+  const limit = Math.max(1, Math.min(Number(options.limit) || 60, 200));
+  const sinceDays = Number(options.sinceDays);
+
+  if (USE_SERVER_PRICE_RPC) {
+    try {
+      return await fetchPricesPageRpc(productId, {
+        limit,
+        sinceDays,
+        lat: options.lat,
+        lng: options.lng,
+        radiusKm: options.radiusKm,
+        cursor: options.cursor || null,
+      });
+    } catch {
+      // Fall through to compatibility mode.
+    }
+  }
+
+  const rows = await fetchPricesForProduct(productId, { limit, sinceDays, lat: options.lat, lng: options.lng, radiusKm: options.radiusKm });
+  return { items: rows, nextCursor: null };
+}
+
+export async function fetchNearbyPrices({ productId, lat, lng, radiusKm = 8, limit = 160, sinceDays = 30 }) {
+  const rows = await fetchPricesForProduct(productId, { limit, sinceDays, lat, lng, radiusKm });
   return rows
     .map((row) => {
       const store = row.stores || null;
@@ -234,12 +378,17 @@ export async function geolocate() {
     }
 
     navigator.geolocation.getCurrentPosition(
-      (position) =>
+      (position) => {
+        trackEvent('geolocate_success');
         resolve({
           lat: position.coords.latitude,
           lng: position.coords.longitude,
-        }),
-      (error) => reject(error),
+        });
+      },
+      (error) => {
+        trackEvent('geolocate_failure', { message: String(error?.message || '') });
+        reject(error);
+      },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
     );
   });
@@ -299,6 +448,7 @@ export function fetchRecentViews() {
 
 export function recordRecentView(product) {
   if (!product?.id) return [];
+  trackEvent('open_product', { product_id: String(product.id) });
   const next = {
     id: product.id,
     name: product.name || '',

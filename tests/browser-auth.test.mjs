@@ -120,7 +120,7 @@ assert.equal(latest.get('s3').id, 'purchase-date');
 
 testState.profileRoleRequestShouldFail = true;
 const profile = await auth.fetchCurrentProfile();
-assert.equal(profile.role, 'member');
+assert.equal(profile.role, 'user');
 assert.ok(testState.restCalls.some((call) => call.type === 'get' && call.path === 'profiles' && String(call.options.query.select).includes('role')));
 assert.ok(testState.restCalls.some((call) => call.type === 'get' && call.path === 'profiles' && !String(call.options.query.select).includes('role')));
 
