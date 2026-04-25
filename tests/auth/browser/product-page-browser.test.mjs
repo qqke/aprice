@@ -403,6 +403,7 @@ async function main() {
       await failurePage.waitForFunction(() => String(document.querySelector('#geo-status')?.textContent || '').includes('价格加载失败：forced prices failure'));
       await failurePage.waitForFunction(() => String(document.querySelector('#personal-store-status')?.textContent || '').includes('门店加载失败：forced stores failure'));
       assert.equal(failureErrors.filter((message) => !message.includes('Failed to load resource')).length, 0, `failure page errors: ${failureErrors.join(' | ')}`);
+      await failurePage.close();
 
       console.log('product-page browser test passed');
     } finally {

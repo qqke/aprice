@@ -14,6 +14,8 @@ const mimeTypes = {
   '.ico': 'image/x-icon',
 };
 
+const staticAssetCache = new Map();
+
 function toFilePath(distRoot, urlPath) {
   const cleanPath = decodeURIComponent(String(urlPath || '/').split('?')[0].split('#')[0]).replace(/^\/+/, '');
   const strippedPath = cleanPath.startsWith('aprice/') ? cleanPath.slice('aprice/'.length) : cleanPath;
@@ -51,10 +53,17 @@ export async function startStaticServer({ distRoot = resolve(process.cwd(), 'dis
         finalPath = resolve(distRoot, 'index.html');
       }
 
-      const body = await readFile(finalPath);
-      const type = mimeTypes[extname(finalPath)] || 'application/octet-stream';
-      res.writeHead(200, { 'Content-Type': type });
-      res.end(body);
+      let cached = staticAssetCache.get(finalPath);
+      if (!cached) {
+        cached = {
+          body: await readFile(finalPath),
+          type: mimeTypes[extname(finalPath)] || 'application/octet-stream',
+        };
+        staticAssetCache.set(finalPath, cached);
+      }
+
+      res.writeHead(200, { 'Content-Type': cached.type });
+      res.end(cached.body);
     } catch (error) {
       res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
       res.end(String(error.message || error));

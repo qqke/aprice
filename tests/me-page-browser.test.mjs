@@ -72,6 +72,7 @@ async function main() {
       assert.match(favsText || '', /(登录后可查看收藏|未登录)/);
       assert.match(recentText || '', /暂无浏览记录/);
       assert.match(statusText || '', /登录后/);
+      await page.close();
 
       const signedPage = await browser.newPage();
       const restCalls = [];
@@ -319,6 +320,7 @@ async function main() {
       await signedPage.locator('#clear-recent-views').click();
       await signedPage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('已清空最近浏览。'));
       assert.match(await signedPage.locator('#recent-views').textContent(), /暂无浏览记录/);
+      await signedPage.close();
 
       const refreshFailurePage = await browser.newPage();
       refreshFailurePage.on('pageerror', (error) => {
@@ -346,6 +348,7 @@ async function main() {
       await refreshFailurePage.goto(`${baseUrl}/aprice/me/`, { waitUntil: 'domcontentloaded' });
       await refreshFailurePage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('记录失败：forced refresh failure'));
       assert.equal(await refreshFailurePage.locator('#log-product').isDisabled(), true);
+      await refreshFailurePage.close();
 
       console.log('me-page browser test passed');
     } finally {

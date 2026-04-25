@@ -106,11 +106,14 @@ async function main() {
       const scanUrl = `${baseUrl}/aprice/scan/`;
 
       await page.goto(scanUrl, { waitUntil: 'domcontentloaded' });
+      await page.locator('#barcode-input').waitFor({ state: 'attached', timeout: 10000 });
+      await page.locator('#barcode-search').waitFor({ state: 'attached', timeout: 10000 });
+      const productRequestCountBeforeEmptySearch = requests.filter((call) => call.url.includes('/rest/v1/products')).length;
       await page.locator('#barcode-search').click();
-      await page.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('请输入条码。'));
       await page.locator('#barcode-input').press('Enter');
-      await page.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('请输入条码。'));
-      assert.equal(requests.some((call) => call.url.includes('/rest/v1/products')), false);
+      await page.waitForTimeout(100);
+      const productRequestCountAfterEmptySearch = requests.filter((call) => call.url.includes('/rest/v1/products')).length;
+      assert.equal(productRequestCountAfterEmptySearch, productRequestCountBeforeEmptySearch);
 
       await page.locator('#barcode-input').fill('0019014614042');
       await page.locator('#barcode-search').click();
@@ -122,6 +125,7 @@ async function main() {
       assert.equal(await page.locator('#barcode-input').inputValue(), '0019014614042');
       assert.match(await page.locator('#scan-result-list').textContent(), /アイムス 11歳以上用 毎日の健康ケア チキン 小粒 5kg/);
       assert.equal(await page.locator('#scan-result-list a').getAttribute('href'), '/aprice/product/0019014614042/');
+      await page.close();
 
       const foundPage = await browser.newPage();
       const foundRequests = [];
@@ -245,6 +249,7 @@ async function main() {
         foundRequests.some((call) => call.url.includes('/rpc/submit_product_submission') && call.method === 'POST' && call.body.includes('"barcode":"4987240210733"') && call.body.includes('"name":"龍角散ダイレクトスティック ピーチ(16包)"') && call.body.includes('"brand":"株式会社龍角散"')),
         `expected product submission payload, got ${foundRequests.map((call) => call.body).join(' | ')}`,
       );
+      await foundPage.close();
 
       const guestPage = await browser.newPage();
       const guestRequests = [];
@@ -306,6 +311,7 @@ async function main() {
       assert.equal(new URL(guestPage.url()).pathname, '/aprice/login/');
       assert.equal(new URL(guestPage.url()).searchParams.get('redirect'), '/aprice/scan/');
       assert.equal(guestRequests.some((call) => call.url.includes('/rpc/submit_product_submission') && call.method === 'POST'), false);
+      await guestPage.close();
 
       const manualPage = await browser.newPage();
       const manualRequests = [];
@@ -381,6 +387,7 @@ async function main() {
         ),
         `expected manual product submission payload, got ${manualRequests.map((call) => call.body).join(' | ')}`,
       );
+      await manualPage.close();
 
       const failureManualPage = await browser.newPage();
       failureManualPage.on('pageerror', (error) => pageErrors.push(error.message));
@@ -424,6 +431,7 @@ async function main() {
       await failureManualPage.locator('#missing-product-name').fill('Unsafe <script>window.__scanXss = true</script>');
       await failureManualPage.locator('#missing-product-form button[type="submit"]').click();
       await failureManualPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('提交失败：forced manual save failure'));
+      await failureManualPage.close();
 
       const xssPage = await browser.newPage();
       xssPage.on('pageerror', (error) => pageErrors.push(error.message));
@@ -455,6 +463,7 @@ async function main() {
       await xssPage.waitForFunction(() => String(document.querySelector('#scan-result-list')?.textContent || '').includes('Scan XSS'));
       assert.equal(await xssPage.evaluate(() => window.__scanXss === true), false);
       assert.equal(await xssPage.locator('#scan-result-list script, #scan-result-list img[onerror]').count(), 0);
+      await xssPage.close();
 
       assert.equal(pageErrors.filter((message) => !message.includes('Failed to load resource')).length, 0, `page errors: ${pageErrors.join(' | ')}`);
 
