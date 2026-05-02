@@ -10,7 +10,7 @@ export const prerender = true;
         <div class="hero-banner__inner">
           <h1 class="product-title">打开即扫描，识别后直达商品。</h1>
           <p class="product-sub">
-            优先自动识别 JAN 码；识别失败时可手动输入并继续补录。
+            优先自动识别 JAN 码；识别失败时可手动输入。登录后可直接补录新商品。
           </p>
         </div>
       </div>
@@ -50,7 +50,7 @@ export const prerender = true;
         <div class="section__header">
           <div>
             <h2>扫描结果</h2>
-            <p>识别成功会停下相机；未命中则保留条码并展开补录。</p>
+            <p>识别成功会停下相机；未命中则保留条码并展开补录表单。</p>
           </div>
         </div>
         <div class="tile tile--wide">
@@ -73,7 +73,7 @@ export const prerender = true;
             </div>
             <span class="pill" id="missing-product-code-pill"></span>
           </div>
-          <div class="notice notice--warning" id="missing-product-summary">请填写商品信息后提交审核。</div>
+          <div class="notice notice--warning" id="missing-product-summary">请填写商品信息后添加。</div>
           <form class="form admin-form" id="missing-product-form">
             <div class="admin-form__row admin-form__row--two">
               <label class="field"><input id="missing-product-barcode" placeholder="条码" aria-label="条码" readonly /></label>
@@ -94,7 +94,7 @@ export const prerender = true;
               </label>
             </div>
             <label class="field"><input id="missing-product-description" placeholder="简短描述" aria-label="商品简短描述" /></label>
-            <button class="button admin-form__submit" id="missing-product-save" type="submit">提交补录审核</button>
+            <button class="button admin-form__submit" id="missing-product-save" type="submit">添加商品</button>
           </form>
         </section>
       </section>
@@ -214,8 +214,8 @@ export const prerender = true;
       resetMissingForm(code);
       if (missingSummary) {
         missingSummary.textContent = canAddProduct
-          ? `条码 ${code} 没有匹配到商品，可以提交补录审核。`
-          : '请先登录后再提交商品补录。';
+          ? `条码 ${code} 没有匹配到商品，可填写后直接添加。`
+          : '请先登录后再新增商品。';
       }
       if (missingCodePill) missingCodePill.textContent = `JAN ${code}`;
       missingPanel.hidden = false;
@@ -311,40 +311,41 @@ export const prerender = true;
 
           if (draft) {
             applyDraftToMissingForm(draft);
-            writePendingMissingProduct({ barcode: barcode.value });
             if (canAddProduct) {
-              if (missingSummary) missingSummary.textContent = '已从 JANCODE 获取商品信息，正在提交审核。';
-              if (status) status.textContent = `已从 JANCODE 预填 ${draft.name || barcode.value}，正在提交审核。`;
+              writePendingMissingProduct({ barcode: barcode.value });
+              if (missingSummary) missingSummary.textContent = '已从 JANCODE 获取商品信息，正在自动添加。';
+              if (status) status.textContent = `已从 JANCODE 预填 ${draft.name || barcode.value}，正在自动添加。`;
               const saved = await submitProductSubmission(draft);
               if (token !== lookupToken) return null;
-              const savedSubmission = Array.isArray(saved) ? saved[0] : saved;
-              if (savedSubmission) {
-                clearPendingMissingProduct();
-                if (missingSummary) missingSummary.textContent = '商品补录已提交，审核通过后会出现在搜索和扫码结果中。';
-                if (status) status.textContent = `商品补录已提交审核：${savedSubmission.name || barcode.value}`;
+              const savedProduct = Array.isArray(saved) ? saved[0] : saved;
+              clearPendingMissingProduct();
+              if (savedProduct) {
+                if (missingSummary) missingSummary.textContent = '商品已自动添加，可立即在搜索和扫码结果中使用。';
+                if (status) status.textContent = `商品已自动添加：${savedProduct.name || barcode.value}`;
                 return null;
               }
-              clearPendingMissingProduct();
-              if (status) status.textContent = `商品补录已提交审核：${draft.name || barcode.value}`;
+              if (status) status.textContent = `商品已自动添加：${draft.name || barcode.value}`;
               return null;
-            }
-
-            if (missingSummary) missingSummary.textContent = '已从 JANCODE 获取商品信息，正在跳转登录后自动添加。';
-            if (status) status.textContent = `已从 JANCODE 预填 ${draft.name || barcode.value}，正在跳转登录。`;
-            if (loginUrl) {
-              window.location.assign(loginUrl);
+            } else {
+              writePendingMissingProduct({ barcode: barcode.value });
+              if (missingSummary) missingSummary.textContent = '已从 JANCODE 获取商品信息，正在跳转登录后自动添加。';
+              if (status) status.textContent = `已从 JANCODE 预填 ${draft.name || barcode.value}，正在跳转登录。`;
+              if (loginUrl) {
+                window.location.assign(loginUrl);
+                return null;
+              }
             }
           } else if (status) {
             status.textContent = canAddProduct
-              ? `未找到条码 ${barcode.value} 的 JANCODE 信息，可以手动填写后提交审核。`
-              : `未找到条码 ${barcode.value} 的 JANCODE 信息，请先登录后再提交补录。`;
+              ? `未找到条码 ${barcode.value} 的 JANCODE 信息，可手动填写后添加商品。`
+              : `未找到条码 ${barcode.value} 的 JANCODE 信息，请先登录后再新增商品。`;
           }
         } catch (draftError) {
           if (token !== lookupToken) return null;
           if (status) {
             status.textContent = canAddProduct
-              ? `JANCODE 预填失败：${friendlyDataError(draftError)}，请手动填写后提交审核。`
-              : `JANCODE 预填失败：${friendlyDataError(draftError)}，请先登录后再提交补录。`;
+              ? `JANCODE 预填失败：${friendlyDataError(draftError)}，请手动填写后添加商品。`
+              : `JANCODE 预填失败：${friendlyDataError(draftError)}，请先登录后再新增商品。`;
           }
         }
         return null;
@@ -478,7 +479,8 @@ export const prerender = true;
     });
 
     try {
-      canAddProduct = Boolean(await getCurrentUser());
+      const user = await getCurrentUser();
+      canAddProduct = Boolean(user);
     } catch {
       canAddProduct = false;
     }
@@ -510,6 +512,10 @@ export const prerender = true;
       }
 
       try {
+        if (!canAddProduct) {
+          if (status) status.textContent = '请先登录后再新增商品。';
+          return;
+        }
         const saved = await submitProductSubmission({
           barcode,
           name: missingFields.name?.value?.trim() || '',
@@ -522,17 +528,19 @@ export const prerender = true;
 
         const savedProduct = Array.isArray(saved) ? saved[0] : saved;
         if (savedProduct) {
-          if (missingSummary) missingSummary.textContent = '商品补录已提交，审核通过后会出现在搜索和扫码结果中。';
-          if (status) status.textContent = `商品补录已提交审核：${savedProduct.name || barcode}`;
+          clearPendingMissingProduct();
+          if (missingSummary) missingSummary.textContent = '商品已添加，可立即在搜索和扫码结果中使用。';
+          if (status) status.textContent = `商品已添加：${savedProduct.name || barcode}`;
           return;
         }
 
-        if (status) status.textContent = `商品补录已提交审核：${barcode}`;
+        clearPendingMissingProduct();
+        if (status) status.textContent = `商品已添加：${barcode}`;
       } catch (error) {
         if (status) {
           status.textContent = String(error?.message || '').includes('Please sign in first')
-            ? '请先登录后再提交商品补录。'
-            : `提交失败：${friendlyDataError(error)}`;
+            ? '请先登录后再新增商品。'
+            : `添加失败：${friendlyDataError(error)}`;
         }
       }
     });

@@ -163,6 +163,56 @@ export async function fetchAllStores() {
   });
 }
 
+function sortProductsBySearchPriority(rows, barcode = '') {
+  if (!barcode) return rows;
+  return rows.slice().sort((a, b) => {
+    const aBarcode = cleanJanCode(a?.barcode);
+    const bBarcode = cleanJanCode(b?.barcode);
+    const aExact = aBarcode === barcode ? 0 : 1;
+    const bExact = bBarcode === barcode ? 0 : 1;
+    if (aExact !== bExact) return aExact - bExact;
+    const aStarts = aBarcode.startsWith(barcode) ? 0 : 1;
+    const bStarts = bBarcode.startsWith(barcode) ? 0 : 1;
+    if (aStarts !== bStarts) return aStarts - bStarts;
+    return String(a?.name || '').localeCompare(String(b?.name || ''), 'ja-JP');
+  });
+}
+
+export async function fetchProductsPage({ term = '', limit = 20, offset = 0 } = {}) {
+  const pageSize = Math.max(1, Number(limit) || 20);
+  const pageOffset = Math.max(0, Number(offset) || 0);
+  const q = String(term || '').trim();
+  const barcode = cleanJanCode(q);
+  const query = {
+    select: '*',
+    order: 'updated_at.desc',
+    limit: pageSize + 1,
+    offset: pageOffset,
+  };
+
+  if (q) {
+    const pattern = `%${escapeIlike(q)}%`;
+    const orParts = [
+      `name.ilike.${pattern}`,
+      `brand.ilike.${pattern}`,
+      `category.ilike.${pattern}`,
+      `id.ilike.${pattern}`,
+    ];
+    if (barcode) {
+      orParts.push(`barcode.ilike.%${barcode}%`);
+    }
+    query.or = `(${orParts.join(',')})`;
+  }
+
+  const rows = await restGet('products', { query });
+  const visibleRows = sortProductsBySearchPriority(rows?.slice(0, pageSize) || [], barcode);
+  return {
+    rows: visibleRows,
+    hasMore: Boolean(rows?.length > pageSize),
+    nextOffset: pageOffset + visibleRows.length,
+  };
+}
+
 export async function fetchStoresPage({ term = '', limit = 10, offset = 0 } = {}) {
   const pageSize = Math.max(1, Number(limit) || 10);
   const pageOffset = Math.max(0, Number(offset) || 0);

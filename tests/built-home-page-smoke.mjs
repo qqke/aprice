@@ -7,7 +7,7 @@ assert.ok(
   'config injection missing from dist/client/index.html',
 );
 
-const startMarker = html.indexOf('fetchNearbyPrices');
+const startMarker = html.indexOf('fetchPricesForProduct');
 assert.ok(startMarker >= 0, 'home module script not found in dist/client/index.html');
 const scriptStart = html.lastIndexOf('<script type="module">', startMarker);
 assert.ok(scriptStart >= 0, 'home module script start not found');
@@ -52,12 +52,10 @@ const nodes = {
   '#home-search-button': makeElement(),
   '#search-results': makeElement(),
   '#search-status': makeElement(),
-  '#geolocate-home': makeElement(),
   '#nearby-status': makeElement({ textContent: '先搜索商品，再查看附近价格。' }),
   '#nearby-results': makeElement(),
-  '#recently-viewed': makeElement(),
-  '#recent-status': makeElement(),
-  '#load-recent-prices': makeElement(),
+  '#selected-product-status': makeElement(),
+  '#selected-product-action': makeElement({ href: '/aprice/scan/' }),
 };
 
 const fetchLog = [];
@@ -132,15 +130,5 @@ assert.match(nodes['#nearby-status'].textContent, /(暂无价格记录|Loxonin S
 assert.match(nodes['#nearby-results'].innerHTML, /当前还没有价格记录/);
 assert.match(fetchLog.join('\n'), /\/rest\/v1\/products/);
 assert.match(fetchLog.join('\n'), /\/rest\/v1\/prices/);
-
-for (const handler of nodes['#load-recent-prices'].listeners.click || []) {
-  await handler();
-}
-
-await new Promise((resolve) => setTimeout(resolve, 0));
-await new Promise((resolve) => setTimeout(resolve, 0));
-
-assert.match(nodes['#recent-status'].textContent, /(暂无最近价格采样|暂无最近更新。)/);
-assert.match(nodes['#recently-viewed'].innerHTML, /(暂无采样|暂无更新)/);
 
 console.log('built-home smoke test passed');

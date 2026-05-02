@@ -265,6 +265,8 @@ async function main() {
       assert.equal(sortedFavoriteText[0], 'Welcia Shibuya');
 
       const logPostCountBeforeInvalid = restCalls.filter((call) => call.method === 'POST' && call.url.includes('/rest/v1/user_price_logs')).length;
+      await signedPage.locator('#log-product').selectOption('eve-a');
+      await signedPage.locator('#log-store').selectOption('welcia-shibuya');
       await signedPage.locator('#log-price').fill('0');
       await signedPage.locator('#log-form button[type="submit"]').click();
       await signedPage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('请输入有效的日元价格。'));

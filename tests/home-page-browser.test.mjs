@@ -62,30 +62,29 @@ async function main() {
 
       const resultText = await page.locator('#search-results').textContent();
       const nearbyText = await page.locator('#nearby-results').textContent();
-      const recentStatusText = await page.locator('#recent-status').textContent();
+      const scanHref = await page.locator('.home-search__scan').getAttribute('href');
 
       assert.match(resultText || '', /Loxonin S/);
       assert.match(nearbyText || '', /(当前还没有价格记录|暂无门店价格|暂无价格记录)/);
-      assert.match(recentStatusText || '', /(点击按钮后加载最近采样|点一下加载最近更新。)/);
+      assert.equal(scanHref, '/aprice/scan/');
       assert.match(requests.join('\n'), /name\.ilike/);
       assert.match(requests.join('\n'), /\/rest\/v1\/products/);
       assert.match(requests.join('\n'), /\/rest\/v1\/prices/);
-
-      await page.locator('#load-recent-prices').click();
-      await page.waitForFunction(() => {
-        const text = String(document.querySelector('#recent-status')?.textContent || '');
-        return /暂无最近价格采样|暂无最近更新/.test(text);
-      });
-
-      const recentText = await page.locator('#recently-viewed').textContent();
-      assert.match(recentText || '', /(暂无采样|暂无更新)/);
+      assert.equal(await page.locator('#recent-status').count(), 0, 'homepage should remove recent status module');
+      assert.equal(await page.locator('#load-recent-prices').count(), 0, 'homepage should remove recent trigger');
 
       await page.setViewportSize({ width: 390, height: 844 });
       const mobileMenuDisplay = await page.evaluate(() => {
         const element = document.querySelector('#nav-toggle');
         return element ? getComputedStyle(element).display : null;
       });
-      assert.notEqual(mobileMenuDisplay, 'none', 'mobile homepage should keep the menu toggle');
+      assert.equal(mobileMenuDisplay, 'none', 'mobile homepage should keep the menu toggle hidden');
+
+      const mobileMetaDisplay = await page.evaluate(() => {
+        const element = document.querySelector('.home-meta');
+        return element ? getComputedStyle(element).display : null;
+      });
+      assert.equal(mobileMetaDisplay, 'none', 'mobile homepage should hide the keyboard shortcut hint');
 
       await page.locator('#home-search').click();
       const focusedElementId = await page.evaluate(() => document.activeElement?.id || '');
@@ -93,30 +92,6 @@ async function main() {
       await page.waitForTimeout(80);
       const focusedElementAfterDelay = await page.evaluate(() => document.activeElement?.id || '');
       assert.equal(focusedElementAfterDelay, 'home-search', 'mobile homepage search input should keep focus after tap');
-
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-      await page.waitForTimeout(80);
-      const preShortcutScrollY = await page.evaluate(() => window.scrollY);
-      assert.ok(preShortcutScrollY > 0, 'mobile scenario should be scrolled before shortcut tap');
-
-      await page.locator('#focus-search-shortcut').click();
-      await page.waitForFunction(() => {
-        const search = document.querySelector('#home-search');
-        const rect = search?.getBoundingClientRect?.();
-        const isVisibleInViewport = Boolean(rect && rect.bottom > 0 && rect.top < window.innerHeight);
-        return document.activeElement?.id === 'home-search' && isVisibleInViewport;
-      });
-      const shortcutFocusState = await page.evaluate(() => {
-        const search = document.querySelector('#home-search');
-        const rect = search?.getBoundingClientRect?.();
-        return {
-          activeId: document.activeElement?.id || '',
-          isVisibleInViewport: Boolean(rect && rect.bottom > 0 && rect.top < window.innerHeight),
-          scrollY: window.scrollY,
-        };
-      });
-      assert.equal(shortcutFocusState.activeId, 'home-search', 'mobile shortcut should focus the search input');
-      assert.equal(shortcutFocusState.isVisibleInViewport, true, 'mobile shortcut should bring search input into viewport');
 
       const ssrContext = await browser.newContext({ javaScriptEnabled: false });
       try {
@@ -190,7 +165,7 @@ async function main() {
           await route.fulfill({
             status: 500,
             contentType: 'text/plain; charset=utf-8',
-            body: 'forced recent failure',
+            body: 'forced price failure',
           });
           return;
         }
@@ -203,10 +178,8 @@ async function main() {
       assert.match(await failureBranchesPage.locator('#search-results').textContent(), /XSS Product/);
       assert.equal(await failureBranchesPage.evaluate(() => window.__homeXss === true), false);
       assert.equal(await failureBranchesPage.locator('#search-results script, #search-results img[onerror]').count(), 0);
-      await failureBranchesPage.locator('#geolocate-home').click();
-      await failureBranchesPage.waitForFunction(() => String(document.querySelector('#nearby-status')?.textContent || '').includes('定位失败：forced location failure'));
-      await failureBranchesPage.locator('#load-recent-prices').click();
-      await failureBranchesPage.waitForFunction(() => String(document.querySelector('#recent-status')?.textContent || '').includes('最近更新失败：forced recent failure'));
+      assert.equal(await failureBranchesPage.locator('#geolocate-home').count(), 0);
+      assert.equal(await failureBranchesPage.locator('#load-recent-prices').count(), 0);
       await failureBranchesPage.close();
 
       console.log('home-page browser test passed');

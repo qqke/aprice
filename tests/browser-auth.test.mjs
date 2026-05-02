@@ -202,9 +202,9 @@ assert.ok(testState.restCalls.some((call) =>
 await auth.submitProductSubmission({ barcode: '4900000000001', name: 'Submitted Product' });
 assert.ok(testState.restCalls.some((call) =>
   call.type === 'rpc' &&
-  call.name === 'submit_product_submission' &&
-  call.body.payload.barcode === '4900000000001' &&
-  call.body.payload.name === 'Submitted Product' &&
+  call.name === 'create_product' &&
+  call.body.barcode === '4900000000001' &&
+  call.body.name === 'Submitted Product' &&
   call.options.token === 'session-token'
 ));
 

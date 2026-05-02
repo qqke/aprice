@@ -410,14 +410,12 @@ export async function submitProductSubmission(payload) {
   const barcode = validateJanCode(payload?.barcode || payload?.id || '');
   if (!barcode.ok) throw new Error(barcode.message);
   if (!String(payload?.name || '').trim()) throw new Error('请填写商品名称。');
-  const result = await restRpc('submit_product_submission', {
-    payload: {
-      ...payload,
-      id: payload?.id || barcode.value,
-      barcode: barcode.value,
-    },
+  const result = await restRpc('create_product', {
+    ...payload,
+    id: payload?.id || barcode.value,
+    barcode: barcode.value,
   }, { token: session.access_token });
-  trackEvent('submit_product', { barcode: barcode.value });
+  trackEvent('submit_product', { barcode: barcode.ok ? barcode.value : '', source: 'create_product' });
   return result;
 }
 

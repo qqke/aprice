@@ -249,15 +249,28 @@ set search_path = public
 as $$
 declare
   result products;
+  target_id text;
+  target_barcode text;
 begin
-  perform require_admin_user();
+  perform public.require_authenticated_user();
 
-  if coalesce(payload->>'barcode', '') = '' then
-    raise exception 'barcode is required';
+  target_barcode := regexp_replace(coalesce(payload->>'barcode', payload->>'id', ''), '\D', '', 'g');
+  target_id := coalesce(nullif(payload->>'id', ''), target_barcode);
+
+  if target_barcode !~ '^(\d{8}|\d{12,14})$' then
+    raise exception 'jan_code is required';
   end if;
 
   if coalesce(payload->>'name', '') = '' then
     raise exception 'name is required';
+  end if;
+
+  if exists(
+    select 1
+    from public.products
+    where id = target_id or barcode = target_barcode
+  ) then
+    raise exception 'product already exists';
   end if;
 
   insert into public.products (
@@ -271,8 +284,8 @@ begin
     description
   )
   values (
-    coalesce(nullif(payload->>'id', ''), nullif(payload->>'barcode', '')),
-    coalesce(payload->>'barcode', ''),
+    target_id,
+    target_barcode,
     coalesce(payload->>'name', ''),
     coalesce(payload->>'brand', ''),
     coalesce(payload->>'pack', ''),
@@ -283,9 +296,6 @@ begin
   returning * into result;
 
   return result;
-exception
-  when unique_violation then
-    raise exception 'product already exists';
 end;
 $$;
 
@@ -352,7 +362,7 @@ declare
   action text;
   next_product_id text;
 begin
-  perform require_admin_user();
+  perform public.require_admin_user();
 
   action := coalesce(payload->>'action', '');
   if action not in ('approve', 'reject') then
@@ -429,11 +439,61 @@ $$;
 
 create or replace function admin_upsert_product(payload jsonb)
 returns products
-language sql
+language plpgsql
 security definer
 set search_path = public
 as $$
-  select * from create_product(payload);
+declare
+  result products;
+  target_id text;
+  target_barcode text;
+begin
+  perform require_admin_user();
+
+  target_barcode := regexp_replace(coalesce(payload->>'barcode', payload->>'id', ''), '\D', '', 'g');
+  target_id := coalesce(nullif(payload->>'id', ''), target_barcode);
+
+  if target_barcode !~ '^(\d{8}|\d{12,14})$' then
+    raise exception 'jan_code is required';
+  end if;
+
+  if coalesce(payload->>'name', '') = '' then
+    raise exception 'name is required';
+  end if;
+
+  insert into public.products (
+    id,
+    barcode,
+    name,
+    brand,
+    pack,
+    category,
+    tone,
+    description
+  )
+  values (
+    target_id,
+    target_barcode,
+    coalesce(payload->>'name', ''),
+    coalesce(payload->>'brand', ''),
+    coalesce(payload->>'pack', ''),
+    coalesce(payload->>'category', ''),
+    coalesce(nullif(payload->>'tone', ''), 'sunset'),
+    coalesce(payload->>'description', '')
+  )
+  on conflict (id) do update
+    set barcode = excluded.barcode,
+        name = excluded.name,
+        brand = excluded.brand,
+        pack = excluded.pack,
+        category = excluded.category,
+        tone = excluded.tone,
+        description = excluded.description,
+        updated_at = now()
+  returning * into result;
+
+  return result;
+end;
 $$;
 
 create or replace function admin_upsert_store(payload jsonb)

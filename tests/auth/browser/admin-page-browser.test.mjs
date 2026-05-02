@@ -133,10 +133,7 @@ async function main() {
       await page.locator('#admin-products').waitFor({ state: 'attached' });
       await page.locator('#admin-stores').waitFor({ state: 'attached' });
       await page.locator('#admin-prices').waitFor({ state: 'attached' });
-      await page.locator('#admin-price-submissions').waitFor({ state: 'attached' });
-      await page.locator('#admin-product-submissions').waitFor({ state: 'attached' });
       await page.locator('#admin-panel-telemetry').waitFor({ state: 'attached' });
-      await page.locator('#admin-panel-submissions').waitFor({ state: 'attached' });
       await page.locator('#admin-panel-product').waitFor({ state: 'attached' });
       await page.locator('#admin-product-summary-count').waitFor({ state: 'attached' });
       await page.locator('#admin-auth-gate').waitFor({ state: 'hidden' });
@@ -149,25 +146,16 @@ async function main() {
       const productListText = await page.locator('#admin-products').textContent();
       const storeListText = await page.locator('#admin-stores').textContent();
       const priceListText = await page.locator('#admin-prices').textContent();
-      const pendingPriceText = await page.locator('#admin-price-submissions').textContent();
       const productSummaryText = await page.locator('#admin-panel-product').textContent();
       const storeSummaryText = await page.locator('#admin-panel-store').textContent();
       const priceSummaryText = await page.locator('#admin-panel-price').textContent();
-      const submissionsSummaryText = await page.locator('#admin-panel-submissions').textContent();
-      const productSubmissionsSummaryText = await page.locator('#admin-panel-product-submissions').textContent();
       const telemetrySummaryText = await page.locator('#admin-panel-telemetry').textContent();
       const productOptions = await page.locator('#price-product option').allTextContents();
       const storeOptions = await page.locator('#price-store option').allTextContents();
 
       assert.match(statusText || '', /可以开始维护数据/);
       assert.match(accessText || '', /管理员权限已开启/);
-      assert.equal(await page.locator('#admin-panel-submissions').evaluate((el) => el.open), true);
       assert.equal(await page.locator('#admin-panel-product').evaluate((el) => el.open), false);
-      assert.match(submissionsSummaryText || '', /待审核店头价/);
-      assert.match(submissionsSummaryText || '', /待审核 2 条/);
-      assert.match(productSubmissionsSummaryText || '', /待审核商品补录/);
-      assert.match(productSubmissionsSummaryText || '', /商品补录 1 条/);
-      assert.match(productSubmissionsSummaryText || '', /Submitted Supplement/);
       assert.match(telemetrySummaryText || '', /事件看板/);
       assert.match(telemetrySummaryText || '', /事件 0 条/);
       assert.match(telemetrySummaryText || '', /价格 RPC 未启用/);
@@ -177,50 +165,10 @@ async function main() {
       assert.match(productListText || '', /Loxonin S/);
       assert.match(storeListText || '', /Sugi Pharmacy Hiroo/);
       assert.match(priceListText || '', /¥698/);
-      assert.match(pendingPriceText || '', /front shelf community/);
-      assert.match(pendingPriceText || '', /¥688/);
       assert.equal(await page.evaluate(() => window.__adminListXss === true), false);
-      assert.equal(await page.locator('#admin-products script, #admin-products img[onerror], #admin-prices script, #admin-prices img[onerror], #admin-price-submissions script, #admin-price-submissions img[onerror]').count(), 0);
+      assert.equal(await page.locator('#admin-products script, #admin-products img[onerror], #admin-prices script, #admin-prices img[onerror]').count(), 0);
       assert.ok(productOptions.some((text) => text.includes('Loxonin S')));
       assert.ok(storeOptions.some((text) => text.includes('Sugi Pharmacy Hiroo')));
-
-      await page.locator('[data-approve-submission="11111111-1111-4111-8111-111111111111"]').click();
-      await waitForText(page, '#admin-status', '店头价已通过');
-      assert.ok(
-        rpcCalls.some((call) =>
-          call.url.includes('/rpc/admin_review_price_submission') &&
-          call.bodyJson?.payload?.id === '11111111-1111-4111-8111-111111111111' &&
-          call.bodyJson?.payload?.action === 'approve' &&
-          String(call.bodyJson?.payload?.confidence_score) === '70'
-        ),
-        `expected approve payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
-      );
-
-      failNextRpcPath = '/rpc/admin_review_price_submission';
-      await page.locator('[data-approve-submission="11111111-1111-4111-8111-111111111111"]').click();
-      await waitForText(page, '#admin-status', '审核失败');
-
-      await page.locator('[data-reject-submission="22222222-2222-4222-8222-222222222222"]').click();
-      await waitForText(page, '#admin-status', '店头价已拒绝');
-      assert.ok(
-        rpcCalls.some((call) =>
-          call.url.includes('/rpc/admin_review_price_submission') &&
-          call.bodyJson?.payload?.id === '22222222-2222-4222-8222-222222222222' &&
-          call.bodyJson?.payload?.action === 'reject'
-        ),
-        `expected reject payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
-      );
-
-      await page.locator('[data-approve-product-submission="33333333-3333-4333-8333-333333333333"]').click();
-      await waitForText(page, '#admin-status', '商品补录已通过');
-      assert.ok(
-        rpcCalls.some((call) =>
-          call.url.includes('/rpc/admin_review_product_submission') &&
-          call.bodyJson?.payload?.id === '33333333-3333-4333-8333-333333333333' &&
-          call.bodyJson?.payload?.action === 'approve'
-        ),
-        `expected product submission approve payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
-      );
 
       await openPanel('#admin-panel-recent-stores');
       await page.locator('[data-edit-store="welcia-shibuya"]').click();
