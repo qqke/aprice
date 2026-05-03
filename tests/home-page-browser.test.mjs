@@ -78,7 +78,7 @@ async function main() {
         const element = document.querySelector('#nav-toggle');
         return element ? getComputedStyle(element).display : null;
       });
-      assert.equal(mobileMenuDisplay, 'none', 'mobile homepage should keep the menu toggle hidden');
+      assert.notEqual(mobileMenuDisplay, 'none', 'mobile homepage should show the menu toggle');
 
       const mobileMetaDisplay = await page.evaluate(() => {
         const element = document.querySelector('.home-meta');

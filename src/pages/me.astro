@@ -80,7 +80,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
             <span class="me-panel__chevron" aria-hidden="true"></span>
             <span class="me-panel__title">
               <strong>收藏</strong>
-              <small>统一查看商品与门店收藏。</small>
+              <small id="favorites-panel-summary">读取收藏中...</small>
             </span>
           </summary>
           <div class="me-panel__body">
@@ -109,7 +109,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
             <span class="me-panel__chevron" aria-hidden="true"></span>
             <span class="me-panel__title">
               <strong>个人价格记录</strong>
-              <small>按时间回看真实成交价。</small>
+              <small id="logs-panel-summary">价格记录 · 0 条</small>
             </span>
           </summary>
           <div class="me-panel__body">
@@ -130,7 +130,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
             <span class="me-panel__chevron" aria-hidden="true"></span>
             <span class="me-panel__title">
               <strong>最近浏览</strong>
-              <small>快速回到最近看过的商品。</small>
+              <small id="recent-panel-summary">最近浏览 · 0 条</small>
             </span>
           </summary>
           <div class="me-panel__body">
@@ -157,9 +157,12 @@ const meGateCopy = getPrivatePageGateCopy('me');
     const authGate = document.querySelector('#me-auth-gate');
     const logsEl = document.querySelector('#my-logs');
     const recentViewsEl = document.querySelector('#recent-views');
+    const recentPanelSummary = document.querySelector('#recent-panel-summary');
     const clearRecentViewsButton = document.querySelector('#clear-recent-views');
     const favsEl = document.querySelector('#my-favorites');
     const favoritesSummary = document.querySelector('#favorites-summary');
+    const favoritesPanelSummary = document.querySelector('#favorites-panel-summary');
+    const logsPanelSummary = document.querySelector('#logs-panel-summary');
     const favoriteFilterButtons = document.querySelectorAll('[data-favorite-filter]');
     const favoriteSortButtons = document.querySelectorAll('[data-favorite-sort]');
     const form = document.querySelector('#log-form');
@@ -207,6 +210,9 @@ const meGateCopy = getPrivatePageGateCopy('me');
 
     function renderRecentViews(rows) {
       if (!recentViewsEl) return;
+      if (recentPanelSummary) {
+        recentPanelSummary.textContent = `最近浏览 · ${rows.length} 条`;
+      }
       recentViewsEl.innerHTML = rows.length
         ? rows.map((item) => `
           <a class="feed__item" href="${escapeAttribute(resolveBase(`product/${item.id}/`))}">
@@ -242,6 +248,9 @@ const meGateCopy = getPrivatePageGateCopy('me');
         favoritesSummary.textContent = favoritesList.length
           ? `共 ${favoritesList.length} 项收藏，当前显示 ${filtered.length} 项，按${favoriteSort === 'recent' ? '最新添加' : '最早添加'}排序。`
           : getPrivatePageStatusCopy('me', 'loggedOutFavoritesDescription');
+      }
+      if (favoritesPanelSummary) {
+        favoritesPanelSummary.textContent = `收藏 · ${favoritesList.length} 项`;
       }
       favsEl.innerHTML = filtered.length
         ? filtered.map((fav) => `
@@ -290,6 +299,9 @@ const meGateCopy = getPrivatePageGateCopy('me');
 
     function renderLogs(logs) {
       if (!logsEl) return;
+      if (logsPanelSummary) {
+        logsPanelSummary.textContent = `价格记录 · ${logs.length} 条`;
+      }
       logsEl.innerHTML = logs.length
         ? logs.map((log) => `
           <div class="list__item">
@@ -331,6 +343,8 @@ const meGateCopy = getPrivatePageGateCopy('me');
           <span class="price">offline</span>
         </div>
       `;
+      if (favoritesPanelSummary) favoritesPanelSummary.textContent = '收藏 · 0 项';
+      if (logsPanelSummary) logsPanelSummary.textContent = '价格记录 · 0 条';
       status.textContent = getPrivatePageStatusCopy('me', 'loggedOutStatus');
       setControlsDisabled(true);
     }

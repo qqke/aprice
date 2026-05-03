@@ -16,6 +16,19 @@ export const prerender = true;
       </div>
 
       <div class="grid scan-layout">
+        <section class="tile scan-manual-panel">
+          <div class="section__header">
+            <h3>手动输入</h3>
+            <p>扫码失败时再输入条码。</p>
+          </div>
+          <div class="form">
+            <label class="field" for="barcode-input">
+              <input id="barcode-input" name="barcode-input" inputmode="numeric" placeholder="例如 4987188161027" spellcheck="false" />
+            </label>
+            <button class="button" id="barcode-search" type="button">查找商品</button>
+            <div class="notice" id="scan-status">正在准备相机...</div>
+          </div>
+        </section>
         <section class="tile tile--wide">
           <div class="stack">
             <div class="scan-frame">
@@ -29,19 +42,6 @@ export const prerender = true;
               <button class="button button--ghost" id="snap-scan" type="button">尝试识别当前帧</button>
             </div>
             <div class="notice notice--compact">页面加载后会自动启动后置相机（需 HTTPS）。</div>
-          </div>
-        </section>
-        <section class="tile">
-          <div class="section__header">
-            <h3>手动输入</h3>
-            <p>扫码失败时再输入条码。</p>
-          </div>
-          <div class="form">
-            <label class="field" for="barcode-input">
-              <input id="barcode-input" name="barcode-input" inputmode="numeric" placeholder="例如 4987188161027" spellcheck="false" />
-            </label>
-            <button class="button" id="barcode-search" type="button">查找商品</button>
-            <div class="notice" id="scan-status">正在准备相机...</div>
           </div>
         </section>
       </div>
