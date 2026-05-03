@@ -249,6 +249,7 @@ async function main() {
       assert.equal(await signedPage.evaluate(() => window.__meXss === true), false);
       assert.equal(await signedPage.locator('#my-logs script, #my-logs img[onerror], #my-favorites script, #my-favorites img[onerror], #recent-views script, #recent-views img[onerror]').count(), 0);
 
+      await signedPage.locator('#me-panel-favorites > summary').click();
       await signedPage.locator('[data-favorite-filter="product"]').click();
       assert.equal(await signedPage.locator('[data-favorite-filter="product"]').getAttribute('aria-pressed'), 'true');
       assert.match(await signedPage.locator('#my-favorites').textContent(), /Loxonin S/);
@@ -319,6 +320,7 @@ async function main() {
         `expected existing store favorite delete, got ${restCalls.map((call) => `${call.method} ${call.url} ${call.bodyText}`).join(' | ')}`,
       );
 
+      await signedPage.locator('#me-panel-recent > summary').click();
       await signedPage.locator('#clear-recent-views').click();
       await signedPage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('已清空最近浏览。'));
       assert.match(await signedPage.locator('#recent-views').textContent(), /暂无浏览记录/);

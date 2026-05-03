@@ -3498,6 +3498,62 @@ body.admin-page .admin-record-actions--price {
   gap: 6px;
 }
 
+body.me-page .me-panel {
+  padding: 0;
+  overflow: clip;
+}
+
+body.me-page .me-panel__summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 14px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+body.me-page .me-panel__summary::-webkit-details-marker {
+  display: none;
+}
+
+body.me-page .me-panel__summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+body.me-page .me-panel__chevron {
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  color: var(--muted);
+  transform: rotate(-45deg);
+  transition: transform 160ms ease;
+}
+
+body.me-page .me-panel[open] .me-panel__chevron {
+  transform: rotate(45deg);
+}
+
+body.me-page .me-panel__title {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+body.me-page .me-panel__title small {
+  color: var(--muted);
+}
+
+body.me-page .me-panel__body {
+  display: grid;
+  gap: 12px;
+  padding: 0 16px 16px;
+  border-top: 1px solid var(--border);
+}
+
 body.me-page #load-more-products,
 body.me-page #load-more-stores {
   width: fit-content;

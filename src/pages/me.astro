@@ -35,59 +35,6 @@ const meGateCopy = getPrivatePageGateCopy('me');
         <section class="tile tile--wide">
           <div class="section__header section__header--tight">
             <div>
-              <h2>个人价格记录</h2>
-              <p>按时间回看真实成交价。</p>
-            </div>
-          </div>
-          <div class="list" id="my-logs">
-            <div class="list__item">
-              <div>
-                <strong>{getPrivatePageStatusCopy('me', 'loggedOutTitle')}</strong>
-                <small>{getPrivatePageStatusCopy('me', 'loggedOutDescription')}</small>
-              </div>
-              <span class="meta">me</span>
-            </div>
-          </div>
-        </section>
-
-        <section class="tile tile--flow">
-          <div class="section__header section__header--tight">
-            <div>
-              <h3>最近浏览</h3>
-              <p>快速回到最近看过的商品。</p>
-            </div>
-            <button class="button button--ghost" id="clear-recent-views" type="button">清空</button>
-          </div>
-          <div class="feed" id="recent-views">
-            <div class="notice notice--compact">最近浏览。</div>
-          </div>
-        </section>
-
-        <section class="tile tile--flow">
-          <div class="section__header section__header--tight">
-            <div>
-              <h3>收藏</h3>
-              <p>统一查看商品与门店收藏。</p>
-              <small class="muted" id="favorites-summary">读取收藏中...</small>
-            </div>
-            <div class="pillrow me-favorites-filter" aria-label="收藏筛选">
-              <button class="button button--ghost button--active" type="button" data-favorite-filter="all">全部</button>
-              <button class="button button--ghost" type="button" data-favorite-filter="product">商品</button>
-              <button class="button button--ghost" type="button" data-favorite-filter="store">门店</button>
-            </div>
-            <div class="pillrow me-favorites-sort" aria-label="收藏排序">
-              <button class="button button--ghost button--active" type="button" data-favorite-sort="recent">最新添加</button>
-              <button class="button button--ghost" type="button" data-favorite-sort="oldest">最早添加</button>
-            </div>
-          </div>
-          <div class="feed" id="my-favorites">
-            <div class="notice notice--compact">{getPrivatePageStatusCopy('me', 'loggedOutFavoritesDescription')}</div>
-          </div>
-        </section>
-
-        <section class="tile tile--wide">
-          <div class="section__header section__header--tight">
-            <div>
               <h3>快速记录</h3>
               <p>把刚看到的价格立即入库。</p>
             </div>
@@ -127,6 +74,75 @@ const meGateCopy = getPrivatePageGateCopy('me');
             <div class="notice notice--compact" id="log-status">{getPrivatePageStatusCopy('me', 'loggedOutStatus')}</div>
           </form>
         </section>
+
+        <details class="tile tile--flow me-panel" id="me-panel-favorites">
+          <summary class="me-panel__summary">
+            <span class="me-panel__chevron" aria-hidden="true"></span>
+            <span class="me-panel__title">
+              <strong>收藏</strong>
+              <small>统一查看商品与门店收藏。</small>
+            </span>
+          </summary>
+          <div class="me-panel__body">
+            <div class="section__header section__header--tight">
+              <div>
+                <small class="muted" id="favorites-summary">读取收藏中...</small>
+              </div>
+              <div class="pillrow me-favorites-filter" aria-label="收藏筛选">
+                <button class="button button--ghost button--active" type="button" data-favorite-filter="all">全部</button>
+                <button class="button button--ghost" type="button" data-favorite-filter="product">商品</button>
+                <button class="button button--ghost" type="button" data-favorite-filter="store">门店</button>
+              </div>
+              <div class="pillrow me-favorites-sort" aria-label="收藏排序">
+                <button class="button button--ghost button--active" type="button" data-favorite-sort="recent">最新添加</button>
+                <button class="button button--ghost" type="button" data-favorite-sort="oldest">最早添加</button>
+              </div>
+            </div>
+            <div class="feed" id="my-favorites">
+              <div class="notice notice--compact">{getPrivatePageStatusCopy('me', 'loggedOutFavoritesDescription')}</div>
+            </div>
+          </div>
+        </details>
+
+        <details class="tile tile--wide me-panel" id="me-panel-logs">
+          <summary class="me-panel__summary">
+            <span class="me-panel__chevron" aria-hidden="true"></span>
+            <span class="me-panel__title">
+              <strong>个人价格记录</strong>
+              <small>按时间回看真实成交价。</small>
+            </span>
+          </summary>
+          <div class="me-panel__body">
+            <div class="list" id="my-logs">
+              <div class="list__item">
+                <div>
+                  <strong>{getPrivatePageStatusCopy('me', 'loggedOutTitle')}</strong>
+                  <small>{getPrivatePageStatusCopy('me', 'loggedOutDescription')}</small>
+                </div>
+                <span class="meta">me</span>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="tile tile--flow me-panel" id="me-panel-recent">
+          <summary class="me-panel__summary">
+            <span class="me-panel__chevron" aria-hidden="true"></span>
+            <span class="me-panel__title">
+              <strong>最近浏览</strong>
+              <small>快速回到最近看过的商品。</small>
+            </span>
+          </summary>
+          <div class="me-panel__body">
+            <div class="section__header section__header--tight">
+              <div></div>
+              <button class="button button--ghost" id="clear-recent-views" type="button">清空</button>
+            </div>
+            <div class="feed" id="recent-views">
+              <div class="notice notice--compact">最近浏览。</div>
+            </div>
+          </div>
+        </details>
       </div>
     </div>
   </section>
