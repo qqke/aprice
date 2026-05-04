@@ -1,6 +1,6 @@
 export async function initProductPage({ loginUrl }) {
 
-const { escapeAttribute, escapeHtml, recordRecentView, resolveBase, fetchNearbyPrices, fetchProductPricesPage, fetchStoresPage, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
+const { escapeAttribute, escapeHtml, recordRecentView, resolveBase, fetchNearbyPrices, fetchProductPricesPage, fetchStoresPage, formatDateTime, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
 const { fetchFavorites, fetchPersonalLogs, formatDataError, getCurrentUser, indexLatestPersonalPricesByStore, submitStorePrice, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
 const { getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
 const { validateOptionalHttpUrl, validatePositiveYen } = await import(window.__APriceConfig?.formValidationJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'form-validation.js');
@@ -58,6 +58,12 @@ const summaryTrendLabel = document.querySelector('#summary-trend-label');
 const summaryGainLabel = document.querySelector('#summary-gain-label');
 const trendList = document.querySelector('#trend-list');
 const trendLoadMoreButton = document.querySelector('#trend-load-more');
+const decisionMinPrice = document.querySelector('#decision-min-price');
+const decisionMinStore = document.querySelector('#decision-min-store');
+const decisionNearestStore = document.querySelector('#decision-nearest-store');
+const decisionNearestDetail = document.querySelector('#decision-nearest-detail');
+const decisionGap = document.querySelector('#decision-gap');
+const decisionUpdated = document.querySelector('#decision-updated');
 
 const STORE_PAGE_SIZE = 10;
 let storeRows = [];
@@ -364,6 +370,43 @@ function syncFavoriteButtons() {
   });
 }
 
+function renderDecisionSummary(rows, { useLocation = false } = {}) {
+  if (!decisionMinPrice || !decisionMinStore || !decisionNearestStore || !decisionNearestDetail || !decisionGap || !decisionUpdated) {
+    return;
+  }
+
+  if (!rows.length) {
+    decisionMinPrice.textContent = '暂无';
+    decisionMinStore.textContent = '还没有门店价格记录';
+    decisionNearestStore.textContent = '定位后显示';
+    decisionNearestDetail.textContent = '优先按当前位置排序';
+    decisionGap.textContent = '等待价格';
+    decisionUpdated.textContent = '补充价格后会显示更新时间';
+    return;
+  }
+
+  const minPrice = Math.min(...rows.map((row) => row.price_yen));
+  const lowestRow = rows.reduce((best, row) => row.price_yen < best.price_yen ? row : best, rows[0]);
+  const nearestRow = rows.find((row) => Number.isFinite(row.distance_km)) || rows[0];
+  const sortedByPrice = rows.slice().sort((a, b) => a.price_yen - b.price_yen);
+  const secondRow = sortedByPrice[1] || null;
+  const gap = secondRow ? secondRow.price_yen - minPrice : null;
+  const latestTimestamp = rows
+    .map((row) => toTime(row.collected_at))
+    .filter((value) => value > 0)
+    .sort((a, b) => b - a)[0] || 0;
+  const latestDate = latestTimestamp ? formatDateTime(new Date(latestTimestamp).toISOString()) : '';
+
+  decisionMinPrice.textContent = formatYen(minPrice);
+  decisionMinStore.textContent = `${lowestRow?.stores?.name || '未知门店'}${lowestRow?.is_member_price ? ' · 会员价' : ' · 公开价'}`;
+  decisionNearestStore.textContent = nearestRow?.stores?.name || '未知门店';
+  decisionNearestDetail.textContent = Number.isFinite(nearestRow?.distance_km)
+    ? `${formatDistance(nearestRow.distance_km)} · ${nearestRow?.is_member_price ? '会员价' : '公开价'}`
+    : (useLocation ? '当前位置附近暂无坐标门店' : '点击“按当前位置排序”后优先显示');
+  decisionGap.textContent = gap === null ? '单条价格' : gap === 0 ? '最低价持平' : `低 ${formatYen(gap)}`;
+  decisionUpdated.textContent = latestDate ? `最新采样 ${latestDate}` : '等待更新时间';
+}
+
 function syncNearbyFavoriteButtons() {
   nearbyStoreList?.querySelectorAll('[data-favorite-store]').forEach((button) => {
     if (!(button instanceof HTMLButtonElement)) return;
@@ -413,12 +456,20 @@ function renderPrices(rows) {
         <span class="price">暂无</span>
       </div>
     `;
+    renderDecisionSummary([]);
     return;
   }
 
-  const minPrice = Math.min(...rows.map((row) => row.price_yen));
-  const lowestRow = rows[0] || null;
-  const nextLowestRow = rows[1] || null;
+  const rankedRows = rows.slice().sort((a, b) => {
+    if (a.price_yen !== b.price_yen) return a.price_yen - b.price_yen;
+    const aDistance = Number.isFinite(a.distance_km) ? a.distance_km : Number.POSITIVE_INFINITY;
+    const bDistance = Number.isFinite(b.distance_km) ? b.distance_km : Number.POSITIVE_INFINITY;
+    if (aDistance !== bDistance) return aDistance - bDistance;
+    return toTime(b.collected_at) - toTime(a.collected_at);
+  });
+  const minPrice = Math.min(...rankedRows.map((row) => row.price_yen));
+  const lowestRow = rankedRows[0] || null;
+  const nextLowestRow = rankedRows[1] || null;
   const nextLowestGap = nextLowestRow ? nextLowestRow.price_yen - minPrice : null;
   const nextLowestGapLabel = nextLowestGap === null
     ? '暂无次低价'
@@ -433,9 +484,10 @@ function renderPrices(rows) {
   if (priceFlowGapPill) priceFlowGapPill.textContent = nextLowestGap === null ? '单条价格' : nextLowestGap === 0 ? '最低价持平' : `次低价差 ${formatYen(nextLowestGap)}`;
   if (priceFlowGapNote) priceFlowGapNote.textContent = nextLowestGap === null
     ? `当前共有 ${rows.length} 条价格，最低价已置顶。`
-    : `当前共有 ${rows.length} 条价格，${nextLowestGapLabel}。`;
+    : `当前共有 ${rows.length} 条价格，${nextLowestGapLabel}，并优先显示推荐门店。`;
+  renderDecisionSummary(rankedRows, { useLocation: rankedRows.some((row) => Number.isFinite(row.distance_km)) });
 
-  priceList.innerHTML = rows.map((row, index) => {
+  priceList.innerHTML = rankedRows.map((row, index) => {
     const gap = row.price_yen - minPrice;
     const gapPercent = minPrice > 0 ? Math.round((gap / minPrice) * 100) : 0;
     const gapTier = gap === 0
@@ -447,13 +499,15 @@ function renderPrices(rows) {
           : { tone: 'trend--down', label: `高 ${formatYen(gap)}`, percent: `+${gapPercent}%`, bar: 'gap--far', ratio: 0.22 };
     const priceHref = resolveBase(`product/${productId}/`);
     const distanceLabel = row.distance_km !== null && row.distance_km !== undefined ? ` · ${formatDistance(row.distance_km)}` : '';
+    const freshnessLabel = row.collected_at ? ` · ${formatDateTime(row.collected_at)}` : '';
+    const sourceLabel = row.source ? ` · ${escapeHtml(row.source)}` : '';
     const barWidth = Math.max(12, Math.round(gapTier.ratio * 100));
     return index === 0 ? `
       <a class="feed__item feed__item--featured" href="${escapeAttribute(priceHref)}">
         <div class="feed__copy">
-          <div class="feed__kicker">最低价 · ${row.is_member_price ? '会员价' : '公开价'}</div>
+          <div class="feed__kicker">推荐门店 · ${row.is_member_price ? '会员价' : '公开价'}</div>
           <strong>${escapeHtml(row.stores?.name || 'Unknown store')}</strong>
-          <small>${escapeHtml(row.stores?.city || '')}${distanceLabel}${row.stores?.hours ? ` · ${escapeHtml(row.stores.hours)}` : ''}</small>
+          <small>${escapeHtml(row.stores?.city || '')}${distanceLabel}${row.stores?.hours ? ` · ${escapeHtml(row.stores.hours)}` : ''}${freshnessLabel}${sourceLabel}</small>
         </div>
         <div class="feed__meta">
           <div class="price">¥${row.price_yen}</div>
@@ -469,7 +523,7 @@ function renderPrices(rows) {
       <a class="feed__item" href="${escapeAttribute(priceHref)}">
         <div>
           <strong>${escapeHtml(row.stores?.name || 'Unknown store')}</strong>
-          <small>${escapeHtml(row.stores?.city || '')}${distanceLabel}${row.is_member_price ? ' · 会员价' : ' · 公开价'}${row.stores?.hours ? ` · ${escapeHtml(row.stores.hours)}` : ''}</small>
+          <small>${escapeHtml(row.stores?.city || '')}${distanceLabel}${row.is_member_price ? ' · 会员价' : ' · 公开价'}${row.stores?.hours ? ` · ${escapeHtml(row.stores.hours)}` : ''}${freshnessLabel}${sourceLabel}</small>
         </div>
         <div class="feed__meta">
           <span class="price">¥${row.price_yen}</span>
@@ -493,13 +547,19 @@ function renderNearbyStores(rows) {
   if (!nearbyStoreList) return;
   activeStoreId = selectedStoreId;
   syncFavoriteButtons();
-  nearbyStoreList.innerHTML = rows.length
-    ? rows.map((row, index) => index === 0 ? `
+  const nearbyRows = rows.slice().sort((a, b) => {
+    const aDistance = Number.isFinite(a.distance_km) ? a.distance_km : Number.POSITIVE_INFINITY;
+    const bDistance = Number.isFinite(b.distance_km) ? b.distance_km : Number.POSITIVE_INFINITY;
+    if (aDistance !== bDistance) return aDistance - bDistance;
+    return a.price_yen - b.price_yen;
+  });
+  nearbyStoreList.innerHTML = nearbyRows.length
+    ? nearbyRows.map((row, index) => index === 0 ? `
       <div class="feed__item feed__item--featured">
         <div class="feed__copy">
           <div class="feed__kicker">最近门店</div>
           <strong>${escapeHtml(row.stores?.name || 'Unknown store')}</strong>
-          <small>${escapeHtml(row.stores?.city || '')}${row.stores?.pref ? ` · ${escapeHtml(row.stores.pref)}` : ''}${row.stores?.hours ? ` · ${escapeHtml(row.stores.hours)}` : ''}</small>
+          <small>${escapeHtml(row.stores?.city || '')}${row.stores?.pref ? ` · ${escapeHtml(row.stores.pref)}` : ''}${row.distance_km !== null && row.distance_km !== undefined ? ` · ${formatDistance(row.distance_km)}` : ''}${row.stores?.hours ? ` · ${escapeHtml(row.stores.hours)}` : ''}</small>
         </div>
         <div class="feed__meta">
           <div class="price">¥${row.price_yen}</div>
@@ -511,7 +571,7 @@ function renderNearbyStores(rows) {
       <div class="feed__item">
         <div>
           <strong>${escapeHtml(row.stores?.name || 'Unknown store')}</strong>
-          <small>${escapeHtml(row.stores?.city || '')}${row.stores?.pref ? ` · ${escapeHtml(row.stores.pref)}` : ''}${row.stores?.hours ? ` · ${escapeHtml(row.stores.hours)}` : ''}</small>
+          <small>${escapeHtml(row.stores?.city || '')}${row.stores?.pref ? ` · ${escapeHtml(row.stores.pref)}` : ''}${row.distance_km !== null && row.distance_km !== undefined ? ` · ${formatDistance(row.distance_km)}` : ''}${row.stores?.hours ? ` · ${escapeHtml(row.stores.hours)}` : ''}</small>
         </div>
         <div class="feed__meta">
           <span class="price">¥${row.price_yen}</span>
@@ -832,6 +892,7 @@ geoButton?.addEventListener('click', async () => {
     renderPrices(rows);
     renderNearbyStores(rows);
     renderInsights(rows);
+    renderDecisionSummary(rows, { useLocation: true });
     geoStatus.textContent = `已按当前位置排序，定位点：${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}。`;
     renderStoreSelectionStatus(storeRows.length);
     if (nearbyStatus) nearbyStatus.textContent = rows.length ? `已按当前位置筛出 ${rows.length} 条门店价格。` : '当前位置附近暂无可比价格。';

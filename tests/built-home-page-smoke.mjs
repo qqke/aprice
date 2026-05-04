@@ -6,6 +6,11 @@ assert.ok(
   html.includes('window.__APriceConfig = { baseUrl, supabaseUrl, supabaseAnonKey, useServerPriceRpc, enableTelemetryRpc };'),
   'config injection missing from dist/client/index.html',
 );
+assert.match(html, /rel="canonical" href="https:\/\/example\.github\.io\/aprice\/"/);
+assert.match(html, /property="og:title" content="搜比价 - 日本药店价格决策助手"/);
+assert.match(html, /name="twitter:card" content="summary_large_image"/);
+assert.match(html, /rel="manifest" href="\/aprice\/manifest\.webmanifest"/);
+assert.match(html, /application\/ld\+json/);
 
 const startMarker = html.indexOf('fetchPricesForProduct');
 assert.ok(startMarker >= 0, 'home module script not found in dist/client/index.html');

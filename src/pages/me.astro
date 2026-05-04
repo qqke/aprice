@@ -23,6 +23,24 @@ const meGateCopy = getPrivatePageGateCopy('me');
         </div>
       </div>
 
+      <div class="me-hub" aria-label="个人中心摘要">
+        <article class="me-hub__card">
+          <span>关注商品</span>
+          <strong id="me-watch-summary">读取中...</strong>
+          <small>优先汇总收藏商品和最近浏览，方便继续回访。</small>
+        </article>
+        <article class="me-hub__card">
+          <span>最近浏览</span>
+          <strong id="recent-panel-summary-top">最近浏览 · 0 条</strong>
+          <small>从首页和商品页回来时，优先回到最近的决策现场。</small>
+        </article>
+        <article class="me-hub__card">
+          <span>个人贡献</span>
+          <strong id="me-contribution-summary">价格记录 · 0 条</strong>
+          <small>记录价格、收藏商品和门店，逐步形成你的长期决策资产。</small>
+        </article>
+      </div>
+
       <div class="notice notice--warning" id="me-auth-gate">
         <div class="stack">
           <strong>{meGateCopy.title}</strong>
@@ -32,11 +50,31 @@ const meGateCopy = getPrivatePageGateCopy('me');
       </div>
 
       <div class="grid">
+        <details class="tile tile--wide me-panel" id="me-panel-watchlist" open>
+          <summary class="me-panel__summary">
+            <span class="me-panel__chevron" aria-hidden="true"></span>
+            <span class="me-panel__title">
+              <strong>关注价格动态</strong>
+              <small id="watchlist-panel-summary">关注商品 · 0 项</small>
+            </span>
+          </summary>
+          <div class="me-panel__body">
+            <div class="section__header section__header--tight">
+              <div>
+                <p>优先显示收藏商品，再补充最近浏览，帮助你快速继续比较。</p>
+              </div>
+            </div>
+            <div class="feed" id="watchlist-items">
+              <div class="notice notice--compact">登录后显示关注商品与价格线索。</div>
+            </div>
+          </div>
+        </details>
+
         <section class="tile tile--wide">
           <div class="section__header section__header--tight">
             <div>
               <h3>快速记录</h3>
-              <p>把刚看到的价格立即入库。</p>
+              <p>把刚看到的价格立即入库，但不打断你的收藏与回访主线。</p>
             </div>
           </div>
           <form class="form me-log-form" id="log-form">
@@ -148,7 +186,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
   </section>
 
   <script type="module" is:inline define:vars={{ loginUrl }}>
-    const { clearRecentViews, escapeAttribute, escapeHtml, fetchProductsPage, fetchRecentViews, fetchStoresPage, formatDateTime, formatYen, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
+    const { clearRecentViews, escapeAttribute, escapeHtml, fetchProductsPage, fetchRecentPrices, fetchRecentViews, fetchStoresPage, formatDateTime, formatYen, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
     const { fetchFavorites, fetchPersonalLogs, formatDataError, getCurrentUser, savePersonalLog, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
     const { validatePositiveYen } = await import(window.__APriceConfig?.formValidationJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'form-validation.js');
@@ -158,11 +196,16 @@ const meGateCopy = getPrivatePageGateCopy('me');
     const logsEl = document.querySelector('#my-logs');
     const recentViewsEl = document.querySelector('#recent-views');
     const recentPanelSummary = document.querySelector('#recent-panel-summary');
+    const recentPanelSummaryTop = document.querySelector('#recent-panel-summary-top');
     const clearRecentViewsButton = document.querySelector('#clear-recent-views');
     const favsEl = document.querySelector('#my-favorites');
     const favoritesSummary = document.querySelector('#favorites-summary');
     const favoritesPanelSummary = document.querySelector('#favorites-panel-summary');
     const logsPanelSummary = document.querySelector('#logs-panel-summary');
+    const watchSummary = document.querySelector('#me-watch-summary');
+    const contributionSummary = document.querySelector('#me-contribution-summary');
+    const watchlistPanelSummary = document.querySelector('#watchlist-panel-summary');
+    const watchlistItems = document.querySelector('#watchlist-items');
     const favoriteFilterButtons = document.querySelectorAll('[data-favorite-filter]');
     const favoriteSortButtons = document.querySelectorAll('[data-favorite-sort]');
     const form = document.querySelector('#log-form');
@@ -185,6 +228,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
     let favorites = [];
     let favoriteFilter = 'all';
     let favoriteSort = 'recent';
+    let latestPublicPrices = [];
     const PAGE_SIZE = 20;
     let productSearchToken = 0;
     let storeSearchToken = 0;
@@ -212,6 +256,9 @@ const meGateCopy = getPrivatePageGateCopy('me');
       if (!recentViewsEl) return;
       if (recentPanelSummary) {
         recentPanelSummary.textContent = `最近浏览 · ${rows.length} 条`;
+      }
+      if (recentPanelSummaryTop) {
+        recentPanelSummaryTop.textContent = `最近浏览 · ${rows.length} 条`;
       }
       recentViewsEl.innerHTML = rows.length
         ? rows.map((item) => `
@@ -302,6 +349,9 @@ const meGateCopy = getPrivatePageGateCopy('me');
       if (logsPanelSummary) {
         logsPanelSummary.textContent = `价格记录 · ${logs.length} 条`;
       }
+      if (contributionSummary) {
+        contributionSummary.textContent = `价格记录 · ${logs.length} 条`;
+      }
       logsEl.innerHTML = logs.length
         ? logs.map((log) => `
           <div class="list__item">
@@ -319,6 +369,53 @@ const meGateCopy = getPrivatePageGateCopy('me');
               <small>现在就把第一笔价格记下来。</small>
             </div>
             <span class="meta">暂无</span>
+          </div>
+        `;
+    }
+
+    function renderWatchlist(favoritesList, recentViewsRows) {
+      if (!watchlistItems) return;
+      const productFavoriteIds = favoritesList
+        .filter((item) => item.entity_type === 'product')
+        .map((item) => String(item.entity_id));
+      const itemIds = Array.from(new Set([
+        ...productFavoriteIds,
+        ...recentViewsRows.map((item) => String(item.id || '')),
+      ].filter(Boolean))).slice(0, 6);
+      const items = itemIds.map((itemId) => {
+        const product = products.find((entry) => entry.id === itemId) || recentViewsRows.find((entry) => entry.id === itemId) || null;
+        const priceSample = latestPublicPrices.find((entry) => String(entry.product_id) === itemId);
+        const isFavorite = productFavoriteIds.includes(itemId);
+        return { product, priceSample, isFavorite };
+      }).filter((entry) => entry.product);
+
+      if (watchSummary) {
+        watchSummary.textContent = `${productFavoriteIds.length} 项关注`;
+      }
+      if (watchlistPanelSummary) {
+        watchlistPanelSummary.textContent = `关注商品 · ${items.length} 项`;
+      }
+
+      watchlistItems.innerHTML = items.length
+        ? items.map(({ product, priceSample, isFavorite }) => `
+          <a class="feed__item me-watchlist__item" href="${escapeAttribute(resolveBase(`product/${product.id}/`))}">
+            <div>
+              <strong>${escapeHtml(product.name || 'Unknown product')}</strong>
+              <small>${escapeHtml(product.brand || '品牌未知')}${product.pack ? ` · ${escapeHtml(product.pack)}` : ''}${isFavorite ? ' · 已收藏' : ' · 最近浏览'}</small>
+            </div>
+            <div class="feed__meta me-watchlist__meta">
+              <span class="price">${priceSample ? formatYen(priceSample.price_yen) : '查看'}</span>
+              <small>${priceSample ? `${priceSample.is_member_price ? '会员价' : '公开价'} · ${escapeHtml(priceSample.stores?.name || '最近采样')}` : '打开商品页继续比较'}</small>
+            </div>
+          </a>
+        `).join('')
+        : `
+          <div class="feed__item">
+            <div>
+              <strong>还没有关注商品</strong>
+              <small>收藏商品或继续浏览后，这里会自动形成你的回访列表。</small>
+            </div>
+            <span class="price">待建立</span>
           </div>
         `;
     }
@@ -345,6 +442,21 @@ const meGateCopy = getPrivatePageGateCopy('me');
       `;
       if (favoritesPanelSummary) favoritesPanelSummary.textContent = '收藏 · 0 项';
       if (logsPanelSummary) logsPanelSummary.textContent = '价格记录 · 0 条';
+      if (recentPanelSummaryTop) recentPanelSummaryTop.textContent = '最近浏览 · 0 条';
+      if (watchSummary) watchSummary.textContent = '0 项关注';
+      if (contributionSummary) contributionSummary.textContent = '价格记录 · 0 条';
+      if (watchlistPanelSummary) watchlistPanelSummary.textContent = '关注商品 · 0 项';
+      if (watchlistItems) {
+        watchlistItems.innerHTML = `
+          <div class="feed__item">
+            <div>
+              <strong>登录后建立你的关注列表</strong>
+              <small>收藏商品、记录价格或继续浏览后，这里会自动汇总你的回访对象。</small>
+            </div>
+            <span class="price">guest</span>
+          </div>
+        `;
+      }
       status.textContent = getPrivatePageStatusCopy('me', 'loggedOutStatus');
       setControlsDisabled(true);
     }
@@ -418,7 +530,8 @@ const meGateCopy = getPrivatePageGateCopy('me');
     }
 
     async function refresh() {
-      renderRecentViews(fetchRecentViews());
+      const recentViewsRows = fetchRecentViews();
+      renderRecentViews(recentViewsRows);
       const user = await getCurrentUser();
       if (!user) {
         renderLoggedOutState();
@@ -432,9 +545,10 @@ const meGateCopy = getPrivatePageGateCopy('me');
       let logs;
       let loadedFavorites;
       try {
-        [logs, loadedFavorites] = await Promise.all([
+        [logs, loadedFavorites, latestPublicPrices] = await Promise.all([
           fetchPersonalLogs(user.id),
           fetchFavorites(user.id),
+          fetchRecentPrices(12),
         ]);
         await Promise.all([
           loadProductsPage({ reset: true }),
@@ -458,6 +572,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
 
       renderLogs(logs);
       renderFavorites(favorites);
+      renderWatchlist(favorites, recentViewsRows);
       status.textContent = getPrivatePageStatusCopy('me', 'syncSummary', { logsCount: logs.length, favoritesCount: favorites.length });
     }
 
@@ -550,6 +665,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
     clearRecentViewsButton?.addEventListener('click', () => {
       clearRecentViews();
       renderRecentViews(fetchRecentViews());
+      renderWatchlist(favorites, fetchRecentViews());
       status.textContent = getPrivatePageStatusCopy('me', 'recentViewsCleared');
     });
 

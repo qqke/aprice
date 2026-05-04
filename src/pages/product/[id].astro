@@ -49,8 +49,26 @@ const loginUrl = buildPrivatePageLoginUrl({
 });
 const productGateCopy = getPrivatePageGateCopy('product');
 const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
+const productUrl = new URL(`${base}product/${product.id}/`, Astro.site ?? Astro.url);
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name: product.name,
+  description: product.description || `${product.name} 的门店价格、附近比价和个人记录。`,
+  sku: product.id,
+  gtin13: product.barcode || undefined,
+  brand: product.brand ? { '@type': 'Brand', name: product.brand } : undefined,
+  category: product.category || undefined,
+  url: productUrl.href,
+};
 ---
-<BaseLayout title={`${product.name} - 搜比价`} description={`${product.name} 的门店价格、附近比价和个人记录。`} bodyClass="product-page">
+<BaseLayout
+  title={`${product.name} - 搜比价`}
+  description={`${product.name} 的最低价、附近门店价格和个人记录入口。移动端优先，适合进店前后快速做购买判断。`}
+  bodyClass="product-page"
+  canonicalPath={`${base}product/${product.id}/`}
+  structuredData={structuredData}
+>
   <section class="section section--first-workspace" id="product-page" data-product-id={product.id} data-product-name={product.name} data-product-brand={product.brand} data-product-pack={product.pack} data-product-barcode={product.barcode} data-product-tone={product.tone}>
     <div class="shell">
       <div class={`product-hero tone-${product.tone || 'sunset'}`} >
@@ -60,7 +78,24 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
             {product.brand && <span class="pill product-hero__brand" title={product.brand}>{product.brand}</span>}
           </div>
           <h1 class="product-title" >{product.name}</h1>
-          <p class="product-sub" >{product.description}</p>
+          <p class="product-sub" >{product.description || '围绕最低价、附近门店与最近价格变化，快速判断这件商品值不值得现在购买。'}</p>
+          <div class="product-decision-grid" aria-label="商品页决策摘要">
+            <article class="product-decision-card">
+              <span>当前最低价</span>
+              <strong id="decision-min-price">同步中</strong>
+              <small id="decision-min-store">等待价格数据</small>
+            </article>
+            <article class="product-decision-card">
+              <span>最近可买门店</span>
+              <strong id="decision-nearest-store">定位后显示</strong>
+              <small id="decision-nearest-detail">优先按当前位置排序</small>
+            </article>
+            <article class="product-decision-card">
+              <span>价格差与新鲜度</span>
+              <strong id="decision-gap">等待价格</strong>
+              <small id="decision-updated">补充价格后会显示更新时间</small>
+            </article>
+          </div>
           <div class="product-hero__actions" aria-label="商品页主要操作">
             <button class="button" id="hero-geo-sort" type="button">按当前位置排序</button>
             <a class="button button--ghost" href="#product-personal-record">记录店头价</a>
@@ -81,7 +116,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
           <div class="section__header section__header--tight">
             <div>
               <h2>价格流</h2>
-              <p>先看可买到的最低价，再比较门店差异。</p>
+              <p>先看推荐门店与最低价，再比较门店差异、价格新鲜度和会员条件。</p>
             </div>
             <button class="button button--ghost" id="geo-sort" type="button">按当前位置排序</button>
           </div>
@@ -93,7 +128,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
             </div>
             <div class="product-price-flow__lead-aside">
               <span class="pill" id="price-flow-gap-pill">等待价格</span>
-              <small id="price-flow-gap-note">补上第一组门店价格后，会显示最低价和次低价差。</small>
+              <small id="price-flow-gap-note">补上第一组门店价格后，会显示最低价、常见差价和最新更新时间。</small>
             </div>
           </div>
           <div class="notice notice--compact" id="geo-status">{getPrivatePageStatusCopy('product', 'geoStatus')}</div>
@@ -106,7 +141,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
           <div class="section__header section__header--tight">
             <div>
               <h3>附近门店</h3>
-              <p>快速查看附近门店价格分布。</p>
+              <p>快速查看当前位置附近可买门店、价格和收藏入口。</p>
             </div>
           </div>
           <div class="notice notice--compact" id="nearby-status">门店价格会显示在这里。</div>
@@ -121,7 +156,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
           <section class="tile tile--wide" id="product-summary">
             <div class="section__header section__header--tight">
               <h3>价格洞察</h3>
-              <p>汇总最低价、门店覆盖和近7天变化。</p>
+              <p>汇总最低价、门店覆盖、最新采样与近 7 天波动。</p>
             </div>
             <div class="feed">
               <div class="feed__item feed__item--featured product-summary__item">
@@ -161,12 +196,13 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
           <section class="tile" id="product-personal-record">
             <div class="section__header section__header--tight">
               <h3>记录店头价格</h3>
-              <p>记录你在门店看到的价格，可选择提交公共比价。</p>
+              <p>把你刚看到的价格记下来，也可以贡献到公共比价池。</p>
             </div>
             <div class="pillrow product-secondary-actions" aria-label="收藏操作">
               <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>
               <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button>
             </div>
+            <div class="notice notice--compact product-contribution-note">贡献通过审核后会进入公共比价，帮助更多人更快做决定。</div>
             <div class="personal-record-layout">
               <div class="personal-store-panel">
                 <div class="store-search">

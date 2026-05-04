@@ -4,12 +4,34 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 export const prerender = true;
 
 const base = import.meta.env.BASE_URL || '/';
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: '搜比价',
+  description: '日本本地药店比价工具，支持搜索商品、扫码查价和查看附近低价。',
+  url: new URL(base, Astro.site ?? Astro.url).href,
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: `${new URL(base, Astro.site ?? Astro.url).href}?q={search_term_string}`,
+    'query-input': 'required name=search_term_string',
+  },
+};
 ---
-<BaseLayout title="搜比价 - 日本本地药店比价" description="在手机上快速搜索商品、查看附近价格，并保留扫码入口。" bodyClass="home-page">
+<BaseLayout
+  title="搜比价 - 日本药店价格决策助手"
+  description="30 秒内完成日本药店商品搜索、扫码查价和附近低价判断。移动端优先，适合出门前和店内即时决策。"
+  bodyClass="home-page"
+  canonicalPath={base}
+  structuredData={structuredData}
+>
   <section class="home-hero">
     <div class="shell home-hero__inner">
-      <div class="home-brand">搜比价 · 日本药店比价</div>
-      <h1 class="home-title">先搜再比价</h1>
+      <div class="home-brand">搜比价 · 日本药店价格决策助手</div>
+      <div class="home-eyebrow">移动端优先</div>
+      <h1 class="home-title">出门前先搜，进店后再扫，30 秒内判断是不是低价。</h1>
+      <p class="home-lead">
+        面向日本本地药店购物场景，优先告诉你当前最低价、附近可买门店和是否值得立刻下单。
+      </p>
       <form class="home-search" id="home-search-form">
         <label class="field home-search__field" for="home-search">
           <span class="home-search__icon" aria-hidden="true">
@@ -41,7 +63,54 @@ const base = import.meta.env.BASE_URL || '/';
         </label>
       </form>
 
+      <div class="home-actions" aria-label="首页快速入口">
+        <a class="button button--ghost" href={`${base}scan/`}>直接扫码查价</a>
+        <a class="button button--ghost" href={`${base}me/`}>查看收藏与记录</a>
+      </div>
+
+      <div class="home-signals" aria-label="商业信任信息">
+        <div class="home-signal">
+          <strong>覆盖本地药店</strong>
+          <span>聚焦日本常见连锁与社区门店价格。</span>
+        </div>
+        <div class="home-signal">
+          <strong>持续更新</strong>
+          <span>搜索、扫码和门店贡献会持续补全最新样本。</span>
+        </div>
+        <div class="home-signal">
+          <strong>真实贡献机制</strong>
+          <span>支持个人记录、收藏回访与公共比价补录。</span>
+        </div>
+      </div>
+
+      <div class="home-recent" id="home-recent-shell" hidden>
+        <div class="home-recent__header">
+          <strong>最近搜索</strong>
+          <button class="button button--ghost home-recent__clear" id="clear-recent-searches" type="button">清空</button>
+        </div>
+        <div class="pillrow home-recent__list" id="home-recent-searches"></div>
+      </div>
+
       <p class="home-meta">快捷键 <code>Ctrl+K</code> 或 <code>/</code> 可直达搜索框。</p>
+    </div>
+  </section>
+
+  <section class="home-section home-section--trust">
+    <div class="shell home-section__shell">
+      <div class="home-trust-grid">
+        <article class="home-trust-card">
+          <strong>先做决定，再看详情</strong>
+          <p>首页只保留一个主任务：先找到商品，再快速判断附近有没有更低价。</p>
+        </article>
+        <article class="home-trust-card">
+          <strong>扫码作为高频入口</strong>
+          <p>店内环境下可直接启动相机，识别 JAN 码后快速进入商品页。</p>
+        </article>
+        <article class="home-trust-card">
+          <strong>登录后可形成回访闭环</strong>
+          <p>收藏商品、记录门店价、回看最近浏览，把一次性搜索变成持续决策工具。</p>
+        </article>
+      </div>
     </div>
   </section>
 
@@ -50,7 +119,7 @@ const base = import.meta.env.BASE_URL || '/';
       <div class="section__header section__header--tight">
         <div>
           <h2>搜索结果</h2>
-          <p id="search-status">输入关键词后显示可选商品。</p>
+          <p id="search-status">输入关键词后显示可选商品，优先帮你进入下一步决策。</p>
         </div>
       </div>
       <div class="home-panel">
@@ -66,7 +135,7 @@ const base = import.meta.env.BASE_URL || '/';
       <div class="section__header section__header--tight">
         <div>
           <h2>附近比价</h2>
-          <p>选中商品后，这里显示最近可比门店价格。</p>
+          <p>选中商品后，这里优先展示附近可比价格和最低价线索。</p>
         </div>
       </div>
       <div class="home-panel">
@@ -100,10 +169,56 @@ const base = import.meta.env.BASE_URL || '/';
     const selectedProductStatus = document.querySelector('#selected-product-status');
     const selectedProductAction = document.querySelector('#selected-product-action');
     const nearbyResults = document.querySelector('#nearby-results');
+    const recentSearchShell = document.querySelector('#home-recent-shell');
+    const recentSearchList = document.querySelector('#home-recent-searches');
+    const clearRecentSearchesButton = document.querySelector('#clear-recent-searches');
+    const recentSearchKey = 'aprice:recent-searches';
 
     let activeProduct = null;
     let searchResults = [];
     let focusedResultIndex = -1;
+
+    function readRecentSearches() {
+      try {
+        const raw = window.localStorage.getItem(recentSearchKey);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string' && item.trim()).slice(0, 6) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function writeRecentSearches(items) {
+      try {
+        window.localStorage.setItem(recentSearchKey, JSON.stringify(items.slice(0, 6)));
+      } catch {}
+    }
+
+    function rememberRecentSearch(term) {
+      const query = String(term || '').trim();
+      if (!query) return;
+      const next = [query, ...readRecentSearches().filter((item) => item !== query)];
+      writeRecentSearches(next);
+      renderRecentSearches();
+    }
+
+    function renderRecentSearches() {
+      if (!recentSearchShell || !recentSearchList) return;
+      const items = readRecentSearches();
+      recentSearchShell.hidden = items.length === 0;
+      recentSearchList.innerHTML = items.map((item) => `
+        <button class="button button--ghost home-recent__chip" type="button" data-recent-search="${escapeAttribute(item)}">
+          ${escapeHtml(item)}
+        </button>
+      `).join('');
+      recentSearchList.querySelectorAll('[data-recent-search]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const value = button.dataset.recentSearch || '';
+          if (input) input.value = value;
+          await runSearch(value);
+        });
+      });
+    }
 
     function productHref(productId) {
       return resolveBase(productId ? `product/${productId}/` : '');
@@ -322,6 +437,7 @@ const base = import.meta.env.BASE_URL || '/';
 
       status.textContent = `搜索“${query}”...`;
       try {
+        rememberRecentSearch(query);
         const items = await searchProducts(query);
         renderSearchResults(items);
         if (items.length) {
@@ -394,5 +510,10 @@ const base = import.meta.env.BASE_URL || '/';
     });
 
     syncSelectedProductCard();
+    clearRecentSearchesButton?.addEventListener('click', () => {
+      writeRecentSearches([]);
+      renderRecentSearches();
+    });
+    renderRecentSearches();
   </script>
 </BaseLayout>
