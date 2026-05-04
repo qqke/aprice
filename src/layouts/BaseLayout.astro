@@ -8,21 +8,10 @@ const {
   title = '搜比价',
   description = '日本本地药店比价应用，支持扫码查价、附近价格对比、模糊搜索和个人价格记录。',
   bodyClass = '',
-  canonicalPath = Astro.url.pathname,
-  ogImage = '',
-  structuredData = null,
 } = Astro.props;
 
 const base = import.meta.env.BASE_URL || '/';
 const current = Astro.url.pathname;
-const siteUrl = Astro.site ?? new URL(Astro.url.origin);
-const canonicalUrl = new URL(canonicalPath || Astro.url.pathname, siteUrl).href;
-const ogImageUrl = ogImage
-  ? new URL(ogImage, siteUrl).href
-  : new URL(`${base}og-default.svg`, siteUrl).href;
-const structuredDataScript = structuredData
-  ? JSON.stringify(structuredData)
-  : '';
 const shellCopy = {
   guestNav: getPrivatePageStatusCopy('shell', 'guestNav'),
   guestChip: getPrivatePageStatusCopy('shell', 'guestChip'),
@@ -64,24 +53,11 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
     <meta name="description" content={description} />
     <meta name="theme-color" content="#f7f9fc" />
     <meta name="application-name" content="搜比价" />
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="搜比价" />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
-    <meta property="og:url" content={canonicalUrl} />
-    <meta property="og:image" content={ogImageUrl} />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={title} />
-    <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={ogImageUrl} />
     <meta name="generator" content={Astro.generator} />
-    <link rel="canonical" href={canonicalUrl} />
     <link rel="icon" href={`${base}favicon.svg`} type="image/svg+xml" />
     <link rel="shortcut icon" href={`${base}favicon.svg`} />
-    <link rel="apple-touch-icon" href={`${base}app-icon.svg`} />
-    <link rel="manifest" href={`${base}manifest.webmanifest`} />
+    <link rel="apple-touch-icon" href={`${base}favicon.svg`} />
     <title>{title}</title>
-    {structuredDataScript && <script is:inline type="application/ld+json" set:html={structuredDataScript}></script>}
     <script is:inline>
       // 先在 documentElement 上打一个轻量标记，避免顶栏在已登录切页时闪回错误状态。
       try {
@@ -166,7 +142,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
       <div class="shell footer__inner">
         <div class="footer__brand">
           <div class="footer__name">搜比价</div>
-          <div class="footer__kicker">日本药店价格决策助手</div>
+          <div class="footer__kicker">继续使用</div>
         </div>
         <nav class="footer__links" aria-label="页脚导航">
           {footerLinks.map((item) => (
@@ -180,7 +156,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
         </nav>
         <div class="footer__meta">
           <span>© {currentYear} 搜比价</span>
-          <span>搜索 · 扫码 · 附近低价 · 收藏回访</span>
+          <span>搜索 · 扫码 · 我的</span>
         </div>
       </div>
     </footer>
@@ -348,12 +324,6 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
           if (document.visibilityState === 'hidden') {
             void flushTrackedEvents();
           }
-        });
-      }
-
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register(resolveBase('sw.js')).catch(() => {});
         });
       }
     </script>
