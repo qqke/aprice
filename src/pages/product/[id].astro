@@ -12,6 +12,7 @@ type Product = {
   category: string;
   tone?: string;
   description: string;
+  image_url?: string;
 };
 
 export const prerender = false;
@@ -55,6 +56,11 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
     <div class="shell">
       <div class={`product-hero tone-${product.tone || 'sunset'}`} >
         <div class="product-hero__overlay" >
+          {product.image_url && (
+            <div class="product-hero__media">
+              <img class="product-hero__image" src={product.image_url} alt={product.name} loading="eager" decoding="async" referrerpolicy="no-referrer" />
+            </div>
+          )}
           <div class="pillrow product-hero__meta">
             <span class="pill product-hero__barcode">JAN {product.barcode}</span>
             {product.brand && <span class="pill product-hero__brand" title={product.brand}>{product.brand}</span>}

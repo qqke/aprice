@@ -85,6 +85,7 @@ async function main() {
             category: payload.category || '',
             tone: payload.tone || 'sunset',
             description: payload.description || '',
+            image_url: payload.image_url || '',
           };
           await route.fulfill({
             status: 200,
@@ -123,6 +124,7 @@ async function main() {
       assert.equal(await page.locator('#barcode-input').inputValue(), '0019014614042');
       assert.match(await page.locator('#scan-result-list').textContent(), /アイムス 11歳以上用 毎日の健康ケア チキン 小粒 5kg/);
       assert.equal(await page.locator('#scan-result-list a').getAttribute('href'), '/aprice/product/0019014614042/');
+      assert.equal(await page.locator('#scan-result-list .product-thumb--scan').getAttribute('src'), 'https://cdn.example.com/products/0019014614042.jpg');
       await page.close();
 
       const foundPage = await browser.newPage();
@@ -173,6 +175,7 @@ async function main() {
             category: payload.category || '',
             tone: payload.tone || 'sunset',
             description: payload.description || '',
+            image_url: payload.image_url || '',
           };
           await route.fulfill({
             status: 200,
@@ -210,6 +213,7 @@ async function main() {
             category: payload.category || '',
             tone: payload.tone || 'sunset',
             description: payload.description || '',
+            image_url: payload.image_url || '',
           };
           await route.fulfill({
             status: 200,
@@ -365,6 +369,7 @@ async function main() {
       await manualPage.locator('#missing-product-category').fill('manual-category');
       await manualPage.locator('#missing-product-tone').selectOption('azure');
       await manualPage.locator('#missing-product-description').fill('Added by browser test');
+      await manualPage.locator('#missing-product-image-url').fill('https://cdn.example.com/products/manual-missing-product.jpg');
       await manualPage.locator('#missing-product-form button[type="submit"]').click();
       await manualPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('商品已添加：Manual Missing Product'));
       assert.ok(
@@ -377,7 +382,8 @@ async function main() {
           call.body.includes('"pack":"24 tabs"') &&
           call.body.includes('"category":"manual-category"') &&
           call.body.includes('"tone":"azure"') &&
-          call.body.includes('"description":"Added by browser test"')
+          call.body.includes('"description":"Added by browser test"') &&
+          call.body.includes('"image_url":"https://cdn.example.com/products/manual-missing-product.jpg"')
         ),
         `expected manual create_product payload, got ${manualRequests.map((call) => call.body).join(' | ')}`,
       );

@@ -139,6 +139,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
                 </label>
                 <label class="field"><input id="product-description" placeholder="简短描述" aria-label="商品简短描述" /></label>
               </div>
+              <label class="field"><input id="product-image-url" type="url" inputmode="url" placeholder="图片 URL（http/https）" aria-label="商品图片 URL" /></label>
               <button class="button admin-form__submit" type="submit">添加商品</button>
             </form>
           </div>
@@ -253,7 +254,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     const { fetchAllProducts, fetchAllStores, fetchRecentPrices } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
     const { adminDeletePrice, adminDeleteProduct, adminDeleteStore, adminFetchTelemetryRecent, adminFetchTelemetrySummary, adminUpsertPrice, adminUpsertStore, createProduct, fetchCurrentProfile, formatDataError, getCurrentUser, signOut } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { applyPrivatePageGateCopy, getPrivatePageGateCopy, getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
-    const { validateCoordinate, validateJanCode, validatePositiveYen } = await import(window.__APriceConfig?.formValidationJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'form-validation.js');
+    const { validateCoordinate, validateJanCode, validateOptionalHttpUrl, validatePositiveYen } = await import(window.__APriceConfig?.formValidationJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'form-validation.js');
 
     const status = document.querySelector('#admin-status');
     const authGate = document.querySelector('#admin-auth-gate');
@@ -309,6 +310,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       category: document.querySelector('#product-category'),
       tone: document.querySelector('#product-tone'),
       description: document.querySelector('#product-description'),
+      image_url: document.querySelector('#product-image-url'),
     };
 
     const storeFields = {
@@ -473,7 +475,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
           <div class="list__item admin-record-item">
             <div>
               <strong>${escapeHtml(item.name)}</strong>
-              <small>${escapeHtml(item.barcode)} · ${escapeHtml(item.brand)} · ${escapeHtml(item.pack)}</small>
+              <small>${escapeHtml(item.barcode)} · ${escapeHtml(item.brand)} · ${escapeHtml(item.pack)}${item.image_url ? ' · 已配置图片' : ''}</small>
             </div>
             <div class="pillrow admin-record-actions">
               <button class="button button--ghost" data-delete-product="${escapeHtml(item.id)}" type="button">删除</button>
@@ -643,8 +645,13 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       event.preventDefault();
       try {
         const barcode = validateJanCode(elValue(productFields.barcode));
+        const imageUrl = validateOptionalHttpUrl(elValue(productFields.image_url));
         if (!barcode.ok) {
           if (status) status.textContent = barcode.message;
+          return;
+        }
+        if (!imageUrl.ok) {
+          if (status) status.textContent = imageUrl.message;
           return;
         }
         await createProduct({
@@ -656,6 +663,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
           category: elValue(productFields.category),
           tone: elValue(productFields.tone),
           description: elValue(productFields.description),
+          image_url: imageUrl.value,
         });
         if (status) status.textContent = getPrivatePageStatusCopy('admin', 'saveProductSuccess');
         await loadData();

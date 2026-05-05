@@ -94,6 +94,7 @@ export const prerender = true;
               </label>
             </div>
             <label class="field"><input id="missing-product-description" placeholder="简短描述" aria-label="商品简短描述" /></label>
+            <label class="field"><input id="missing-product-image-url" type="url" inputmode="url" placeholder="图片 URL（http/https）" aria-label="商品图片 URL" /></label>
             <button class="button admin-form__submit" id="missing-product-save" type="submit">添加商品</button>
           </form>
         </section>
@@ -105,7 +106,7 @@ export const prerender = true;
     const { escapeAttribute, escapeHtml, fetchJancodeProductDraft, fetchProductByBarcode, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
     const { getCurrentUser, submitProductSubmission } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { buildPrivatePageLoginUrl } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
-    const { friendlyDataError, validateJanCode } = await import(window.__APriceConfig?.formValidationJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'form-validation.js');
+    const { friendlyDataError, validateJanCode, validateOptionalHttpUrl } = await import(window.__APriceConfig?.formValidationJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'form-validation.js');
 
     const video = document.querySelector('#camera');
     const capture = document.querySelector('#capture');
@@ -129,6 +130,7 @@ export const prerender = true;
       category: document.querySelector('#missing-product-category'),
       tone: document.querySelector('#missing-product-tone'),
       description: document.querySelector('#missing-product-description'),
+      image_url: document.querySelector('#missing-product-image-url'),
     };
     const pendingMissingProductKey = 'aprice:pending-missing-product';
 
@@ -172,6 +174,7 @@ export const prerender = true;
 
       resultList.innerHTML = `
         <a class="list__item" href="${escapeAttribute(resolveBase(`product/${product.id}/`))}">
+          ${product.image_url ? `<img class="product-thumb product-thumb--scan" src="${escapeAttribute(product.image_url)}" alt="${escapeAttribute(product.name || '商品图片')}" loading="lazy" decoding="async" referrerpolicy="no-referrer" />` : ''}
           <div>
             <strong>${escapeHtml(product.name)}</strong>
             <small>${escapeHtml(product.brand || '品牌未知')} · ${escapeHtml(product.pack || '规格未知')} · ${escapeHtml(product.barcode || '')}</small>
@@ -207,6 +210,7 @@ export const prerender = true;
       setMissingFormValue(missingFields.category, '');
       setMissingFormValue(missingFields.tone, 'sunset');
       setMissingFormValue(missingFields.description, '');
+      setMissingFormValue(missingFields.image_url, '');
     }
 
     function showMissingPanel(code) {
@@ -231,6 +235,7 @@ export const prerender = true;
       setMissingFormValue(missingFields.category, draft.category || '');
       setMissingFormValue(missingFields.tone, draft.tone || 'sunset');
       setMissingFormValue(missingFields.description, draft.description || '');
+      setMissingFormValue(missingFields.image_url, draft.image_url || '');
     }
 
     function hideMissingPanel() {
@@ -506,8 +511,13 @@ export const prerender = true;
     missingForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
       const barcode = missingFields.barcode?.value?.trim() || '';
+      const imageUrl = validateOptionalHttpUrl(missingFields.image_url?.value || '');
       if (!barcode) {
         if (status) status.textContent = '缺少条码，无法保存。';
+        return;
+      }
+      if (!imageUrl.ok) {
+        if (status) status.textContent = imageUrl.message;
         return;
       }
 
@@ -524,6 +534,7 @@ export const prerender = true;
           category: missingFields.category?.value?.trim() || '',
           tone: missingFields.tone?.value?.trim() || 'sunset',
           description: missingFields.description?.value?.trim() || '',
+          image_url: imageUrl.value,
         });
 
         const savedProduct = Array.isArray(saved) ? saved[0] : saved;

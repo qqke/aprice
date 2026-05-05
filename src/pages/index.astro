@@ -257,6 +257,7 @@ const base = import.meta.env.BASE_URL || '/';
           <div class="list__item home-result${selected ? ' is-active' : ''}${focused ? ' is-focused' : ''}" data-result-index="${index}">
             <button class="home-result__main" id="home-result-option-${escapeAttribute(item.id)}" type="button" data-select-product="${escapeAttribute(item.id)}" role="option" aria-selected="${selected ? 'true' : 'false'}" aria-pressed="${selected ? 'true' : 'false'}" aria-label="选择 ${escapeAttribute(item.name)}">
               ${statusLabel ? `<span class="home-result__status">${statusLabel}</span>` : ''}
+              ${item.image_url ? `<img class="product-thumb product-thumb--home" src="${escapeAttribute(item.image_url)}" alt="${escapeAttribute(item.name || '商品图片')}" loading="lazy" decoding="async" referrerpolicy="no-referrer" />` : ''}
               <strong>${escapeHtml(item.name)}</strong>
               <div class="home-result__meta-row">
                 <small class="home-result__details">${escapeHtml(item.brand)} · ${escapeHtml(item.pack)}</small>

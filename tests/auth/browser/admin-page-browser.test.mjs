@@ -193,6 +193,7 @@ async function main() {
       await page.locator('#product-pack').fill('8 tabs');
       await page.locator('#product-category').fill('test-fixture');
       await page.locator('#product-description').fill('Browser regression fixture');
+      await page.locator('#product-image-url').fill('https://cdn.example.com/products/admin-fixture-product.jpg');
       await page.locator('#product-tone').selectOption('mint');
       await page.locator('#product-form button[type="submit"]').click();
 
@@ -206,7 +207,7 @@ async function main() {
         `expected admin_upsert_product RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
       );
       assert.ok(
-        rpcCalls.some((call) => call.url.includes('/rpc/admin_upsert_product') && call.method === 'POST' && call.bodyJson?.id === 'admin-fixture-product' && call.bodyJson?.name === 'Admin Fixture Product'),
+        rpcCalls.some((call) => call.url.includes('/rpc/admin_upsert_product') && call.method === 'POST' && call.bodyJson?.id === 'admin-fixture-product' && call.bodyJson?.name === 'Admin Fixture Product' && call.bodyJson?.image_url === 'https://cdn.example.com/products/admin-fixture-product.jpg'),
         `expected admin_upsert_product payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
       );
 

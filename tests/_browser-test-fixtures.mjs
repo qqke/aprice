@@ -8,6 +8,7 @@ export function makeCatalogProductResponse() {
     category: '鎮痛薬',
     tone: 'sunset',
     description: '日本の薬店でよく見かける定番OTC。',
+    image_url: 'https://cdn.example.com/products/loxonin-s.jpg',
   };
 }
 
@@ -18,6 +19,7 @@ export function makeAspirinProductResponse() {
     brand: 'Bayer',
     pack: '100 tabs',
     barcode: '4987123456789',
+    image_url: 'https://cdn.example.com/products/aspirin-81.jpg',
   };
 }
 
@@ -31,6 +33,7 @@ export function makeProductDetailsResponse(id = '0019014614042') {
     category: '',
     tone: 'sunset',
     description: '',
+    image_url: `https://cdn.example.com/products/${id}.jpg`,
   };
 }
 
@@ -236,6 +239,7 @@ export function makeAdminProducts() {
       category: 'pain-relief',
       tone: 'sunset',
       description: 'Synthetic admin fixture product',
+      image_url: 'https://cdn.example.com/products/loxonin-s.jpg',
       updated_at: '2026-04-04T01:00:00.000Z',
     },
     {
@@ -247,6 +251,7 @@ export function makeAdminProducts() {
       category: 'pain-relief',
       tone: 'mint',
       description: 'Secondary fixture product',
+      image_url: 'https://cdn.example.com/products/eve-a.jpg',
       updated_at: '2026-04-03T01:00:00.000Z',
     },
   ];
@@ -371,6 +376,7 @@ export function makePendingProductSubmissions() {
       category: 'test-fixture',
       tone: 'mint',
       description: 'Submitted from scan',
+      image_url: 'https://cdn.example.com/products/submitted-supplement.jpg',
       review_status: 'pending',
       review_note: '',
       promoted_product_id: null,

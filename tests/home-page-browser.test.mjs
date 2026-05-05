@@ -63,10 +63,12 @@ async function main() {
       const resultText = await page.locator('#search-results').textContent();
       const nearbyText = await page.locator('#nearby-results').textContent();
       const scanHref = await page.locator('.home-search__scan').getAttribute('href');
+      const resultImageSrc = await page.locator('#search-results .product-thumb--home').getAttribute('src');
 
       assert.match(resultText || '', /Loxonin S/);
       assert.match(nearbyText || '', /(当前还没有价格记录|暂无门店价格|暂无价格记录)/);
       assert.equal(scanHref, '/aprice/scan/');
+      assert.equal(resultImageSrc, 'https://cdn.example.com/products/loxonin-s.jpg');
       assert.match(requests.join('\n'), /name\.ilike/);
       assert.match(requests.join('\n'), /\/rest\/v1\/products/);
       assert.match(requests.join('\n'), /\/rest\/v1\/prices/);

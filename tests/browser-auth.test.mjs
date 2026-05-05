@@ -189,22 +189,24 @@ assert.ok(testState.restCalls.some((call) =>
   call.options.token === 'session-token'
 ));
 
-await auth.createProduct({ barcode: '4900000000000', name: 'Created Product' });
+await auth.createProduct({ barcode: '4900000000000', name: 'Created Product', image_url: 'https://cdn.example.com/products/created-product.jpg' });
 assert.ok(testState.restCalls.some((call) =>
   call.type === 'rpc' &&
   call.name === 'admin_upsert_product' &&
   call.body.id === '4900000000000' &&
   call.body.barcode === '4900000000000' &&
   call.body.name === 'Created Product' &&
+  call.body.image_url === 'https://cdn.example.com/products/created-product.jpg' &&
   call.options.token === 'session-token'
 ));
 
-await auth.submitProductSubmission({ barcode: '4900000000001', name: 'Submitted Product' });
+await auth.submitProductSubmission({ barcode: '4900000000001', name: 'Submitted Product', image_url: 'https://cdn.example.com/products/submitted-product.jpg' });
 assert.ok(testState.restCalls.some((call) =>
   call.type === 'rpc' &&
   call.name === 'create_product' &&
   call.body.barcode === '4900000000001' &&
   call.body.name === 'Submitted Product' &&
+  call.body.image_url === 'https://cdn.example.com/products/submitted-product.jpg' &&
   call.options.token === 'session-token'
 ));
 

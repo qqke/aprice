@@ -392,11 +392,14 @@ export async function toggleFavorite(entityType, entityId) {
 export async function createProduct(payload) {
   const session = await requireSession();
   const barcode = validateJanCode(payload?.barcode || payload?.id || '');
+  const imageUrl = validateOptionalHttpUrl(payload?.image_url || '');
   if (!barcode.ok) throw new Error(barcode.message);
+  if (!imageUrl.ok) throw new Error(imageUrl.message);
   const normalizedPayload = {
     ...payload,
     id: payload?.id || barcode.value,
     barcode: barcode.value,
+    image_url: imageUrl.value,
   };
   try {
     return await restRpc('admin_upsert_product', normalizedPayload, { token: session.access_token });
@@ -408,12 +411,15 @@ export async function createProduct(payload) {
 export async function submitProductSubmission(payload) {
   const session = await requireSession();
   const barcode = validateJanCode(payload?.barcode || payload?.id || '');
+  const imageUrl = validateOptionalHttpUrl(payload?.image_url || '');
   if (!barcode.ok) throw new Error(barcode.message);
+  if (!imageUrl.ok) throw new Error(imageUrl.message);
   if (!String(payload?.name || '').trim()) throw new Error('请填写商品名称。');
   const result = await restRpc('create_product', {
     ...payload,
     id: payload?.id || barcode.value,
     barcode: barcode.value,
+    image_url: imageUrl.value,
   }, { token: session.access_token });
   trackEvent('submit_product', { barcode: barcode.ok ? barcode.value : '', source: 'create_product' });
   return result;

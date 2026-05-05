@@ -18,6 +18,7 @@ create table if not exists products (
   category text not null default '',
   tone text not null default 'sunset',
   description text not null default '',
+  image_url text not null default '' check (image_url = '' or image_url ~* '^https?://'),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -32,6 +33,7 @@ create table if not exists product_submissions (
   category text not null default '',
   tone text not null default 'sunset',
   description text not null default '',
+  image_url text not null default '' check (image_url = '' or image_url ~* '^https?://'),
   review_status text not null default 'pending' check (review_status in ('pending', 'approved', 'rejected')),
   review_note text not null default '',
   promoted_product_id text references products(id) on delete set null,
@@ -281,7 +283,8 @@ begin
     pack,
     category,
     tone,
-    description
+    description,
+    image_url
   )
   values (
     target_id,
@@ -291,7 +294,11 @@ begin
     coalesce(payload->>'pack', ''),
     coalesce(payload->>'category', ''),
     coalesce(nullif(payload->>'tone', ''), 'sunset'),
-    coalesce(payload->>'description', '')
+    coalesce(payload->>'description', ''),
+    case
+      when coalesce(payload->>'image_url', '') ~* '^https?://' then payload->>'image_url'
+      else ''
+    end
   )
   returning * into result;
 
@@ -332,7 +339,8 @@ begin
     pack,
     category,
     tone,
-    description
+    description,
+    image_url
   )
   values (
     auth.uid(),
@@ -342,7 +350,11 @@ begin
     coalesce(payload->>'pack', ''),
     coalesce(payload->>'category', ''),
     coalesce(nullif(payload->>'tone', ''), 'sunset'),
-    coalesce(payload->>'description', '')
+    coalesce(payload->>'description', ''),
+    case
+      when coalesce(payload->>'image_url', '') ~* '^https?://' then payload->>'image_url'
+      else ''
+    end
   )
   returning * into result;
 
@@ -393,7 +405,8 @@ begin
       pack,
       category,
       tone,
-      description
+      description,
+      image_url
     )
     values (
       next_product_id,
@@ -403,7 +416,8 @@ begin
       target_submission.pack,
       target_submission.category,
       target_submission.tone,
-      target_submission.description
+      target_submission.description,
+      target_submission.image_url
     )
     on conflict (id) do update
       set barcode = excluded.barcode,
@@ -413,6 +427,7 @@ begin
           category = excluded.category,
           tone = excluded.tone,
           description = excluded.description,
+          image_url = excluded.image_url,
           updated_at = now();
 
     update public.product_submissions
@@ -469,7 +484,8 @@ begin
     pack,
     category,
     tone,
-    description
+    description,
+    image_url
   )
   values (
     target_id,
@@ -479,7 +495,11 @@ begin
     coalesce(payload->>'pack', ''),
     coalesce(payload->>'category', ''),
     coalesce(nullif(payload->>'tone', ''), 'sunset'),
-    coalesce(payload->>'description', '')
+    coalesce(payload->>'description', ''),
+    case
+      when coalesce(payload->>'image_url', '') ~* '^https?://' then payload->>'image_url'
+      else ''
+    end
   )
   on conflict (id) do update
     set barcode = excluded.barcode,
@@ -489,6 +509,7 @@ begin
         category = excluded.category,
         tone = excluded.tone,
         description = excluded.description,
+        image_url = excluded.image_url,
         updated_at = now()
   returning * into result;
 
