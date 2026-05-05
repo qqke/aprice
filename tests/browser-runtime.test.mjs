@@ -206,6 +206,15 @@ assert.equal(nearbyPrices.length, 2);
 assert.equal(nearbyPrices[0].id, 'price-near');
 assert.equal(nearbyPrices[1].id, 'price-unknown-distance');
 assert.equal(nearbyPrices[1].distance_km, null);
+assert.match(browser.buildExternalMapUrl({ id: 'near-store', name: 'Near Store', lat: 35.649, lng: 139.722 }), /google\.com\/maps\/search/);
+assert.match(browser.buildGoogleMapEmbedUrl({ id: 'near-store', name: 'Near Store', lat: 35.649, lng: 139.722 }), /maps\.google\.com\/maps/);
+const browserMapModel = browser.buildStoreMapModel([
+  { id: 'near-store', name: 'Near Store', lat: 35.649, lng: 139.722 },
+  { id: 'unknown-store', name: 'Unknown Store' },
+], { featuredStoreIds: ['near-store'], highlightedStoreId: 'near-store' });
+assert.equal(browserMapModel.points.length, 1);
+assert.equal(browserMapModel.missingCount, 1);
+assert.equal(browserMapModel.points[0].isFeatured, true);
 
 assert.equal(browser.productToneClass('mint'), 'tone-mint');
 assert.equal(browser.productToneClass('unknown-tone'), 'tone-sunset');

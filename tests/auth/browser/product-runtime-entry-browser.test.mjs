@@ -202,6 +202,10 @@ async function main() {
       }
       await page.waitForFunction(() => String(document.querySelector('#price-list')?.textContent || '').includes('Sugi Pharmacy Hiroo'), null, { timeout: 10000 });
       await page.waitForFunction(() => String(document.querySelector('#nearby-store-list')?.textContent || '').includes('Welcia Shibuya'), null, { timeout: 10000 });
+      await page.waitForFunction(() => document.querySelectorAll('#nearby-store-map .store-map__marker').length >= 2, null, { timeout: 10000 });
+      await page.waitForFunction(() => document.querySelectorAll('#personal-store-map .store-map__marker').length >= 2, null, { timeout: 10000 });
+      assert.match(await page.locator('#nearby-store-map iframe').getAttribute('src'), /maps\.google\.com\/maps/);
+      assert.match(await page.locator('#personal-store-map iframe').getAttribute('src'), /maps\.google\.com\/maps/);
       const heroTitle = await page.locator('.product-title').textContent();
       const heroSub = await page.locator('.product-sub').textContent();
       const authGateHref = new URL(await page.locator('#product-login-link').getAttribute('href'), baseUrl);
@@ -214,6 +218,8 @@ async function main() {
       const storePickerText = await page.locator('#personal-store-list').textContent();
       const storeStatusText = await page.locator('#personal-store-status').textContent();
       const personalStatusText = await page.locator('#personal-status').textContent();
+      const nearbyMapStatusText = await page.locator('#nearby-map-status').textContent();
+      const pickerMapStatusText = await page.locator('#store-picker-map-status').textContent();
 
       assert.match(heroTitle || '', /\S/);
       assert.notEqual(heroSub, null);
@@ -224,6 +230,8 @@ async function main() {
       assert.match(nearbyListText || '', /Welcia Shibuya/);
       assert.match(insightText || '', /最低价/);
       assert.match(geoStatus || '', /已加载 2 条价格记录/);
+      assert.match(nearbyMapStatusText || '', /已显示在地图上|缺少坐标/);
+      assert.match(pickerMapStatusText || '', /已显示在地图上|当前只有一个可定位门店/);
       await page.locator('#geo-sort').click();
       await page.waitForFunction(() => String(document.querySelector('#geo-status')?.textContent || '').includes('已按当前位置排序'), null, { timeout: 10000 });
       assert.match(await page.locator('#geo-status').textContent(), /已按当前位置排序/);
@@ -271,8 +279,9 @@ async function main() {
       await page.locator('#personal-store-search').fill('');
       await page.waitForFunction(() => String(document.querySelector('#personal-store-search-clear')?.hidden || '') === 'true', null, { timeout: 10000 });
       await page.waitForFunction(() => document.querySelectorAll('#personal-store-list .store-picker__item').length === 10, null, { timeout: 10000 });
+      await page.waitForFunction(() => document.querySelectorAll('#personal-store-map .store-map__marker').length === 10, null, { timeout: 10000 });
 
-      await page.locator('#personal-store-list [data-store-id="welcia-shibuya"]').click();
+      await page.locator('#personal-store-map .store-map__marker[data-map-store-id="welcia-shibuya"]').click();
       await page.waitForFunction(() => String(document.querySelector('#personal-price')?.value || '') === '712', null, { timeout: 10000 });
       assert.equal(await page.locator('#personal-price').inputValue(), '712');
       assert.equal(await page.locator('#personal-selected-store-label').textContent(), 'Welcia Shibuya');
@@ -281,6 +290,7 @@ async function main() {
       assert.equal(await page.locator('#favorite-store-button').isEnabled(), true);
       assert.equal(await page.evaluate(() => document.activeElement?.id), 'personal-price');
       assert.match(await page.locator('#personal-status').textContent(), /712/);
+      assert.equal(await page.locator('#personal-store-map .store-map__marker[data-map-store-id="welcia-shibuya"]').evaluate((node) => node.classList.contains('is-selected')), true);
 
       await page.locator('#personal-store-search').fill('sugi');
       await page.waitForFunction(() => String(document.querySelector('#personal-store-list')?.textContent || '').includes('Welcia Shibuya'), null, { timeout: 10000 });
@@ -309,6 +319,9 @@ async function main() {
 
       await page.locator('#personal-store-search-clear').click();
       await page.waitForFunction(() => String(document.querySelector('#personal-store-search')?.value || '') === '', null, { timeout: 10000 });
+      await page.locator('#nearby-store-map .store-map__marker[data-map-store-id="welcia-shibuya"]').click();
+      await page.waitForFunction(() => document.querySelector('#nearby-store-map .store-map__marker[data-map-store-id="welcia-shibuya"]')?.classList.contains('is-highlighted') || document.querySelector('#nearby-store-map .store-map__marker[data-map-store-id="welcia-shibuya"]')?.classList.contains('is-selected'), null, { timeout: 10000 });
+      assert.equal(await page.locator('#nearby-store-list [data-store-id="welcia-shibuya"]').evaluate((node) => node.classList.contains('is-active')), true);
 
       await page.locator('#personal-price').fill('722');
       await page.locator('#personal-note').fill('browser regression');
@@ -341,9 +354,6 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
-
-
 
 
 

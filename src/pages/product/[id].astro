@@ -115,6 +115,15 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
               <p>快速查看附近门店价格分布。</p>
             </div>
           </div>
+          <div class="store-map-card">
+            <div class="store-map-card__header">
+              <strong>门店分布图</strong>
+              <small id="nearby-map-status">等待附近门店位置。</small>
+            </div>
+            <div class="store-map" id="nearby-store-map" aria-live="polite">
+              <div class="notice notice--compact">附近门店地图会显示在这里。</div>
+            </div>
+          </div>
           <div class="notice notice--compact" id="nearby-status">门店价格会显示在这里。</div>
           <div class="feed" id="nearby-store-list">
             <div class="notice notice--compact">随价格更新。</div>
@@ -180,6 +189,15 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
                     <input id="personal-store-search" name="personal-store-search" type="search" inputmode="search" placeholder="搜索店名或连锁名" autocomplete="off" spellcheck="false" aria-label="搜索门店" />
                   </label>
                   <button class="button button--ghost store-search__clear" id="personal-store-search-clear" type="button" hidden>清空</button>
+                </div>
+                <div class="store-map-card">
+                  <div class="store-map-card__header">
+                    <strong>选店地图</strong>
+                    <small id="store-picker-map-status">门店加载后会在地图上显示。</small>
+                  </div>
+                  <div class="store-map" id="personal-store-map" aria-live="polite">
+                    <div class="notice notice--compact">可选门店地图会显示在这里。</div>
+                  </div>
                 </div>
                 <div class="notice notice--compact" id="personal-store-status">按店名、连锁名或当前位置筛选门店。</div>
                 <div class="feed" id="personal-store-list">

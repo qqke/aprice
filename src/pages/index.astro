@@ -102,6 +102,15 @@ const base = import.meta.env.BASE_URL || '/';
               <span class="home-panel__eyebrow">门店价格</span>
               <span class="home-panel__meta">优先展示最近采样到的附近结果</span>
             </div>
+            <div class="home-map-card">
+              <div class="home-map-card__header">
+                <strong>附近门店地图</strong>
+                <small id="nearby-map-status">选中商品后在这里显示门店分布。</small>
+              </div>
+              <div class="home-map" id="nearby-map" aria-live="polite">
+                <div class="notice notice--compact">搜索后，附近门店位置会显示在这里。</div>
+              </div>
+            </div>
             <div class="list home-results" id="nearby-results" aria-live="polite" aria-label="附近价格结果">
               <div class="notice notice--compact">搜索后，附近门店价格会显示在这里。</div>
             </div>
@@ -116,6 +125,9 @@ const base = import.meta.env.BASE_URL || '/';
       fetchPricesForProduct,
       escapeAttribute,
       escapeHtml,
+      buildExternalMapUrl,
+      buildGoogleMapEmbedUrl,
+      buildStoreMapModel,
       formatYen,
       resolveBase,
       searchProducts,
@@ -129,6 +141,8 @@ const base = import.meta.env.BASE_URL || '/';
     const selectedProductStatus = document.querySelector('#selected-product-status');
     const selectedProductAction = document.querySelector('#selected-product-action');
     const nearbyResults = document.querySelector('#nearby-results');
+    const nearbyMap = document.querySelector('#nearby-map');
+    const nearbyMapStatus = document.querySelector('#nearby-map-status');
 
     let activeProduct = null;
     let searchResults = [];
@@ -203,6 +217,17 @@ const base = import.meta.env.BASE_URL || '/';
       `;
     }
 
+    function renderNearbyMapIdleState(title = '选中商品后显示附近门店地图', detail = '地图会根据当前商品的门店坐标自动打点。') {
+      if (!nearbyMap) return;
+      nearbyMap.innerHTML = `
+        <div class="home-map__empty">
+          <strong>${escapeHtml(title)}</strong>
+          <small>${escapeHtml(detail)}</small>
+        </div>
+      `;
+      if (nearbyMapStatus) nearbyMapStatus.textContent = detail;
+    }
+
     function syncSelectedProductCard() {
       if (selectedProductStatus) {
         if (activeProduct) {
@@ -258,6 +283,7 @@ const base = import.meta.env.BASE_URL || '/';
     function clearNearbyState() {
       renderNearbyIdleState();
       setNearbyStatus('选中商品后显示附近门店价格。', false);
+      renderNearbyMapIdleState();
     }
 
     function clearSearchState() {
@@ -400,7 +426,91 @@ const base = import.meta.env.BASE_URL || '/';
         if (!prices.length) {
           renderEmptyList(nearbyResults, product.name, '当前还没有价格记录。', '暂无');
           setNearbyStatus(`${product.name} 暂无门店价格。`, true);
+          renderNearbyMapIdleState('暂无门店分布', '当前商品还没有可显示的门店价格坐标。');
           return;
+        }
+
+        const stores = Array.from(new Map(prices
+          .map((row) => row?.stores ? {
+            ...row.stores,
+            id: row.store_id || row.stores.id,
+            price_yen: row.price_yen,
+            is_member_price: row.is_member_price,
+          } : null)
+          .filter(Boolean)
+          .map((store) => [store.id, store])).values());
+        const mapModel = buildStoreMapModel(stores, {
+          featuredStoreIds: stores[0]?.id ? [stores[0].id] : [],
+          highlightedStoreId: stores[0]?.id || '',
+        });
+
+        if (nearbyMap) {
+          if (!mapModel.points.length) {
+            renderNearbyMapIdleState('地图待补充', '当前门店缺少坐标，暂时无法绘制地图。');
+          } else {
+            const focusPoint = mapModel.points.find((point) => point.isHighlighted)
+              || mapModel.points.find((point) => point.isFeatured)
+              || mapModel.points[0];
+            nearbyMap.innerHTML = `
+              <div class="home-map__canvas-wrap">
+                <div class="home-map__canvas" role="img" aria-label="${escapeAttribute(`${product.name} 附近门店地图`)}">
+                  <iframe
+                    class="home-map__iframe"
+                    title="${escapeAttribute(`${focusPoint?.name || product.name} Google 地图`)}"
+                    src="${escapeAttribute(buildGoogleMapEmbedUrl(focusPoint, { zoom: 15 }))}"
+                    loading="lazy"
+                    referrerpolicy="no-referrer-when-downgrade"
+                  ></iframe>
+                  <svg class="home-map__grid" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                    <path d="M0 25H100M0 50H100M0 75H100M25 0V100M50 0V100M75 0V100"></path>
+                  </svg>
+                  ${mapModel.points.map((point, index) => `
+                    <a
+                      class="home-map__marker${point.isFeatured ? ' is-featured' : ''}${point.isHighlighted ? ' is-highlighted' : ''}"
+                      href="${escapeAttribute(buildExternalMapUrl(point))}"
+                      target="_blank"
+                      rel="noreferrer"
+                      style="left:${point.x.toFixed(2)}%;top:${point.y.toFixed(2)}%;"
+                      data-home-map-store-id="${escapeAttribute(point.id)}"
+                      aria-label="${escapeAttribute(`${point.name || '未知门店'}，${formatYen(point.price_yen || 0)}`)}"
+                      title="${escapeAttribute(`${point.name || '未知门店'} · ${formatYen(point.price_yen || 0)}`)}"
+                    >
+                      <span>${index + 1}</span>
+                    </a>
+                  `).join('')}
+                </div>
+                <div class="home-map__legend" aria-hidden="true">
+                  <span class="home-map__legend-item"><span class="home-map__legend-dot is-featured"></span>最近门店</span>
+                  <span class="home-map__legend-item"><span class="home-map__legend-dot is-highlighted"></span>打开外部地图</span>
+                </div>
+              </div>
+              <div class="home-map__list">
+                ${mapModel.points.slice(0, 4).map((point) => `
+                  <div class="home-map__list-item">
+                    <div class="home-map__list-copy">
+                      <strong>${escapeHtml(point.name || '未知门店')}</strong>
+                      <small>${escapeHtml([point.city, point.pref].filter(Boolean).join(' · ') || '门店位置已同步')}${point.hours ? ` · ${escapeHtml(point.hours)}` : ''}</small>
+                    </div>
+                    <a class="home-map__external-link" href="${escapeAttribute(buildExternalMapUrl(point))}" target="_blank" rel="noreferrer">打开地图</a>
+                  </div>
+                `).join('')}
+                ${mapModel.missingCount ? `<small class="home-map__footnote">${mapModel.missingCount} 家门店缺少坐标，未显示在图上。</small>` : ''}
+              </div>
+            `;
+            const canvas = nearbyMap.querySelector('.home-map__canvas');
+            if (canvas && !canvas.querySelector('iframe')) {
+              const frame = document.createElement('iframe');
+              frame.className = 'home-map__iframe';
+              frame.title = `${focusPoint?.name || product.name} Google 地图`;
+              frame.src = buildGoogleMapEmbedUrl(focusPoint, { zoom: 15 });
+              frame.loading = 'lazy';
+              frame.referrerPolicy = 'no-referrer-when-downgrade';
+              canvas.prepend(frame);
+            }
+            if (nearbyMapStatus) nearbyMapStatus.textContent = mapModel.missingCount
+              ? `${mapModel.points.length} 家门店已显示在地图上，另有 ${mapModel.missingCount} 家缺少坐标。`
+              : `${mapModel.points.length} 家门店已显示在地图上。`;
+          }
         }
 
         nearbyResults.innerHTML = prices.slice(0, 4).map((row) => `
@@ -427,6 +537,7 @@ const base = import.meta.env.BASE_URL || '/';
       } catch (error) {
         renderEmptyList(nearbyResults, '价格读取失败', '请稍后再试，或换一个商品。', '错误');
         setNearbyStatus(`${product.name} 价格读取失败：${error.message}`, true);
+        renderNearbyMapIdleState('地图读取失败', `当前无法加载附近门店地图：${error.message}`);
       }
     }
 
@@ -522,5 +633,6 @@ const base = import.meta.env.BASE_URL || '/';
     });
 
     syncSelectedProductCard();
+    renderNearbyMapIdleState();
   </script>
 </BaseLayout>

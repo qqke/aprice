@@ -72,8 +72,23 @@ async function main() {
       assert.match(requests.join('\n'), /name\.ilike/);
       assert.match(requests.join('\n'), /\/rest\/v1\/products/);
       assert.match(requests.join('\n'), /\/rest\/v1\/prices/);
+      assert.match(await page.evaluate(() => String(document.querySelector('#nearby-map-status')?.textContent || '')), /当前商品还没有可显示的门店价格坐标|选中商品后在这里显示门店分布/);
       assert.equal(await page.locator('#recent-status').count(), 0, 'homepage should remove recent status module');
       assert.equal(await page.locator('#load-recent-prices').count(), 0, 'homepage should remove recent trigger');
+
+      await page.locator('#home-search').fill('EVE');
+      await page.locator('#home-search-button').click();
+      await page.waitForFunction(() => {
+        const text = String(document.querySelector('#nearby-status')?.textContent || '');
+        return /EVE A · 2 条价格/.test(text);
+      });
+      await page.waitForFunction(() => document.querySelectorAll('#nearby-map .home-map__marker').length >= 2, null, { timeout: 10000 });
+      const nearbyMapText = await page.locator('#nearby-map').textContent();
+      const nearbyMapStatusText = await page.evaluate(() => String(document.querySelector('#nearby-map-status')?.textContent || ''));
+      assert.match(nearbyMapText || '', /Sugi Pharmacy Hiroo/);
+      assert.match(nearbyMapStatusText || '', /已显示在地图上/);
+      assert.equal(await page.locator('#nearby-map .home-map__marker').count(), 2);
+      assert.match(await page.locator('#nearby-map iframe').getAttribute('src'), /maps\.google\.com\/maps/);
 
       await page.setViewportSize({ width: 390, height: 844 });
       const mobileMenuDisplay = await page.evaluate(() => {
@@ -176,8 +191,9 @@ async function main() {
       await failureBranchesPage.goto(`${baseUrl}/aprice/`, { waitUntil: 'domcontentloaded' });
       await failureBranchesPage.locator('#home-search').fill('xss');
       await failureBranchesPage.locator('#home-search-button').click();
-      await failureBranchesPage.waitForFunction(() => String(document.querySelector('#nearby-status')?.textContent || '').includes('价格读取失败：forced price failure'));
+      await failureBranchesPage.waitForFunction(() => String(document.querySelector('#nearby-status')?.textContent || '').includes('价格读取失败'));
       assert.match(await failureBranchesPage.locator('#search-results').textContent(), /XSS Product/);
+      assert.match(await failureBranchesPage.evaluate(() => String(document.querySelector('#nearby-map-status')?.textContent || '')), /地图读取失败|门店地图/);
       assert.equal(await failureBranchesPage.evaluate(() => window.__homeXss === true), false);
       assert.equal(await failureBranchesPage.locator('#search-results script, #search-results img[onerror]').count(), 0);
       assert.equal(await failureBranchesPage.locator('#geolocate-home').count(), 0);

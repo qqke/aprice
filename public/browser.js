@@ -23,6 +23,102 @@ function distanceKm(lat1, lng1, lat2, lng2) {
   return 2 * r * Math.asin(Math.sqrt(a));
 }
 
+export function buildExternalMapUrl(store) {
+  const name = String(store?.name || '').trim();
+  const address = String(store?.address || '').trim();
+  const lat = Number(store?.lat);
+  const lng = Number(store?.lng);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`;
+  }
+  const query = [name, address].filter(Boolean).join(' ');
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query || name || address || 'store')}`;
+}
+
+export function buildGoogleMapEmbedUrl(store, { zoom = 15 } = {}) {
+  const name = String(store?.name || '').trim();
+  const address = String(store?.address || '').trim();
+  const lat = Number(store?.lat);
+  const lng = Number(store?.lng);
+  const query = Number.isFinite(lat) && Number.isFinite(lng)
+    ? `${lat},${lng}`
+    : [name, address].filter(Boolean).join(' ');
+  return `https://maps.google.com/maps?q=${encodeURIComponent(query || name || address || 'store')}&z=${encodeURIComponent(Number(zoom) || 15)}&output=embed`;
+}
+
+export function buildStoreMapModel(stores = [], { selectedStoreId = '', featuredStoreIds = [], highlightedStoreId = '', maxDensePoints = 24 } = {}) {
+  const featuredIdSet = new Set((featuredStoreIds || []).filter(Boolean).map((id) => String(id)));
+  const normalized = (stores || []).map((store, index) => {
+    const lat = Number(store?.lat);
+    const lng = Number(store?.lng);
+    const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lng);
+    return {
+      ...store,
+      id: String(store?.id || `store-${index}`),
+      lat,
+      lng,
+      hasCoordinates,
+      orderIndex: index,
+    };
+  });
+
+  const withCoordinates = normalized.filter((store) => store.hasCoordinates);
+  const missing = normalized.filter((store) => !store.hasCoordinates);
+  if (!withCoordinates.length) {
+    return {
+      points: [],
+      missingCount: missing.length,
+      dense: false,
+      allSameSpot: false,
+      singlePoint: false,
+      bounds: null,
+    };
+  }
+
+  const latValues = withCoordinates.map((store) => store.lat);
+  const lngValues = withCoordinates.map((store) => store.lng);
+  let minLat = Math.min(...latValues);
+  let maxLat = Math.max(...latValues);
+  let minLng = Math.min(...lngValues);
+  let maxLng = Math.max(...lngValues);
+  const singlePoint = withCoordinates.length === 1;
+  const allSameSpot = minLat === maxLat && minLng === maxLng;
+
+  if (singlePoint || allSameSpot) {
+    minLat -= 0.01;
+    maxLat += 0.01;
+    minLng -= 0.01;
+    maxLng += 0.01;
+  } else {
+    const latPadding = Math.max((maxLat - minLat) * 0.12, 0.003);
+    const lngPadding = Math.max((maxLng - minLng) * 0.12, 0.003);
+    minLat -= latPadding;
+    maxLat += latPadding;
+    minLng -= lngPadding;
+    maxLng += lngPadding;
+  }
+
+  const latSpan = maxLat - minLat || 0.02;
+  const lngSpan = maxLng - minLng || 0.02;
+  const points = withCoordinates.map((store) => ({
+    ...store,
+    x: ((store.lng - minLng) / lngSpan) * 100,
+    y: (1 - (store.lat - minLat) / latSpan) * 100,
+    isSelected: String(store.id) === String(selectedStoreId || ''),
+    isFeatured: featuredIdSet.has(String(store.id)),
+    isHighlighted: String(store.id) === String(highlightedStoreId || ''),
+  }));
+
+  return {
+    points,
+    missingCount: missing.length,
+    dense: points.length > maxDensePoints,
+    allSameSpot,
+    singlePoint,
+    bounds: { minLat, maxLat, minLng, maxLng },
+  };
+}
+
 export function resolveBase(pathname = '') {
   const base = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
   const cleanPath = String(pathname || '').replace(/^\//, '');

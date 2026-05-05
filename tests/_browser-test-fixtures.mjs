@@ -391,6 +391,19 @@ export function makeHomePageResponseForRequest(requestUrl) {
   const url = new URL(requestUrl);
   if (url.pathname.endsWith('/products')) {
     const or = url.searchParams.get('or') || '';
+    if (or.toLowerCase().includes('eve')) {
+      return [{
+        id: 'eve-a',
+        name: 'EVE A',
+        brand: 'SS Pharmaceuticals',
+        pack: '20 tabs',
+        barcode: '4987300051234',
+        category: '鎮痛薬',
+        tone: 'mint',
+        description: 'Secondary fixture product',
+        image_url: 'https://cdn.example.com/products/eve-a.jpg',
+      }];
+    }
     if (or.includes('name.ilike') || or.includes('brand.ilike') || or.includes('category.ilike')) {
       return [makeCatalogProductResponse()];
     }
@@ -398,6 +411,21 @@ export function makeHomePageResponseForRequest(requestUrl) {
   }
 
   if (url.pathname.endsWith('/prices')) {
+    if (url.searchParams.get('product_id') === 'eq.eve-a') {
+      return makePriceFixtures().map((row, index) => ({
+        ...row,
+        id: `home-price-${index + 1}`,
+        product_id: 'eve-a',
+        products: {
+          id: 'eve-a',
+          name: 'EVE A',
+          barcode: '4987300051234',
+          brand: 'SS Pharmaceuticals',
+          pack: '20 tabs',
+          tone: 'mint',
+        },
+      }));
+    }
     return [];
   }
 

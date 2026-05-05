@@ -20,6 +20,7 @@ const tests = [
   'tests/browser-auth.test.mjs',
   'tests/middleware.test.mjs',
   'tests/browser-runtime.test.mjs',
+  'tests/product-page-map-helpers.test.mjs',
   'tests/browser-price-rpc.test.mjs',
   'tests/no-relative-browser-imports.test.mjs',
   'tests/built-home-page-smoke.mjs',

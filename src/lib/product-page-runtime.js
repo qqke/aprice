@@ -1,3 +1,103 @@
+export function hasStoreCoordinates(store) {
+  return Number.isFinite(Number(store?.lat)) && Number.isFinite(Number(store?.lng));
+}
+
+export function buildExternalMapUrl(store) {
+  const name = String(store?.name || '').trim();
+  const address = String(store?.address || '').trim();
+  const lat = Number(store?.lat);
+  const lng = Number(store?.lng);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`;
+  }
+  const query = [name, address].filter(Boolean).join(' ');
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query || name || address || 'store')}`;
+}
+
+export function buildGoogleMapEmbedUrl(store, { zoom = 15 } = {}) {
+  const name = String(store?.name || '').trim();
+  const address = String(store?.address || '').trim();
+  const lat = Number(store?.lat);
+  const lng = Number(store?.lng);
+  const query = Number.isFinite(lat) && Number.isFinite(lng)
+    ? `${lat},${lng}`
+    : [name, address].filter(Boolean).join(' ');
+  return `https://maps.google.com/maps?q=${encodeURIComponent(query || name || address || 'store')}&z=${encodeURIComponent(Number(zoom) || 15)}&output=embed`;
+}
+
+export function buildStoreMapModel(stores = [], { selectedStoreId = '', featuredStoreIds = [], highlightedStoreId = '', maxDensePoints = 24 } = {}) {
+  const featuredIdSet = new Set((featuredStoreIds || []).filter(Boolean).map((id) => String(id)));
+  const normalized = (stores || []).map((store, index) => {
+    const lat = Number(store?.lat);
+    const lng = Number(store?.lng);
+    const hasCoordinates = Number.isFinite(lat) && Number.isFinite(lng);
+    return {
+      ...store,
+      id: String(store?.id || `store-${index}`),
+      lat,
+      lng,
+      hasCoordinates,
+      orderIndex: index,
+    };
+  });
+
+  const withCoordinates = normalized.filter((store) => store.hasCoordinates);
+  const missing = normalized.filter((store) => !store.hasCoordinates);
+  if (!withCoordinates.length) {
+    return {
+      points: [],
+      missingCount: missing.length,
+      dense: false,
+      allSameSpot: false,
+      singlePoint: false,
+      bounds: null,
+    };
+  }
+
+  const latValues = withCoordinates.map((store) => store.lat);
+  const lngValues = withCoordinates.map((store) => store.lng);
+  let minLat = Math.min(...latValues);
+  let maxLat = Math.max(...latValues);
+  let minLng = Math.min(...lngValues);
+  let maxLng = Math.max(...lngValues);
+  const singlePoint = withCoordinates.length === 1;
+  const allSameSpot = minLat === maxLat && minLng === maxLng;
+
+  if (singlePoint || allSameSpot) {
+    minLat -= 0.01;
+    maxLat += 0.01;
+    minLng -= 0.01;
+    maxLng += 0.01;
+  } else {
+    const latPadding = Math.max((maxLat - minLat) * 0.12, 0.003);
+    const lngPadding = Math.max((maxLng - minLng) * 0.12, 0.003);
+    minLat -= latPadding;
+    maxLat += latPadding;
+    minLng -= lngPadding;
+    maxLng += lngPadding;
+  }
+
+  const latSpan = maxLat - minLat || 0.02;
+  const lngSpan = maxLng - minLng || 0.02;
+  const points = withCoordinates.map((store) => ({
+    ...store,
+    x: ((store.lng - minLng) / lngSpan) * 100,
+    y: (1 - (store.lat - minLat) / latSpan) * 100,
+    isSelected: String(store.id) === String(selectedStoreId || ''),
+    isFeatured: featuredIdSet.has(String(store.id)),
+    isHighlighted: String(store.id) === String(highlightedStoreId || ''),
+  }));
+
+  return {
+    points,
+    missingCount: missing.length,
+    dense: points.length > maxDensePoints,
+    allSameSpot,
+    singlePoint,
+    bounds: { minLat, maxLat, minLng, maxLng },
+  };
+}
+
 export async function initProductPage({ loginUrl }) {
 
 const { escapeAttribute, escapeHtml, recordRecentView, resolveBase, fetchNearbyPrices, fetchProductPricesPage, fetchStoresPage, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
@@ -50,6 +150,8 @@ const priceFlowStore = document.querySelector('#price-flow-store');
 const priceFlowGapPill = document.querySelector('#price-flow-gap-pill');
 const priceFlowGapNote = document.querySelector('#price-flow-gap-note');
 const nearbyStoreList = document.querySelector('#nearby-store-list');
+const nearbyStoreMap = document.querySelector('#nearby-store-map');
+const nearbyMapStatus = document.querySelector('#nearby-map-status');
 const insightPills = document.querySelector('#insight-pills');
 const summaryMinPrice = document.querySelector('#summary-min-price');
 const summaryStoreCount = document.querySelector('#summary-store-count');
@@ -58,6 +160,8 @@ const summaryTrendLabel = document.querySelector('#summary-trend-label');
 const summaryGainLabel = document.querySelector('#summary-gain-label');
 const trendList = document.querySelector('#trend-list');
 const trendLoadMoreButton = document.querySelector('#trend-load-more');
+const personalStoreMap = document.querySelector('#personal-store-map');
+const storePickerMapStatus = document.querySelector('#store-picker-map-status');
 
 const STORE_PAGE_SIZE = 10;
 let storeRows = [];
@@ -78,6 +182,7 @@ let favoriteStoreIds = new Set();
 let loadedPriceRows = [];
 let priceNextCursor = null;
 let pricePageLoading = false;
+let highlightedNearbyStoreId = '';
 
 async function syncAuthGate() {
   const user = await getCurrentUser();
@@ -120,6 +225,177 @@ function compareStores(a, b) {
   if (aHasDistance) return -1;
   if (bHasDistance) return 1;
   return String(a.name || '').localeCompare(String(b.name || ''), 'ja-JP');
+}
+
+function storeMetaText(storeItem, { distance = null, personalPrice = null } = {}) {
+  const metaBits = [];
+  if (storeItem?.chain_name) metaBits.push(storeItem.chain_name);
+  if (storeItem?.city || storeItem?.pref) metaBits.push([storeItem.pref, storeItem.city].filter(Boolean).join(' · '));
+  if (Number.isFinite(distance)) metaBits.push(formatDistance(distance));
+  if (personalPrice?.price_yen) metaBits.push(`我的价 ¥${personalPrice.price_yen}`);
+  if (storeItem?.hours) metaBits.push(storeItem.hours);
+  return metaBits.filter(Boolean).join(' · ');
+}
+
+function renderStoreMapLegend({ selectedLabel = '已选门店', featuredLabel = '重点门店', defaultLabel = '其他门店' } = {}) {
+  return `
+    <div class="store-map__legend" aria-hidden="true">
+      <span class="store-map__legend-item"><span class="store-map__legend-dot is-selected"></span>${escapeHtml(selectedLabel)}</span>
+      <span class="store-map__legend-item"><span class="store-map__legend-dot is-featured"></span>${escapeHtml(featuredLabel)}</span>
+      <span class="store-map__legend-item"><span class="store-map__legend-dot"></span>${escapeHtml(defaultLabel)}</span>
+    </div>
+  `;
+}
+
+function renderStoreMapEmpty(target, statusEl, title, detail) {
+  if (target) {
+    target.innerHTML = `
+      <div class="store-map__empty">
+        <strong>${escapeHtml(title)}</strong>
+        <small>${escapeHtml(detail)}</small>
+      </div>
+    `;
+  }
+  if (statusEl) statusEl.textContent = detail;
+}
+
+function renderStoreMap(target, statusEl, stores, options = {}) {
+  if (!target) return;
+  const model = buildStoreMapModel(stores, options);
+  const mappedStoreCount = model.points.length;
+  const totalStoreCount = stores.length;
+  if (!mappedStoreCount) {
+    renderStoreMapEmpty(target, statusEl, '地图待补充', totalStoreCount ? '当前门店缺少坐标，暂时无法绘制地图。' : '等门店数据加载后会在这里显示。');
+    return;
+  }
+
+  const markerButtons = model.points.map((point, index) => {
+    const markerClasses = [
+      'store-map__marker',
+      point.isSelected ? 'is-selected' : '',
+      point.isFeatured ? 'is-featured' : '',
+      point.isHighlighted ? 'is-highlighted' : '',
+    ].filter(Boolean).join(' ');
+    const label = storeMetaText(point, {
+      distance: Number.isFinite(point.distance_km) ? point.distance_km : storeDistance(point),
+      personalPrice: options.personalPriceIndex?.get?.(String(point.id)) || null,
+    });
+    return `
+      <button
+        class="${markerClasses}"
+        type="button"
+        style="left:${point.x.toFixed(2)}%;top:${point.y.toFixed(2)}%;"
+        data-map-store-id="${escapeAttribute(point.id)}"
+        aria-label="${escapeAttribute(`${point.name || '未知门店'}${label ? `，${label}` : ''}`)}"
+        title="${escapeAttribute(`${point.name || '未知门店'}${label ? ` · ${label}` : ''}`)}"
+      >
+        <span>${index + 1}</span>
+      </button>
+    `;
+  }).join('');
+  const focusPoint = model.points.find((point) => point.isSelected)
+    || model.points.find((point) => point.isHighlighted)
+    || model.points.find((point) => point.isFeatured)
+    || model.points[0];
+
+  const listItems = model.points.slice(0, 4).map((point) => {
+    const label = storeMetaText(point, {
+      distance: Number.isFinite(point.distance_km) ? point.distance_km : storeDistance(point),
+      personalPrice: options.personalPriceIndex?.get?.(String(point.id)) || null,
+    });
+    const actionLabel = options.actionLabel || '打开地图';
+    return `
+      <div class="store-map__list-item${point.isSelected ? ' is-selected' : ''}${point.isHighlighted ? ' is-highlighted' : ''}">
+        <button type="button" class="store-map__list-button" data-map-store-id="${escapeAttribute(point.id)}">
+          <strong>${escapeHtml(point.name || '未知门店')}</strong>
+          <small>${escapeHtml(label || '坐标已同步')}</small>
+        </button>
+        <a class="store-map__external-link" href="${escapeAttribute(buildExternalMapUrl(point))}" target="_blank" rel="noreferrer">${escapeHtml(actionLabel)}</a>
+      </div>
+    `;
+  }).join('');
+
+  target.innerHTML = `
+    <div class="store-map__canvas-wrap">
+      <div class="store-map__canvas${model.dense ? ' is-dense' : ''}${model.allSameSpot ? ' is-single-spot' : ''}" role="img" aria-label="${escapeAttribute(options.ariaLabel || '门店位置地图')}">
+        <iframe
+          class="store-map__iframe"
+          title="${escapeAttribute(`${focusPoint?.name || '门店'} Google 地图`)}"
+          src="${escapeAttribute(buildGoogleMapEmbedUrl(focusPoint, { zoom: options.zoom || 15 }))}"
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+        ></iframe>
+        <svg class="store-map__grid" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 25H100M0 50H100M0 75H100M25 0V100M50 0V100M75 0V100"></path>
+        </svg>
+        ${markerButtons}
+      </div>
+      ${renderStoreMapLegend(options.legend || {})}
+    </div>
+    <div class="store-map__list">
+      ${listItems}
+      ${model.missingCount ? `<small class="store-map__footnote">${model.missingCount} 家门店缺少坐标，未显示在图上。</small>` : ''}
+      ${model.allSameSpot ? '<small class="store-map__footnote">多家门店坐标重叠，地图已自动放大显示。</small>' : ''}
+    </div>
+  `;
+
+  if (statusEl) {
+    const countLabel = `${mappedStoreCount} / ${totalStoreCount} 家门店已显示在地图上`;
+    if (model.missingCount) {
+      statusEl.textContent = `${countLabel}，另有 ${model.missingCount} 家缺少坐标。`;
+    } else if (model.singlePoint) {
+      statusEl.textContent = `${countLabel}，当前只有一个可定位门店。`;
+    } else {
+      statusEl.textContent = `${countLabel}。`;
+    }
+  }
+}
+
+function renderPersonalStoreMap() {
+  const selectedStore = selectedStoreId ? getSelectedStore() : null;
+  const visibleStores = selectedStore && !storeRows.some((item) => item.id === selectedStore.id)
+    ? [selectedStore, ...storeRows]
+    : storeRows.slice();
+
+  renderStoreMap(personalStoreMap, storePickerMapStatus, visibleStores, {
+    selectedStoreId,
+    highlightedStoreId: selectedStoreId,
+    ariaLabel: '可选门店地图',
+    actionLabel: '外部地图',
+    personalPriceIndex,
+    legend: {
+      selectedLabel: '当前选择',
+      featuredLabel: '有我的价',
+      defaultLabel: '其他门店',
+    },
+    featuredStoreIds: Array.from(personalPriceIndex.keys()),
+  });
+}
+
+function renderNearbyStoreMap(rows) {
+  const stores = Array.from(new Map(rows
+    .map((row) => row?.stores ? {
+      ...row.stores,
+      id: row.store_id || row.stores.id,
+      distance_km: row.distance_km,
+      price_yen: row.price_yen,
+      is_member_price: row.is_member_price,
+    } : null)
+    .filter(Boolean)
+    .map((store) => [store.id, store])).values());
+
+  renderStoreMap(nearbyStoreMap, nearbyMapStatus, stores, {
+    selectedStoreId,
+    highlightedStoreId: highlightedNearbyStoreId || selectedStoreId,
+    featuredStoreIds: stores[0]?.id ? [stores[0].id] : [],
+    ariaLabel: '附近门店地图',
+    actionLabel: '打开地图',
+    legend: {
+      selectedLabel: '当前选择',
+      featuredLabel: '最近门店',
+      defaultLabel: '附近门店',
+    },
+  });
 }
 
 function getStorePersonalPrice(storeId) {
@@ -198,6 +474,7 @@ function applySelectedStorePrice(storeId, { focus = false } = {}) {
   if (store) store.value = String(storeId || '');
   selectedStoreId = String(storeId || '');
   activeStoreId = selectedStoreId;
+  highlightedNearbyStoreId = selectedStoreId;
   selectedStoreSnapshot = storeRows.find((item) => item.id === selectedStoreId) || selectedStoreSnapshot;
   if (personalPrice && price) {
     price.value = String(personalPrice.price_yen);
@@ -227,6 +504,7 @@ function renderStorePicker() {
     renderStoreSelectionStatus(0);
     syncPersonalLogFormState();
     syncStoreLoadMoreButton();
+    renderPersonalStoreMap();
     return;
   }
 
@@ -251,6 +529,7 @@ function renderStorePicker() {
     renderStoreSelectionStatus(0);
     syncPersonalLogFormState();
     syncStoreLoadMoreButton();
+    renderPersonalStoreMap();
     return;
   }
 
@@ -258,12 +537,7 @@ function renderStorePicker() {
     const personalPrice = getStorePersonalPrice(item.id);
     const selected = item.id === selectedStoreId;
     const distance = storeDistance(item);
-    const metaBits = [];
-    if (item.chain_name) metaBits.push(item.chain_name);
-    if (item.city || item.pref) metaBits.push([item.pref, item.city].filter(Boolean).join(' · '));
-    if (Number.isFinite(distance)) metaBits.push(formatDistance(distance));
-    if (personalPrice) metaBits.push(`我的价 ¥${personalPrice.price_yen}`);
-    if (item.hours) metaBits.push(item.hours);
+    const metaText = storeMetaText(item, { distance, personalPrice });
     return `
       <button
         class="feed__item store-picker__item${selected ? ' is-active' : ''}"
@@ -273,7 +547,7 @@ function renderStorePicker() {
       >
         <div class="feed__copy">
           <strong>${escapeHtml(item.name || 'Unknown store')}</strong>
-          <small>${escapeHtml(metaBits.filter(Boolean).join(' · '))}</small>
+          <small>${escapeHtml(metaText)}</small>
         </div>
         <div class="feed__meta">
           <span class="pill">${selected ? '已选中' : personalPrice ? '可回填' : '选择'}</span>
@@ -286,6 +560,7 @@ function renderStorePicker() {
   renderStoreSelectionStatus(storeRows.length);
   syncPersonalLogFormState();
   syncStoreLoadMoreButton();
+  renderPersonalStoreMap();
 }
 
 async function refreshPersonalPriceState({ preserveSelection = true } = {}) {
@@ -491,11 +766,10 @@ function renderPrices(rows) {
 
 function renderNearbyStores(rows) {
   if (!nearbyStoreList) return;
-  activeStoreId = selectedStoreId;
   syncFavoriteButtons();
   nearbyStoreList.innerHTML = rows.length
     ? rows.map((row, index) => index === 0 ? `
-      <div class="feed__item feed__item--featured">
+      <div class="feed__item feed__item--featured${row.store_id === activeStoreId ? ' is-active' : ''}" data-store-id="${escapeAttribute(row.store_id)}">
         <div class="feed__copy">
           <div class="feed__kicker">最近门店</div>
           <strong>${escapeHtml(row.stores?.name || 'Unknown store')}</strong>
@@ -504,11 +778,12 @@ function renderNearbyStores(rows) {
         <div class="feed__meta">
           <div class="price">¥${row.price_yen}</div>
           <span class="pill">${row.is_member_price ? '会员价' : '公开价'}</span>
+          <a class="button button--ghost product-nearby__link" href="${escapeAttribute(buildExternalMapUrl({ ...row.stores, id: row.store_id }))}" target="_blank" rel="noreferrer">打开地图</a>
           <button class="button button--ghost product-nearby__favorite" type="button" data-favorite-store="${escapeAttribute(row.store_id)}">收藏</button>
         </div>
       </div>
     ` : `
-      <div class="feed__item">
+      <div class="feed__item${row.store_id === activeStoreId ? ' is-active' : ''}" data-store-id="${escapeAttribute(row.store_id)}">
         <div>
           <strong>${escapeHtml(row.stores?.name || 'Unknown store')}</strong>
           <small>${escapeHtml(row.stores?.city || '')}${row.stores?.pref ? ` · ${escapeHtml(row.stores.pref)}` : ''}${row.stores?.hours ? ` · ${escapeHtml(row.stores.hours)}` : ''}</small>
@@ -516,6 +791,7 @@ function renderNearbyStores(rows) {
         <div class="feed__meta">
           <span class="price">¥${row.price_yen}</span>
           <span class="pill">${row.is_member_price ? '会员价' : '公开价'}</span>
+          <a class="button button--ghost product-nearby__link" href="${escapeAttribute(buildExternalMapUrl({ ...row.stores, id: row.store_id }))}" target="_blank" rel="noreferrer">打开地图</a>
           <button class="button button--ghost product-nearby__favorite" type="button" data-favorite-store="${escapeAttribute(row.store_id)}">收藏</button>
         </div>
       </div>
@@ -529,6 +805,7 @@ function renderNearbyStores(rows) {
         <span class="price">暂无</span>
       </div>
     `;
+  renderNearbyStoreMap(rows);
   syncNearbyFavoriteButtons();
 }
 
@@ -650,6 +927,7 @@ async function loadPrices() {
   try {
     const page = await fetchProductPricesPage(productId, { limit: 90, sinceDays: 60 });
     loadedPriceRows = page.items || [];
+    highlightedNearbyStoreId = selectedStoreId || loadedPriceRows[0]?.store_id || '';
     priceNextCursor = page.nextCursor || null;
     renderPrices(loadedPriceRows);
     renderNearbyStores(loadedPriceRows);
@@ -659,6 +937,7 @@ async function loadPrices() {
     if (nearbyStatus) nearbyStatus.textContent = loadedPriceRows.length ? `已显示 ${loadedPriceRows.length} 条门店价格。` : '补第一条价格再看门店流。';
   } catch (error) {
     loadedPriceRows = [];
+    highlightedNearbyStoreId = selectedStoreId || '';
     priceNextCursor = null;
     renderPrices([]);
     renderNearbyStores([]);
@@ -801,25 +1080,57 @@ favoriteStoreButton?.addEventListener('click', async () => {
 nearbyStoreList?.addEventListener('click', async (event) => {
   const target = event.target;
   if (!(target instanceof HTMLElement)) return;
-  const storeId = target.dataset.favoriteStore;
-  if (!storeId) return;
+  const favoriteButtonTarget = target.closest('[data-favorite-store]');
+  if (favoriteButtonTarget instanceof HTMLElement) {
+    const storeId = favoriteButtonTarget.dataset.favoriteStore;
+    if (!storeId) return;
 
-  const user = await getCurrentUser();
-  if (!user) {
-    syncPrivatePageGate({ gateEl: authGate, loginLinkEl: authGateLink, loginUrl, visible: true });
-    redirectToLogin(loginUrl, authGate);
+    const user = await getCurrentUser();
+    if (!user) {
+      syncPrivatePageGate({ gateEl: authGate, loginLinkEl: authGateLink, loginUrl, visible: true });
+      redirectToLogin(loginUrl, authGate);
+      return;
+    }
+
+    try {
+      const result = await toggleFavorite('store', storeId);
+      if (result?.action === 'added') favoriteStoreIds.add(storeId);
+      if (result?.action === 'removed') favoriteStoreIds.delete(storeId);
+      syncFavoriteButtons();
+      syncNearbyFavoriteButtons();
+    } catch (error) {
+      if (status) status.textContent = getPrivatePageStatusCopy('product', 'favoriteFailure', { message: error.message });
+    }
     return;
   }
 
-  try {
-    const result = await toggleFavorite('store', storeId);
-    if (result?.action === 'added') favoriteStoreIds.add(storeId);
-    if (result?.action === 'removed') favoriteStoreIds.delete(storeId);
+  const storeCard = target.closest('[data-store-id]');
+  if (storeCard instanceof HTMLElement && storeCard.dataset.storeId) {
+    highlightedNearbyStoreId = storeCard.dataset.storeId;
+    activeStoreId = highlightedNearbyStoreId;
+    renderNearbyStores(loadedPriceRows);
     syncFavoriteButtons();
-    syncNearbyFavoriteButtons();
-  } catch (error) {
-    if (status) status.textContent = getPrivatePageStatusCopy('product', 'favoriteFailure', { message: error.message });
+    return;
   }
+});
+
+personalStoreMap?.addEventListener('click', (event) => {
+  const target = event.target instanceof HTMLElement ? event.target.closest('[data-map-store-id]') : null;
+  if (!(target instanceof HTMLElement)) return;
+  const storeId = target.dataset.mapStoreId;
+  if (!storeId) return;
+  applySelectedStorePrice(storeId, { focus: true });
+});
+
+nearbyStoreMap?.addEventListener('click', (event) => {
+  const target = event.target instanceof HTMLElement ? event.target.closest('[data-map-store-id]') : null;
+  if (!(target instanceof HTMLElement)) return;
+  const storeId = target.dataset.mapStoreId;
+  if (!storeId) return;
+  highlightedNearbyStoreId = storeId;
+  activeStoreId = storeId;
+  renderNearbyStores(loadedPriceRows);
+  syncFavoriteButtons();
 });
 
 geoButton?.addEventListener('click', async () => {
@@ -829,6 +1140,7 @@ geoButton?.addEventListener('click', async () => {
     const location = await syncStoreLocation({ announce: true });
     if (!location) return;
     const rows = await fetchNearbyPrices({ productId, lat: location.lat, lng: location.lng, radiusKm: 20, limit: 220, sinceDays: 60 });
+    highlightedNearbyStoreId = selectedStoreId || rows[0]?.store_id || '';
     renderPrices(rows);
     renderNearbyStores(rows);
     renderInsights(rows);
