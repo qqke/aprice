@@ -60,6 +60,13 @@ const logPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
       const productLogPrompt = logPrompt || getPrivatePageStatusCopy('product', 'logPrompt');
       const tone = product.tone || 'sunset';
       const description = product.description || '先看可买到的最低价，再比较门店差异。';
+      const heroImage = product.image_url
+        ? `
+          <div class="product-hero__media">
+            <img class="product-hero__image" src="${escapeAttribute(product.image_url)}" alt="${escapeAttribute(product.name || product.id)}" loading="eager" decoding="async" referrerpolicy="no-referrer" />
+          </div>
+        `
+        : '';
       const brandPill = product.brand
         ? `<span class="pill product-hero__brand" title="${escapeAttribute(product.brand)}">${escapeHtml(product.brand)}</span>`
         : '';
@@ -75,6 +82,7 @@ const logPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
           <div class="shell">
             <div class="product-hero tone-${escapeAttribute(tone)}">
               <div class="product-hero__overlay">
+                ${heroImage}
                 <div class="pillrow product-hero__meta">
                   <span class="pill product-hero__barcode">JAN ${escapeHtml(product.barcode || product.id)}</span>
                   ${brandPill}

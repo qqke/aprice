@@ -39,6 +39,12 @@ const base = import.meta.env.BASE_URL || '/';
           </a>
           <button class="button home-search__button" id="home-search-button" type="submit">搜索</button>
         </label>
+        <div class="home-search__hints" aria-hidden="true">
+          <span class="home-search__hint">支持商品名</span>
+          <span class="home-search__hint">支持品牌名</span>
+          <span class="home-search__hint">支持 JAN 条码</span>
+          <span class="home-search__hint home-search__hint--accent">也可直接扫码</span>
+        </div>
       </form>
 
       <p class="home-meta">快捷键 <code>Ctrl+K</code> 或 <code>/</code> 可直达搜索框。</p>
@@ -122,6 +128,50 @@ const base = import.meta.env.BASE_URL || '/';
       `;
     }
 
+    function renderSearchIdleState() {
+      if (!results) return;
+      results.innerHTML = `
+        <div class="home-empty-state home-empty-state--search">
+          <div class="home-empty-state__copy">
+            <strong>先输入商品名、品牌或 JAN 码</strong>
+            <small>支持中日文商品名、品牌名和条码直搜。也可以先点一个常见关键词快速开始。</small>
+          </div>
+          <div class="pillrow home-empty-state__actions">
+            <button class="button button--ghost home-suggestion-chip" type="button" data-suggestion="ロキソニン">ロキソニン</button>
+            <button class="button button--ghost home-suggestion-chip" type="button" data-suggestion="EVE">EVE</button>
+            <button class="button button--ghost home-suggestion-chip" type="button" data-suggestion="4987188161027">JAN 直搜</button>
+            <a class="button button--ghost home-suggestion-chip" href="${escapeAttribute(resolveBase('scan/'))}">去扫码</a>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderNearbyIdleState() {
+      if (!nearbyResults) return;
+      nearbyResults.innerHTML = `
+        <div class="home-empty-state home-empty-state--nearby">
+          <div class="home-empty-state__copy">
+            <strong>选中商品后，这里会显示附近可比门店</strong>
+            <small>先在上方搜索并选中一个商品，我们会优先展示最近采样到的价格和门店营业信息。</small>
+          </div>
+          <div class="home-empty-steps" aria-label="使用步骤">
+            <div class="home-empty-step">
+              <span>1</span>
+              <small>搜索商品</small>
+            </div>
+            <div class="home-empty-step">
+              <span>2</span>
+              <small>选中结果</small>
+            </div>
+            <div class="home-empty-step">
+              <span>3</span>
+              <small>查看附近比价</small>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     function syncSelectedProductCard() {
       if (selectedProductStatus) {
         selectedProductStatus.textContent = activeProduct ? `当前比价商品：${activeProduct.name}` : '当前比价商品：未选择';
@@ -150,7 +200,7 @@ const base = import.meta.env.BASE_URL || '/';
     }
 
     function clearNearbyState() {
-      renderEmptyList(nearbyResults, '等待选择商品', '点击上方任一商品后，这里会显示附近门店价格。', '待选');
+      renderNearbyIdleState();
       if (nearbyStatus) nearbyStatus.textContent = '选中商品后显示附近门店价格。';
     }
 
@@ -160,7 +210,7 @@ const base = import.meta.env.BASE_URL || '/';
       focusedResultIndex = -1;
       if (input) input.value = '';
       syncSelectedProductCard();
-      renderEmptyList(results, '等待搜索', '输入商品名、品牌名或 JAN 条码后再查价。', '空');
+      renderSearchIdleState();
       clearNearbyState();
     }
 
@@ -256,12 +306,16 @@ const base = import.meta.env.BASE_URL || '/';
         return `
           <div class="list__item home-result${selected ? ' is-active' : ''}${focused ? ' is-focused' : ''}" data-result-index="${index}">
             <button class="home-result__main" id="home-result-option-${escapeAttribute(item.id)}" type="button" data-select-product="${escapeAttribute(item.id)}" role="option" aria-selected="${selected ? 'true' : 'false'}" aria-pressed="${selected ? 'true' : 'false'}" aria-label="选择 ${escapeAttribute(item.name)}">
-              ${statusLabel ? `<span class="home-result__status">${statusLabel}</span>` : ''}
-              ${item.image_url ? `<img class="product-thumb product-thumb--home" src="${escapeAttribute(item.image_url)}" alt="${escapeAttribute(item.name || '商品图片')}" loading="lazy" decoding="async" referrerpolicy="no-referrer" />` : ''}
-              <strong>${escapeHtml(item.name)}</strong>
-              <div class="home-result__meta-row">
-                <small class="home-result__details">${escapeHtml(item.brand)} · ${escapeHtml(item.pack)}</small>
-                <span class="home-result__barcode">JAN ${escapeHtml(item.barcode)}</span>
+              <div class="home-result__media${item.image_url ? '' : ' is-empty'}">
+                ${item.image_url ? `<img class="product-thumb product-thumb--home" src="${escapeAttribute(item.image_url)}" alt="${escapeAttribute(item.name || '商品图片')}" loading="lazy" decoding="async" referrerpolicy="no-referrer" />` : `<span class="home-result__media-fallback" aria-hidden="true">${escapeHtml((item.name || '?').slice(0, 1))}</span>`}
+              </div>
+              <div class="home-result__copy">
+                ${statusLabel ? `<span class="home-result__status">${statusLabel}</span>` : ''}
+                <strong>${escapeHtml(item.name)}</strong>
+                <small class="home-result__details">${escapeHtml(item.brand)}${item.pack ? ` · ${escapeHtml(item.pack)}` : ''}</small>
+                <div class="home-result__meta-row">
+                  <span class="home-result__barcode">JAN ${escapeHtml(item.barcode)}</span>
+                </div>
               </div>
             </button>
             <div class="home-result__actions">
@@ -294,14 +348,21 @@ const base = import.meta.env.BASE_URL || '/';
         }
 
         nearbyResults.innerHTML = prices.slice(0, 4).map((row) => `
-          <a class="list__item" href="${escapeAttribute(productHref(product.id))}">
-            <div>
-              <strong>${escapeHtml(row.stores?.name || '未知门店')}</strong>
-              <small>${escapeHtml(row.stores?.city || '')}${row.stores?.city ? ' · ' : ''}${escapeHtml(row.stores?.pref || '')}${row.is_member_price ? ' · 会员价' : ' · 公开价'}</small>
+          <a class="list__item home-nearby-result" href="${escapeAttribute(productHref(product.id))}">
+            <div class="home-nearby-result__media${row.is_member_price ? ' is-member' : ''}">
+              <span class="home-nearby-result__price">${formatYen(row.price_yen)}</span>
+              <small>${row.is_member_price ? '会员价' : '公开价'}</small>
             </div>
-            <div class="home-results__meta">
+            <div class="home-nearby-result__copy">
+              <strong>${escapeHtml(row.stores?.name || '未知门店')}</strong>
+              <small class="home-nearby-result__details">${escapeHtml(row.stores?.city || '')}${row.stores?.city ? ' · ' : ''}${escapeHtml(row.stores?.pref || '')}</small>
+              <div class="home-result__meta-row">
+                <span class="home-result__barcode">${escapeHtml(row.stores?.hours || '营业时间待补充')}</span>
+              </div>
+            </div>
+            <div class="home-results__meta home-nearby-result__meta">
               <div class="price">${formatYen(row.price_yen)}</div>
-              <small>${escapeHtml(row.stores?.hours || '')}</small>
+              <small>查看详情</small>
             </div>
           </a>
         `).join('');
@@ -352,6 +413,16 @@ const base = import.meta.env.BASE_URL || '/';
     form?.addEventListener('submit', async (event) => {
       event.preventDefault();
       await runSearch(input?.value || '');
+    });
+
+    results?.addEventListener('click', async (event) => {
+      const target = event.target;
+      const button = target instanceof Element ? target.closest('[data-suggestion]') : null;
+      if (!button || !input) return;
+      const suggestion = button.getAttribute('data-suggestion') || '';
+      input.value = suggestion;
+      input.focus();
+      await runSearch(suggestion);
     });
 
     input?.addEventListener('keydown', async (event) => {
