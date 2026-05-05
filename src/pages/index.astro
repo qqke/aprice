@@ -59,7 +59,11 @@ const base = import.meta.env.BASE_URL || '/';
           <p id="search-status">输入关键词后显示可选商品。</p>
         </div>
       </div>
-      <div class="home-panel">
+      <div class="home-panel home-panel--search">
+        <div class="home-panel__bar" aria-hidden="true">
+          <span class="home-panel__eyebrow">候选商品</span>
+          <span class="home-panel__meta">最多显示 8 条匹配结果</span>
+        </div>
         <div class="list home-results" id="search-results" role="listbox" aria-live="polite" aria-label="搜索结果列表">
           <div class="notice notice--compact">搜索后显示商品列表。</div>
         </div>
@@ -75,14 +79,33 @@ const base = import.meta.env.BASE_URL || '/';
           <p>选中商品后，这里显示最近可比门店价格。</p>
         </div>
       </div>
-      <div class="home-panel">
-        <div class="home-selection" aria-live="polite">
-          <div class="notice notice--compact home-status home-status--selected" id="selected-product-status">当前比价商品：未选择</div>
-          <a class="button button--ghost home-selection__action" id="selected-product-action" href={`${base}scan/`} hidden>打开详情</a>
-        </div>
-        <div class="notice notice--compact home-status" id="nearby-status">先搜索商品，再查看附近价格。</div>
-        <div class="list home-results" id="nearby-results" aria-live="polite" aria-label="附近价格结果">
-          <div class="notice notice--compact">搜索后，附近门店价格会显示在这里。</div>
+      <div class="home-panel home-panel--nearby">
+        <div class="home-nearby-workspace">
+          <aside class="home-nearby-context">
+            <div class="home-panel__bar home-panel__bar--stacked" aria-hidden="true">
+              <span class="home-panel__eyebrow">当前商品</span>
+              <span class="home-panel__meta">作为右侧比价结果的固定上下文</span>
+            </div>
+            <div class="home-selection" aria-live="polite">
+              <div class="home-selection-card home-selection-card--empty" id="selected-product-status">
+                <div class="home-selection-card__copy">
+                  <strong>当前比价商品：未选择</strong>
+                  <small>先在上方搜索并选中一个商品，这里会固定显示当前查看对象。</small>
+                </div>
+              </div>
+              <a class="button button--ghost home-selection__action" id="selected-product-action" href={`${base}scan/`} hidden>打开详情</a>
+            </div>
+            <div class="notice notice--compact home-status" id="nearby-status">先搜索商品，再查看附近价格。</div>
+          </aside>
+          <div class="home-nearby-board">
+            <div class="home-panel__bar" aria-hidden="true">
+              <span class="home-panel__eyebrow">门店价格</span>
+              <span class="home-panel__meta">优先展示最近采样到的附近结果</span>
+            </div>
+            <div class="list home-results" id="nearby-results" aria-live="polite" aria-label="附近价格结果">
+              <div class="notice notice--compact">搜索后，附近门店价格会显示在这里。</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -110,6 +133,14 @@ const base = import.meta.env.BASE_URL || '/';
     let activeProduct = null;
     let searchResults = [];
     let focusedResultIndex = -1;
+
+    function setNearbyStatus(message, emphasized = false) {
+      if (!nearbyStatus) return;
+      nearbyStatus.textContent = message;
+      if ('classList' in nearbyStatus && nearbyStatus.classList?.toggle) {
+        nearbyStatus.classList.toggle('home-status--selected', emphasized);
+      }
+    }
 
     function productHref(productId) {
       return resolveBase(productId ? `product/${productId}/` : '');
@@ -174,13 +205,38 @@ const base = import.meta.env.BASE_URL || '/';
 
     function syncSelectedProductCard() {
       if (selectedProductStatus) {
-        selectedProductStatus.textContent = activeProduct ? `当前比价商品：${activeProduct.name}` : '当前比价商品：未选择';
+        if (activeProduct) {
+          selectedProductStatus.className = 'home-selection-card';
+          selectedProductStatus.innerHTML = `
+            <div class="home-selection-card__media${activeProduct.image_url ? '' : ' is-empty'}">
+              ${activeProduct.image_url
+                ? `<img class="product-thumb product-thumb--selection" src="${escapeAttribute(activeProduct.image_url)}" alt="${escapeAttribute(activeProduct.name || '商品图片')}" loading="lazy" decoding="async" referrerpolicy="no-referrer" />`
+                : `<span class="home-selection-card__fallback" aria-hidden="true">${escapeHtml((activeProduct.name || '?').slice(0, 1))}</span>`}
+            </div>
+            <div class="home-selection-card__copy">
+              <span class="home-selection-card__eyebrow">当前比价商品</span>
+              <strong>${escapeHtml(activeProduct.name || '未命名商品')}</strong>
+              <small>${escapeHtml(activeProduct.brand || '品牌待补充')}${activeProduct.pack ? ` · ${escapeHtml(activeProduct.pack)}` : ''}</small>
+              <div class="home-result__meta-row">
+                <span class="home-result__barcode">JAN ${escapeHtml(activeProduct.barcode || activeProduct.id || '')}</span>
+              </div>
+            </div>
+          `;
+        } else {
+          selectedProductStatus.className = 'home-selection-card home-selection-card--empty';
+          selectedProductStatus.innerHTML = `
+            <div class="home-selection-card__copy">
+              <strong>当前比价商品：未选择</strong>
+              <small>先在上方搜索并选中一个商品，这里会固定显示当前查看对象。</small>
+            </div>
+          `;
+        }
       }
       if (!selectedProductAction) return;
       if (activeProduct) {
         selectedProductAction.hidden = false;
         selectedProductAction.href = productHref(activeProduct.id);
-        selectedProductAction.textContent = '打开详情';
+        selectedProductAction.textContent = '查看详情';
       } else {
         selectedProductAction.hidden = true;
         selectedProductAction.href = `${productHref('')}`;
@@ -201,7 +257,7 @@ const base = import.meta.env.BASE_URL || '/';
 
     function clearNearbyState() {
       renderNearbyIdleState();
-      if (nearbyStatus) nearbyStatus.textContent = '选中商品后显示附近门店价格。';
+      setNearbyStatus('选中商品后显示附近门店价格。', false);
     }
 
     function clearSearchState() {
@@ -338,12 +394,12 @@ const base = import.meta.env.BASE_URL || '/';
 
     async function renderNearbyForProduct(product) {
       if (!product || !nearbyResults || !nearbyStatus) return;
-      nearbyStatus.textContent = `${product.name} 价格读取中...`;
+      setNearbyStatus(`${product.name} 价格读取中...`, true);
       try {
         const prices = await fetchPricesForProduct(product.id, { limit: 80, sinceDays: 45 });
         if (!prices.length) {
           renderEmptyList(nearbyResults, product.name, '当前还没有价格记录。', '暂无');
-          nearbyStatus.textContent = `${product.name} 暂无门店价格。`;
+          setNearbyStatus(`${product.name} 暂无门店价格。`, true);
           return;
         }
 
@@ -367,10 +423,10 @@ const base = import.meta.env.BASE_URL || '/';
           </a>
         `).join('');
 
-        nearbyStatus.textContent = `${product.name} · ${prices.length} 条价格`;
+        setNearbyStatus(`${product.name} · ${prices.length} 条价格`, true);
       } catch (error) {
         renderEmptyList(nearbyResults, '价格读取失败', '请稍后再试，或换一个商品。', '错误');
-        nearbyStatus.textContent = `${product.name} 价格读取失败：${error.message}`;
+        setNearbyStatus(`${product.name} 价格读取失败：${error.message}`, true);
       }
     }
 
@@ -406,7 +462,7 @@ const base = import.meta.env.BASE_URL || '/';
       } catch (error) {
         status.textContent = `搜索失败：${error.message}`;
         renderEmptyList(results, '搜索失败', '请稍后再试。', '错误');
-        nearbyStatus.textContent = '搜索失败后仍可重新尝试。';
+        setNearbyStatus('搜索失败后仍可重新尝试。', false);
       }
     }
 
