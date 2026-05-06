@@ -1528,6 +1528,29 @@ textarea:focus-visible {
   }
 }
 
+@keyframes map-skeleton-shimmer {
+  0%,
+  100% {
+    transform: translateX(-14%);
+    opacity: 0.42;
+  }
+
+  50% {
+    transform: translateX(14%);
+    opacity: 0.62;
+  }
+}
+
+@keyframes map-selection-flash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(31, 79, 216, 0.28);
+  }
+
+  100% {
+    box-shadow: 0 0 0 12px rgba(31, 79, 216, 0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
@@ -2424,6 +2447,15 @@ body.home-page .home-map__canvas {
     linear-gradient(180deg, #f9fbff 0%, #edf4ff 100%);
 }
 
+body.home-page .home-map__canvas::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 28%, rgba(255, 255, 255, 0.26) 48%, transparent 68%);
+  animation: map-skeleton-shimmer 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
 body.home-page .home-map__iframe {
   position: absolute;
   inset: 0;
@@ -2431,6 +2463,26 @@ body.home-page .home-map__iframe {
   height: 100%;
   border: 0;
   filter: saturate(0.96) contrast(0.98);
+}
+
+body.home-page .home-map__status-pill {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  z-index: 4;
+  display: inline-flex;
+  width: fit-content;
+  max-width: calc(100% - 20px);
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(8, 24, 61, 0.62);
+  color: #f3f7ff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.3;
+  backdrop-filter: blur(4px);
 }
 
 body.home-page .home-map__grid {
@@ -2446,7 +2498,7 @@ body.home-page .home-map__grid {
 
 body.home-page .home-map__marker {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
   width: 24px;
   height: 24px;
   margin: -12px 0 0 -12px;
@@ -2475,7 +2527,7 @@ body.home-page .home-map__marker span {
 }
 
 body.home-page .home-map__marker.is-featured {
-  background: rgba(42, 109, 245, 0.14);
+  background: rgba(31, 79, 216, 0.18);
 }
 
 body.home-page .home-map__marker.is-highlighted {
@@ -2511,7 +2563,7 @@ body.home-page .home-map__legend-dot.is-featured {
 }
 
 body.home-page .home-map__legend-dot.is-highlighted {
-  background: rgba(120, 240, 194, 0.48);
+  background: #123aa7;
 }
 
 body.home-page .home-map__list {
@@ -3987,6 +4039,15 @@ body.product-page .store-map__canvas {
     linear-gradient(180deg, #f9fbff 0%, #edf4ff 100%);
 }
 
+body.product-page .store-map__canvas::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 28%, rgba(255, 255, 255, 0.24) 48%, transparent 68%);
+  animation: map-skeleton-shimmer 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
 body.product-page .store-map__canvas.is-dense {
   min-height: 228px;
 }
@@ -3998,6 +4059,26 @@ body.product-page .store-map__iframe {
   height: 100%;
   border: 0;
   filter: saturate(0.96) contrast(0.98);
+}
+
+body.product-page .store-map__status-pill {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  z-index: 4;
+  display: inline-flex;
+  width: fit-content;
+  max-width: calc(100% - 20px);
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(8, 24, 61, 0.62);
+  color: #f3f7ff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.3;
+  backdrop-filter: blur(4px);
 }
 
 body.product-page .store-map__grid {
@@ -4044,7 +4125,8 @@ body.product-page .store-map__marker span {
 }
 
 body.product-page .store-map__marker.is-featured {
-  background: rgba(42, 109, 245, 0.12);
+  background: rgba(31, 79, 216, 0.18);
+  color: #0f2f8f;
 }
 
 body.product-page .store-map__marker.is-selected {
@@ -4213,6 +4295,10 @@ body.product-page .store-picker__item {
 body.product-page .store-picker__item.is-active {
   border-color: rgba(120, 240, 194, 0.42);
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+body.product-page .store-picker__item.is-flash {
+  animation: map-selection-flash 1.5s ease-out;
 }
 
 body.product-page .personal-record-layout {
@@ -4683,6 +4769,11 @@ body.me-page #load-more-stores {
 
   body.home-page .home-nearby-context {
     position: static;
+    order: 2;
+  }
+
+  body.home-page .home-nearby-board {
+    order: 1;
   }
 
   body.home-page .home-results .list__item {
@@ -4752,7 +4843,21 @@ body.me-page #load-more-stores {
   }
 
   body.home-page .home-map__canvas {
-    min-height: 170px;
+    min-height: 196px;
+  }
+
+  body.home-page .home-map__status-pill {
+    font-size: 0.64rem;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+  }
+
+  body.home-page .home-map__legend {
+    flex-wrap: nowrap;
+    gap: 10px;
+    overflow-x: auto;
+    white-space: nowrap;
   }
 
   body.home-page .home-map__list-item {
@@ -5157,7 +5262,21 @@ body.me-page #load-more-stores {
   }
 
   body.product-page .store-map__canvas {
-    min-height: 184px;
+    min-height: 196px;
+  }
+
+  body.product-page .store-map__status-pill {
+    font-size: 0.64rem;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+  }
+
+  body.product-page .store-map__legend {
+    flex-wrap: nowrap;
+    gap: 10px;
+    overflow-x: auto;
+    white-space: nowrap;
   }
 
   body.product-page .store-map__list-item {
@@ -6123,6 +6242,26 @@ body.login-page .section__header.section__header--tight {
   .footer__links a {
     min-height: 38px;
     border-radius: 12px;
+  }
+}
+
+@media (max-width: 400px) {
+  body.home-page .home-map__canvas {
+    min-height: 176px;
+  }
+
+  body.product-page .store-map__canvas {
+    min-height: 182px;
+  }
+}
+
+@media (min-width: 401px) and (max-width: 720px) {
+  body.home-page .home-map__canvas {
+    min-height: 208px;
+  }
+
+  body.product-page .store-map__canvas {
+    min-height: 210px;
   }
 }
 

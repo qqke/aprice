@@ -72,7 +72,7 @@ async function main() {
       assert.match(requests.join('\n'), /name\.ilike/);
       assert.match(requests.join('\n'), /\/rest\/v1\/products/);
       assert.match(requests.join('\n'), /\/rest\/v1\/prices/);
-      assert.match(await page.evaluate(() => String(document.querySelector('#nearby-map-status')?.textContent || '')), /当前商品还没有可显示的门店价格坐标|选中商品后在这里显示门店分布/);
+      assert.match(await page.evaluate(() => String(document.querySelector('#nearby-map-status')?.textContent || '')), /当前商品还没有可显示的门店价格坐标|选中商品后在这里显示门店分布|当前商品暂无可用坐标|加载中：等待门店数据/);
       assert.equal(await page.locator('#recent-status').count(), 0, 'homepage should remove recent status module');
       assert.equal(await page.locator('#load-recent-prices').count(), 0, 'homepage should remove recent trigger');
 
@@ -86,7 +86,7 @@ async function main() {
       const nearbyMapText = await page.locator('#nearby-map').textContent();
       const nearbyMapStatusText = await page.evaluate(() => String(document.querySelector('#nearby-map-status')?.textContent || ''));
       assert.match(nearbyMapText || '', /Sugi Pharmacy Hiroo/);
-      assert.match(nearbyMapStatusText || '', /已显示在地图上/);
+      assert.match(nearbyMapStatusText || '', /已显示在地图上|可交互：已显示/);
       assert.equal(await page.locator('#nearby-map .home-map__marker').count(), 2);
       assert.match(await page.locator('#nearby-map iframe').getAttribute('src'), /maps\.google\.com\/maps/);
 

@@ -259,6 +259,15 @@ function renderStoreMapEmpty(target, statusEl, title, detail) {
   if (statusEl) statusEl.textContent = detail;
 }
 
+function mapStatusLabel({ mappedStoreCount, missingCount = 0, selectedStore = null, mode = 'nearby' } = {}) {
+  const head = mode === 'picker'
+    ? `当前页已显示 ${mappedStoreCount} 家门店`
+    : `已显示 ${mappedStoreCount} 家门店`;
+  const selected = selectedStore?.name ? ` · 已选 ${selectedStore.name}` : '';
+  const missing = missingCount ? ` · ${missingCount} 家缺坐标` : '';
+  return `${head}${selected}${missing}`;
+}
+
 function renderStoreMap(target, statusEl, stores, options = {}) {
   if (!target) return;
   const model = buildStoreMapModel(stores, options);
@@ -297,6 +306,15 @@ function renderStoreMap(target, statusEl, stores, options = {}) {
     || model.points.find((point) => point.isHighlighted)
     || model.points.find((point) => point.isFeatured)
     || model.points[0];
+  const selectedPoint = model.points.find((point) => point.isSelected)
+    || model.points.find((point) => point.id === String(options.selectedStoreId || ''))
+    || null;
+  const statusOverlay = mapStatusLabel({
+    mappedStoreCount,
+    missingCount: model.missingCount,
+    selectedStore: selectedPoint,
+    mode: options.mapMode || 'nearby',
+  });
 
   const listItems = model.points.slice(0, 4).map((point) => {
     const label = storeMetaText(point, {
@@ -325,6 +343,7 @@ function renderStoreMap(target, statusEl, stores, options = {}) {
           loading="lazy"
           referrerpolicy="no-referrer-when-downgrade"
         ></iframe>
+        <div class="store-map__status-pill" aria-hidden="true">${escapeHtml(statusOverlay)}</div>
         <svg class="store-map__grid" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <path d="M0 25H100M0 50H100M0 75H100M25 0V100M50 0V100M75 0V100"></path>
         </svg>
@@ -368,6 +387,7 @@ function renderPersonalStoreMap() {
       featuredLabel: '有我的价',
       defaultLabel: '其他门店',
     },
+    mapMode: 'picker',
     featuredStoreIds: Array.from(personalPriceIndex.keys()),
   });
 }
@@ -395,6 +415,7 @@ function renderNearbyStoreMap(rows) {
       featuredLabel: '最近门店',
       defaultLabel: '附近门店',
     },
+    mapMode: 'nearby',
   });
 }
 
@@ -485,11 +506,26 @@ function applySelectedStorePrice(storeId, { focus = false } = {}) {
   renderStorePicker();
   renderStoreSelectionStatus(storeRows.length);
   syncFavoriteButtons();
+  queueStorePickerFocus(storeId);
   if (status) {
     status.textContent = personalPrice
       ? `已回填你在该店的最新价 ¥${personalPrice.price_yen}，可直接修改后保存。`
       : '这家门店还没有你的个人价，输入后就能保存。';
   }
+}
+
+function queueStorePickerFocus(storeId) {
+  if (!storeList || !storeId) return;
+  requestAnimationFrame(() => {
+    const item = Array.from(storeList.querySelectorAll('[data-store-id]'))
+      .find((node) => node instanceof HTMLElement && node.dataset.storeId === String(storeId || ''));
+    if (!(item instanceof HTMLElement)) return;
+    item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    item.classList.add('is-flash');
+    setTimeout(() => {
+      item.classList.remove('is-flash');
+    }, 1500);
+  });
 }
 
 function renderStorePicker() {
