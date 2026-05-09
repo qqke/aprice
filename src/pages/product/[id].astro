@@ -18,15 +18,20 @@ type Product = {
 export const prerender = false;
 
 const productId = String(Astro.params.id || '').trim();
-const productRows = productId
-  ? (await restGet('products', {
+let productRows: Product[] = [];
+if (productId) {
+  try {
+    productRows = (await restGet('products', {
       query: {
         select: '*',
         id: `eq.${productId}`,
         limit: 1,
       },
-    })) as Product[]
-  : [];
+    })) as Product[];
+  } catch {
+    productRows = [];
+  }
+}
 const product = productRows?.[0] ?? {
   id: productId,
   barcode: productId,

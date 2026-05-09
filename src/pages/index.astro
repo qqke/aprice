@@ -6,119 +6,147 @@ export const prerender = true;
 const base = import.meta.env.BASE_URL || '/';
 ---
 <BaseLayout title="搜比价 - 日本本地药店比价" description="在手机上快速搜索商品、查看附近价格，并保留扫码入口。" bodyClass="home-page">
-  <section class="home-hero">
-    <div class="shell home-hero__inner">
-      <div class="home-brand">搜比价 · 日本药店比价</div>
-      <h1 class="home-title">先搜再比价</h1>
-      <form class="home-search" id="home-search-form">
-        <label class="field home-search__field" for="home-search">
-          <span class="home-search__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" role="presentation" focusable="false" aria-hidden="true">
-              <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8" />
-              <path d="M16 16l4 4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
-            </svg>
-          </span>
-          <input
-            id="home-search"
-            name="home-search"
-            type="search"
-            inputmode="search"
-            autocomplete="off"
-            spellcheck="false"
-            placeholder="搜商品名、品牌或 JAN 码"
-            aria-controls="search-results"
-            aria-describedby="search-status"
-            aria-keyshortcuts="Ctrl+K /"
-          />
-          <a class="home-search__scan" href={`${base}scan/`} aria-label="打开扫码查价">
-            <svg viewBox="0 0 24 24" role="presentation" focusable="false" aria-hidden="true">
-              <path d="M7.5 8.5h2m5 0h2m-10 7h11m-13-8.25L6 5.75h12l1.5 1.5v9.5a1.5 1.5 0 0 1-1.5 1.5h-12a1.5 1.5 0 0 1-1.5-1.5z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" />
-              <circle cx="12" cy="12" r="2.75" fill="none" stroke="currentColor" stroke-width="1.7" />
-            </svg>
-            <span class="sr-only">扫码查价</span>
-          </a>
-          <button class="button home-search__button" id="home-search-button" type="submit">搜索</button>
-        </label>
-        <div class="home-search__hints" aria-hidden="true">
-          <span class="home-search__hint">支持商品名</span>
-          <span class="home-search__hint">支持品牌名</span>
-          <span class="home-search__hint">支持 JAN 条码</span>
-          <span class="home-search__hint home-search__hint--accent">也可直接扫码</span>
-        </div>
-      </form>
+  <div class="home-v2">
+    <section class="home-hero">
+      <div class="shell home-hero__inner">
+        <div class="home-hero__badge">搜比价 · 日常药店比价</div>
+        <h1 class="home-title">先搜再比价</h1>
+        <form class="home-search" id="home-search-form">
+          <label class="field home-search__field" for="home-search">
+            <span class="home-search__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" role="presentation" focusable="false" aria-hidden="true">
+                <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8" />
+                <path d="M16 16l4 4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+              </svg>
+            </span>
+            <input
+              id="home-search"
+              name="home-search"
+              type="search"
+              inputmode="search"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="搜索商品名、品牌或 JAN 码"
+              aria-controls="search-results"
+              aria-describedby="search-status"
+              aria-keyshortcuts="Ctrl+K /"
+            />
+            <a class="home-search__scan" href={`${base}scan/`} aria-label="打开扫码查价">
+              <svg viewBox="0 0 24 24" role="presentation" focusable="false" aria-hidden="true">
+                <path d="M7.5 8.5h2m5 0h2m-10 7h11m-13-8.25L6 5.75h12l1.5 1.5v9.5a1.5 1.5 0 0 1-1.5 1.5h-12a1.5 1.5 0 0 1-1.5-1.5z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" />
+                <circle cx="12" cy="12" r="2.75" fill="none" stroke="currentColor" stroke-width="1.7" />
+              </svg>
+              <span class="sr-only">扫码查价</span>
+            </a>
+            <button class="button home-search__button" id="home-search-button" type="submit">搜索</button>
+          </label>
+          <div class="home-search__hints" aria-hidden="true">
+            <span class="home-search__hint">支持商品名</span>
+            <span class="home-search__hint">支持品牌名</span>
+            <span class="home-search__hint">支持 JAN 条码</span>
+            <span class="home-search__hint home-search__hint--accent">可直接扫码</span>
+          </div>
+        </form>
+        <p class="home-meta">快捷键 <code>Ctrl+K</code> 或 <code>/</code> 可直达搜索框。</p>
+      </div>
+    </section>
 
-      <p class="home-meta">快捷键 <code>Ctrl+K</code> 或 <code>/</code> 可直达搜索框。</p>
-    </div>
-  </section>
-
-  <section class="home-section">
-    <div class="shell home-section__shell">
-      <div class="section__header section__header--tight">
-        <div>
+    <section class="home-section">
+      <div class="shell home-section__shell">
+        <div class="home-section__title">
           <h2>搜索结果</h2>
-          <p id="search-status">输入关键词后显示可选商品。</p>
+          <small>最多显示 8 条匹配结果</small>
+        </div>
+        <p id="search-status">输入关键词后显示可选商品。</p>
+        <div class="home-panel home-panel--search">
+          <div class="home-panel__bar" aria-hidden="true">
+            <span class="home-panel__eyebrow">候选商品</span>
+            <span class="home-panel__meta">搜索后显示商品列表</span>
+          </div>
+          <div class="list home-results" id="search-results" role="listbox" aria-live="polite" aria-label="搜索结果列表">
+            <div class="notice notice--compact">搜索后显示商品列表。</div>
+          </div>
         </div>
       </div>
-      <div class="home-panel home-panel--search">
-        <div class="home-panel__bar" aria-hidden="true">
-          <span class="home-panel__eyebrow">候选商品</span>
-          <span class="home-panel__meta">最多显示 8 条匹配结果</span>
-        </div>
-        <div class="list home-results" id="search-results" role="listbox" aria-live="polite" aria-label="搜索结果列表">
-          <div class="notice notice--compact">搜索后显示商品列表。</div>
-        </div>
+      <div class="home-quick-dock" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="home-section">
-    <div class="shell home-section__shell">
-      <div class="section__header section__header--tight">
-        <div>
+    <section class="home-section">
+      <div class="shell home-section__shell">
+        <div class="home-section__title">
           <h2>附近比价</h2>
-          <p>选中商品后，这里显示最近可比门店价格。</p>
+          <small>优先展示最近采样到的附近结果</small>
         </div>
-      </div>
-      <div class="home-panel home-panel--nearby">
-        <div class="home-nearby-workspace">
-          <aside class="home-nearby-context">
-            <div class="home-panel__bar home-panel__bar--stacked" aria-hidden="true">
-              <span class="home-panel__eyebrow">当前商品</span>
-              <span class="home-panel__meta">作为右侧比价结果的固定上下文</span>
-            </div>
-            <div class="home-selection" aria-live="polite">
-              <div class="home-selection-card home-selection-card--empty" id="selected-product-status">
-                <div class="home-selection-card__copy">
-                  <strong>当前比价商品：未选择</strong>
-                  <small>先在上方搜索并选中一个商品，这里会固定显示当前查看对象。</small>
+        <div class="home-panel home-panel--nearby">
+          <div class="home-nearby-workspace">
+            <aside class="home-nearby-context">
+              <div class="home-panel__bar home-panel__bar--stacked" aria-hidden="true">
+                <span class="home-panel__eyebrow">当前商品</span>
+                <span class="home-panel__meta">作为右侧比价结果的固定上下文</span>
+              </div>
+              <div class="home-selection" aria-live="polite">
+                <div class="home-selection-card home-selection-card--empty" id="selected-product-status">
+                  <div class="home-selection-card__copy">
+                    <strong>当前比价商品：未选择</strong>
+                    <small>先在上方搜索并选中一个商品，这里会固定显示当前查看对象。</small>
+                  </div>
+                </div>
+                <a class="button button--ghost home-selection__action" id="selected-product-action" href={`${base}scan/`} hidden>打开详情</a>
+              </div>
+              <div class="notice notice--compact home-status" id="nearby-status">先搜索商品，再查看附近价格。</div>
+            </aside>
+            <div class="home-nearby-board">
+              <div class="home-map-card">
+                <div class="home-map-card__header">
+                  <strong>附近门店地图</strong>
+                  <small id="nearby-map-status">加载中：等待门店数据。</small>
+                </div>
+                <div class="home-map" id="nearby-map" aria-live="polite">
+                  <div class="notice notice--compact">搜索后，附近门店位置会显示在这里。</div>
                 </div>
               </div>
-              <a class="button button--ghost home-selection__action" id="selected-product-action" href={`${base}scan/`} hidden>打开详情</a>
-            </div>
-            <div class="notice notice--compact home-status" id="nearby-status">先搜索商品，再查看附近价格。</div>
-          </aside>
-          <div class="home-nearby-board">
-            <div class="home-panel__bar" aria-hidden="true">
-              <span class="home-panel__eyebrow">门店价格</span>
-              <span class="home-panel__meta">优先展示最近采样到的附近结果</span>
-            </div>
-            <div class="home-map-card">
-              <div class="home-map-card__header">
-                <strong>附近门店地图</strong>
-              <small id="nearby-map-status">加载中：等待门店数据。</small>
+              <div class="list home-results" id="nearby-results" aria-live="polite" aria-label="附近价格结果">
+                <div class="notice notice--compact">搜索后，附近门店价格会显示在这里。</div>
               </div>
-              <div class="home-map" id="nearby-map" aria-live="polite">
-                <div class="notice notice--compact">搜索后，附近门店位置会显示在这里。</div>
-              </div>
-            </div>
-            <div class="list home-results" id="nearby-results" aria-live="polite" aria-label="附近价格结果">
-              <div class="notice notice--compact">搜索后，附近门店价格会显示在这里。</div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
+
+    <section class="home-section home-section--last">
+      <div class="shell home-section__shell">
+        <div class="home-feature-grid">
+          <a class="home-feature-card home-feature-card--scan" href={`${base}scan/`}>
+            <div class="home-feature-card__icon" aria-hidden="true"></div>
+            <div class="home-feature-card__copy">
+              <strong>打开即扫</strong>
+              <small>识别后立即直达商品，快速开始比价。</small>
+            </div>
+          </a>
+          <a class="home-feature-card home-feature-card--decision" href={`${base}me/`}>
+            <div class="home-feature-card__icon" aria-hidden="true"></div>
+            <div class="home-feature-card__copy">
+              <strong>价格决策中心</strong>
+              <small>记录与收藏当前结果，把看到的价格带回仓库。</small>
+            </div>
+          </a>
+          <a class="home-feature-card home-feature-card--profile" href={`${base}me/`}>
+            <div class="home-feature-card__icon" aria-hidden="true"></div>
+            <div class="home-feature-card__copy">
+              <strong>个人中心</strong>
+              <small>查看个人价格记录、最近浏览和收藏内容。</small>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+  </div>
 
   <script type="module" is:inline>
     const {
