@@ -9,6 +9,7 @@ const testState = {
   favoriteRows: [],
   signOutError: null,
   signInError: null,
+  signUpResult: null,
 };
 
 globalThis.__APriceConfig = {
@@ -42,7 +43,10 @@ const patchedSource = source
             callback?.('SIGNED_IN', { user: { id: 'member-1' } });
             return { data: { subscription: { unsubscribe(){ state.authCalls.push({ type: 'unsubscribe' }); } } } };
           },
-          async signUp(options){ state.authCalls.push({ type: 'signUp', options }); return { data: { user: { email: options.email } }, error: null }; },
+          async signUp(options){
+            state.authCalls.push({ type: 'signUp', options });
+            return state.signUpResult || { data: { user: { email: options.email, identities: [{ provider: 'email' }] }, session: null }, error: null };
+          },
           async signInWithPassword(options){ state.authCalls.push({ type: 'signInWithPassword', options }); return { data: {}, error: state.signInError }; },
           async resetPasswordForEmail(email, options){ state.authCalls.push({ type: 'resetPasswordForEmail', email, options }); return { error: null }; },
           async updateUser(options){ state.authCalls.push({ type: 'updateUser', options }); return { data: {}, error: null }; },
@@ -228,6 +232,13 @@ assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name ==
 await auth.signUpWithEmailPassword({ email: 'new@example.com', password: 'password123', redirect: '/aprice/me/' });
 const signUpCall = testState.authCalls.findLast((call) => call.type === 'signUp');
 assert.equal(signUpCall.options.options.emailRedirectTo, 'https://aprice.example/aprice/login/?redirect=%2Faprice%2Fme%2F');
+
+testState.signUpResult = { data: { user: { email: 'new@example.com', identities: [] }, session: null }, error: null };
+await assert.rejects(
+  () => auth.signUpWithEmailPassword({ email: 'new@example.com', password: 'password123' }),
+  /User already registered/,
+);
+testState.signUpResult = null;
 
 await auth.sendPasswordResetEmail({ email: 'reset@example.com', redirect: 'https://evil.example/aprice/me/' });
 const resetCall = testState.authCalls.findLast((call) => call.type === 'resetPasswordForEmail');

@@ -57,7 +57,10 @@ function makeEsmShimModuleBody() {
     '          password: options.password,',
     '          emailRedirectTo: options.options?.emailRedirectTo,',
     '        });',
-    '        return { data: { session: null, user: { email: options.email } }, error: null };',
+    '        if (options.email === "taken@example.com") {',
+    '          return { data: { session: null, user: { email: options.email, identities: [] } }, error: null };',
+    '        }',
+    '        return { data: { session: null, user: { email: options.email, identities: [{ provider: "email" }] } }, error: null };',
     '      },',
     '      async resetPasswordForEmail(email, options){',
     '        record("resetPasswordForEmail", { email, ...options });',
@@ -235,6 +238,14 @@ async function main() {
       const signUpRedirect = new URL(signUpCall.options.emailRedirectTo);
       assert.equal(signUpRedirect.searchParams.get('redirect'), redirectTarget);
     }
+
+    await page.locator('#mode-toggle').click();
+    await waitForText(page, '#auth-panel-title', '注册账号');
+    await page.locator('#email').fill('taken@example.com');
+    await page.locator('#password').fill('register123');
+    await page.locator('#confirm-password').fill('register123');
+    await page.locator('#auth-submit').click();
+    await waitForText(page, '#auth-status', '该邮箱已注册');
 
     await page.locator('#forgot-toggle').click();
     await waitForText(page, '#auth-panel-title', '找回密码');

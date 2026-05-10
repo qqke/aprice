@@ -92,6 +92,9 @@ export async function signUpWithEmailPassword({ email, password, redirect = '' }
     },
   });
   if (error) throw error;
+  if (Array.isArray(data?.user?.identities) && data.user.identities.length === 0) {
+    throw new Error('User already registered');
+  }
   return data;
 }
 
