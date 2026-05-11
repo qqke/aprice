@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.105.4';
 
 import { restDelete, restGet, restInsert, restRpc } from './supabase-rest.js';
 import { normalizeInternalRedirectTarget } from './auth-redirect.js';
@@ -81,7 +81,7 @@ async function requireSession() {
   return session;
 }
 
-export async function signUpWithEmailPassword({ email, password, redirect = '' }) {
+export async function signUpWithEmailPassword({ email, password, redirect = '', captchaToken = '' }) {
   const client = await getSupabaseClient();
   const { data, error } = await client.auth.signUp({
     email,
@@ -89,6 +89,7 @@ export async function signUpWithEmailPassword({ email, password, redirect = '' }
     options: {
       // 注册后回到登录页，兼容 Supabase 邮箱确认链路。
       emailRedirectTo: buildAuthRedirectUrl('login/', { redirect: normalizeInternalRedirectTarget(redirect, authRedirectConfig) }),
+      captchaToken: String(captchaToken || '').trim() || undefined,
     },
   });
   if (error) throw error;
@@ -124,6 +125,16 @@ export async function sendPasswordResetEmail({ email, redirect = '' }) {
 export async function updatePassword(password) {
   const client = await getSupabaseClient();
   const { data, error } = await client.auth.updateUser({
+    password,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function changePassword({ currentPassword, password }) {
+  const client = await getSupabaseClient();
+  const { data, error } = await client.auth.updateUser({
+    current_password: currentPassword,
     password,
   });
   if (error) throw error;

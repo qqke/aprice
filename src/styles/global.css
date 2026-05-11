@@ -4513,6 +4513,30 @@ body.admin-page .admin-record-item {
   align-items: start;
 }
 
+body.login-page .turnstile-field {
+  display: grid;
+  gap: 8px;
+}
+
+body.login-page .turnstile-field[hidden] {
+  display: none;
+}
+
+body.login-page .turnstile-field__frame {
+  min-height: 68px;
+  display: grid;
+  align-items: center;
+  justify-items: start;
+  padding: 8px;
+  border: 1px solid rgba(125, 150, 222, 0.2);
+  border-radius: 8px;
+  background: rgba(248, 252, 255, 0.84);
+}
+
+body.me-page .account-security-form {
+  gap: 10px;
+}
+
 body.me-page .me-favorites__meta,
 body.admin-page .admin-record-actions--price {
   justify-items: end;

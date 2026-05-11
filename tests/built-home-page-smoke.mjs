@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 
 const html = await readFile(new URL('../dist/client/index.html', import.meta.url), 'utf8');
 assert.ok(
-  html.includes('window.__APriceConfig = { baseUrl, supabaseUrl, supabaseAnonKey, useServerPriceRpc, enableTelemetryRpc };'),
+  html.includes('window.__APriceConfig = { baseUrl, supabaseUrl, supabaseAnonKey, turnstileSiteKey, turnstileDevFallback, useServerPriceRpc, enableTelemetryRpc };'),
   'config injection missing from dist/client/index.html',
 );
 
@@ -63,6 +63,7 @@ globalThis.__APriceConfig = {
   baseUrl: '/aprice/',
   supabaseUrl: 'https://example.supabase.co',
   supabaseAnonKey: 'anon-key',
+  turnstileSiteKey: 'test-turnstile-site-key',
 };
 
 globalThis.fetch = async (input) => {

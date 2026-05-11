@@ -7,6 +7,7 @@ import { waitForHidden, waitForRequestMatch, waitForVisible } from './_browser-t
 function makeSupabaseShimModuleBody({ signedIn }) {
   return [
     'export function createClient(){',
+    '  const calls = globalThis.__meAuthCalls || (globalThis.__meAuthCalls = []);',
     '  return {',
     '    auth: {',
     signedIn
@@ -17,6 +18,7 @@ function makeSupabaseShimModuleBody({ signedIn }) {
       : '      async getUser(){ return { data: { user: null }, error: null }; },',
     '      onAuthStateChange(){ return { data: { subscription: { unsubscribe(){} } } }; },',
     '      async signOut(){ return { error: null }; },',
+    '      async updateUser(options){ calls.push({ type: "updateUser", options }); return { data: { user: { id: "member-1", email: "member@example.com" } }, error: null }; },',
     '    }',
     '  };',
     '}',
@@ -35,7 +37,7 @@ async function main() {
     try {
       const page = await browser.newPage();
 
-      await page.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+      await page.route('https://esm.sh/@supabase/supabase-js@2.105.4', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'text/javascript; charset=utf-8',
@@ -72,6 +74,7 @@ async function main() {
       assert.match(favsText || '', /(登录后可查看收藏|未登录)/);
       assert.match(recentText || '', /暂无浏览记录/);
       assert.match(statusText || '', /登录后/);
+      assert.equal(await page.locator('#current-password').isDisabled(), true);
       await page.close();
 
       const signedPage = await browser.newPage();
@@ -120,7 +123,7 @@ async function main() {
           },
         ]));
       });
-      await signedPage.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+      await signedPage.route('https://esm.sh/@supabase/supabase-js@2.105.4', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'text/javascript; charset=utf-8',
@@ -249,6 +252,36 @@ async function main() {
       assert.equal(await signedPage.evaluate(() => window.__meXss === true), false);
       assert.equal(await signedPage.locator('#my-logs script, #my-logs img[onerror], #my-favorites script, #my-favorites img[onerror], #recent-views script, #recent-views img[onerror]').count(), 0);
 
+      await signedPage.locator('#me-panel-security > summary').click();
+      assert.equal(await signedPage.locator('#current-password').isEnabled(), true);
+      await signedPage.locator('#password-submit').click();
+      await signedPage.waitForFunction(() => String(document.querySelector('#password-status')?.textContent || '').includes('请输入当前密码。'));
+      await signedPage.locator('#current-password').fill('oldpassword123');
+      await signedPage.locator('#new-password').fill('short');
+      await signedPage.locator('#new-password-confirm').fill('short');
+      await signedPage.locator('#password-submit').click();
+      await signedPage.waitForFunction(() => String(document.querySelector('#password-status')?.textContent || '').includes('新密码至少需要 8 位。'));
+      await signedPage.locator('#new-password').fill('newpassword123');
+      await signedPage.locator('#new-password-confirm').fill('different123');
+      await signedPage.locator('#password-submit').click();
+      await signedPage.waitForFunction(() => String(document.querySelector('#password-status')?.textContent || '').includes('两次输入的新密码不一致。'));
+      await signedPage.locator('#new-password').fill('oldpassword123');
+      await signedPage.locator('#new-password-confirm').fill('oldpassword123');
+      await signedPage.locator('#password-submit').click();
+      await signedPage.waitForFunction(() => String(document.querySelector('#password-status')?.textContent || '').includes('新密码不能和当前密码相同。'));
+      await signedPage.locator('#new-password').fill('newpassword123');
+      await signedPage.locator('#new-password-confirm').fill('newpassword123');
+      await signedPage.locator('#password-submit').click();
+      await signedPage.waitForFunction(() => String(document.querySelector('#password-status')?.textContent || '').includes('密码已更新。'));
+      assert.ok(
+        await signedPage.evaluate(() => (window.__meAuthCalls || []).some((call) =>
+          call.type === 'updateUser' &&
+          call.options?.current_password === 'oldpassword123' &&
+          call.options?.password === 'newpassword123'
+        )),
+        'expected password update to include current password and new password',
+      );
+
       await signedPage.locator('#me-panel-favorites > summary').click();
       await signedPage.locator('[data-favorite-filter="product"]').click();
       assert.equal(await signedPage.locator('[data-favorite-filter="product"]').getAttribute('aria-pressed'), 'true');
@@ -330,7 +363,7 @@ async function main() {
       refreshFailurePage.on('pageerror', (error) => {
         throw error;
       });
-      await refreshFailurePage.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+      await refreshFailurePage.route('https://esm.sh/@supabase/supabase-js@2.105.4', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'text/javascript; charset=utf-8',

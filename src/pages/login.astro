@@ -51,6 +51,10 @@ export const prerender = true;
               <label class="field" for="confirm-password" id="confirm-field" hidden>
                 <input id="confirm-password" type="password" placeholder="再次输入密码" autocomplete="new-password" aria-label="确认密码" />
               </label>
+              <div class="turnstile-field" id="turnstile-field" hidden>
+                <div class="turnstile-field__frame" id="turnstile-widget"></div>
+                <small class="muted" id="turnstile-status">注册前需要完成人机验证。</small>
+              </div>
               <div class="pillrow auth-form__actions">
                 <button class="button" type="submit" id="auth-submit">登录</button>
                 <button class="button button--ghost" type="button" id="mode-toggle">切换到注册</button>
@@ -113,6 +117,7 @@ export const prerender = true;
       basePath,
       loginPath,
     });
+    const turnstileSiteKey = String(window.__APriceConfig?.turnstileSiteKey || '').trim();
 
     function loadAuthModule() {
       authModulePromise ??= import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
@@ -123,6 +128,9 @@ export const prerender = true;
     const emailInput = document.querySelector('#email');
     const passwordInput = document.querySelector('#password');
     const confirmPasswordInput = document.querySelector('#confirm-password');
+    const turnstileField = document.querySelector('#turnstile-field');
+    const turnstileWidget = document.querySelector('#turnstile-widget');
+    const turnstileStatus = document.querySelector('#turnstile-status');
     const status = document.querySelector('#auth-status');
     const hint = document.querySelector('#auth-hint');
     const sessionState = document.querySelector('#session-state');
@@ -148,6 +156,105 @@ export const prerender = true;
     const initialMode = getInitialLoginMode(url);
     let mode = initialMode;
     const hasSessionHint = isSignedInSessionHint();
+    let turnstileScriptPromise = null;
+    let turnstileWidgetId = null;
+    let turnstileToken = '';
+    let turnstileDevFallback = false;
+    const isLocalDevFallbackEnabled = Boolean(window.__APriceConfig?.turnstileDevFallback);
+
+    function setTurnstileStatus(message) {
+      if (turnstileStatus) turnstileStatus.textContent = message;
+    }
+
+    function loadTurnstileScript() {
+      if (window.turnstile) return Promise.resolve(window.turnstile);
+      if (turnstileScriptPromise) return turnstileScriptPromise;
+      turnstileScriptPromise = new Promise((resolve, reject) => {
+        const existing = document.querySelector('script[data-aprice-turnstile]');
+        if (existing) {
+          existing.addEventListener('load', () => resolve(window.turnstile), { once: true });
+          existing.addEventListener('error', () => reject(new Error('Turnstile script failed to load')), { once: true });
+          return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        script.async = true;
+        script.defer = true;
+        script.dataset.apriceTurnstile = 'true';
+        script.addEventListener('load', () => resolve(window.turnstile), { once: true });
+        script.addEventListener('error', () => reject(new Error('Turnstile script failed to load')), { once: true });
+        document.head.append(script);
+      });
+      return turnstileScriptPromise;
+    }
+
+    function resetTurnstile() {
+      turnstileToken = '';
+      turnstileDevFallback = false;
+      try {
+        if (window.turnstile && turnstileWidgetId !== null) {
+          window.turnstile.reset(turnstileWidgetId);
+        }
+      } catch {}
+    }
+
+    function enableDevTurnstileFallback() {
+      if (!isLocalDevFallbackEnabled) return false;
+      turnstileDevFallback = true;
+      turnstileToken = 'dev-turnstile-token';
+      setTurnstileStatus('Turnstile 在本地开发环境不可用，已切换到本地调试模式。');
+      return true;
+    }
+
+    async function renderTurnstileIfNeeded() {
+      if (!turnstileField || !turnstileWidget || mode !== 'register') return;
+      turnstileField.hidden = false;
+      if (!turnstileSiteKey) {
+        setTurnstileStatus('Turnstile Site Key 未配置，注册暂不可提交。');
+        return;
+      }
+      if (isLocalDevFallbackEnabled) {
+        enableDevTurnstileFallback();
+        return;
+      }
+      if (turnstileWidgetId !== null) return;
+      setTurnstileStatus('正在加载人机验证...');
+      try {
+        const turnstile = await loadTurnstileScript();
+        if (!turnstile || !turnstileWidget || turnstileWidgetId !== null) return;
+        turnstileWidgetId = turnstile.render(turnstileWidget, {
+          sitekey: turnstileSiteKey,
+          callback(token) {
+            turnstileToken = String(token || '').trim();
+            setTurnstileStatus(turnstileToken ? '人机验证已完成。' : '请先完成人机验证。');
+          },
+          'expired-callback'() {
+            turnstileToken = '';
+            setTurnstileStatus('验证已过期，请重新完成。');
+          },
+          'error-callback'() {
+            turnstileToken = '';
+            setTurnstileStatus('验证加载失败，请稍后重试。');
+          },
+        });
+      } catch {
+        if (!enableDevTurnstileFallback()) {
+          turnstileToken = '';
+          setTurnstileStatus('验证加载失败，请检查网络后重试。');
+        }
+      }
+    }
+
+    function syncTurnstilePanel() {
+      if (!turnstileField) return;
+      const shouldShow = mode === 'register';
+      turnstileField.hidden = !shouldShow;
+      if (!shouldShow) {
+        resetTurnstile();
+        return;
+      }
+      void renderTurnstileIfNeeded();
+    }
 
     // 根据当前模式切换表单字段、按钮文案和提示，保持一个页面覆盖注册、登录和找回密码。
     function setMode(nextMode) {
@@ -185,6 +292,7 @@ export const prerender = true;
         confirmPasswordInput.value = '';
       }
 
+      syncTurnstilePanel();
       syncAuthPanels();
     }
 
@@ -319,6 +427,8 @@ export const prerender = true;
         email: emailInput?.value.trim() || '',
         password: passwordInput?.value || '',
         confirmPassword: confirmPasswordInput?.value || '',
+        turnstileConfigured: Boolean(turnstileSiteKey),
+        captchaToken: turnstileToken,
       });
       if (validationMessage) {
         if (status) {
@@ -341,7 +451,7 @@ export const prerender = true;
           return;
         } else if (submitMode === 'register') {
           const { signUpWithEmailPassword } = await loadAuthModule();
-          const result = await signUpWithEmailPassword({ email, password, redirect: redirectTarget });
+          const result = await signUpWithEmailPassword({ email, password, redirect: redirectTarget, captchaToken: turnstileToken });
           if (emailInput) emailInput.value = email;
           if (passwordInput) passwordInput.value = '';
           if (confirmPasswordInput) confirmPasswordInput.value = '';
@@ -372,6 +482,11 @@ export const prerender = true;
       } catch (error) {
         if (status) status.textContent = `操作失败：${formatAuthError(error, submitMode)}`;
       } finally {
+        if (submitMode === 'register') {
+          if (!turnstileDevFallback) {
+            resetTurnstile();
+          }
+        }
         if (status) delete status.dataset.locked;
         if (submitMode !== 'reset-password') {
           await refreshSession();

@@ -39,7 +39,7 @@ async function main() {
         if (message.type() === 'error') pageErrors.push(message.text());
       });
 
-      await page.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+      await page.route('https://esm.sh/@supabase/supabase-js@2.105.4', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'text/javascript; charset=utf-8',
@@ -133,7 +133,7 @@ async function main() {
       foundPage.on('console', (message) => {
         if (message.type() === 'error') pageErrors.push(message.text());
       });
-      await foundPage.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+      await foundPage.route('https://esm.sh/@supabase/supabase-js@2.105.4', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'text/javascript; charset=utf-8',
@@ -255,7 +255,7 @@ async function main() {
       guestPage.on('console', (message) => {
         if (message.type() === 'error') pageErrors.push(message.text());
       });
-      await guestPage.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+      await guestPage.route('https://esm.sh/@supabase/supabase-js@2.105.4', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'text/javascript; charset=utf-8',
@@ -318,7 +318,7 @@ async function main() {
       manualPage.on('console', (message) => {
         if (message.type() === 'error') pageErrors.push(message.text());
       });
-      await manualPage.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+      await manualPage.route('https://esm.sh/@supabase/supabase-js@2.105.4', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'text/javascript; charset=utf-8',
@@ -394,7 +394,7 @@ async function main() {
       failureManualPage.on('console', (message) => {
         if (message.type() === 'error') pageErrors.push(message.text());
       });
-      await failureManualPage.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+      await failureManualPage.route('https://esm.sh/@supabase/supabase-js@2.105.4', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'text/javascript; charset=utf-8',
@@ -438,7 +438,7 @@ async function main() {
       xssPage.on('console', (message) => {
         if (message.type() === 'error') pageErrors.push(message.text());
       });
-      await xssPage.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+      await xssPage.route('https://esm.sh/@supabase/supabase-js@2.105.4', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'text/javascript; charset=utf-8',

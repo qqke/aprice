@@ -56,6 +56,7 @@ function makeEsmShimModuleBody() {
     '          email: options.email,',
     '          password: options.password,',
     '          emailRedirectTo: options.options?.emailRedirectTo,',
+    '          captchaToken: options.options?.captchaToken,',
     '        });',
     '        if (options.email === "taken@example.com") {',
     '          return { data: { session: null, user: { email: options.email, identities: [] } }, error: null };',
@@ -98,6 +99,26 @@ async function main() {
     page.on('pageerror', (error) => pageErrors.push(error.message));
     page.on('console', (message) => {
       if (message.type() === 'error') pageErrors.push(message.text());
+    });
+    await page.addInitScript(() => {
+      Object.defineProperty(window, '__APriceConfig', {
+        configurable: true,
+        get() {
+          return window['__apriceConfigValue'];
+        },
+        set(value) {
+          window['__apriceConfigValue'] = { ...(value || {}), turnstileSiteKey: 'test-turnstile-site-key' };
+        },
+      });
+      window.turnstile = {
+        render(_element, options) {
+          window.__turnstileOptions = options;
+          return 'test-widget';
+        },
+        reset() {
+          window.__turnstileResets = (window.__turnstileResets || 0) + 1;
+        },
+      };
     });
 
     await page.route('https://esm.sh/**', async (route) => {
@@ -224,11 +245,21 @@ async function main() {
     await page.locator('#switch-account-button').click();
     await waitForVisible(page, '#auth-form-shell');
     await page.goto(`${baseUrl}/aprice/login/?redirect=${encodeURIComponent(redirectTarget)}`, { waitUntil: 'domcontentloaded' });
+    await waitForVisible(page, '#auth-form-shell');
     await page.locator('#mode-toggle').click();
     await waitForText(page, '#auth-panel-title', '注册账号');
     await page.locator('#email').fill('register@example.com');
     await page.locator('#password').fill('register123');
     await page.locator('#confirm-password').fill('register123');
+    {
+      const signUpCountBeforeCaptcha = await page.evaluate(() => (globalThis.__authCalls || []).filter((call) => call.type === 'signUp').length);
+      await page.locator('#auth-submit').click();
+      await waitForText(page, '#auth-status', '请先完成人机验证');
+      const signUpCountAfterCaptchaBlock = await page.evaluate(() => (globalThis.__authCalls || []).filter((call) => call.type === 'signUp').length);
+      assert.equal(signUpCountAfterCaptchaBlock, signUpCountBeforeCaptcha);
+      await page.evaluate(() => window.__turnstileOptions?.callback?.('turnstile-token'));
+      await waitForText(page, '#turnstile-status', '人机验证已完成');
+    }
     await page.locator('#auth-submit').click();
     await waitForText(page, '#auth-status', '注册成功');
     {
@@ -237,6 +268,8 @@ async function main() {
       assert.ok(signUpCall, 'expected signUp call to be recorded');
       const signUpRedirect = new URL(signUpCall.options.emailRedirectTo);
       assert.equal(signUpRedirect.searchParams.get('redirect'), redirectTarget);
+      assert.equal(signUpCall.options.captchaToken, 'turnstile-token');
+      assert.ok(await page.evaluate(() => window.__turnstileResets >= 1), 'expected Turnstile to reset after register submit');
     }
 
     await page.locator('#mode-toggle').click();
@@ -244,8 +277,10 @@ async function main() {
     await page.locator('#email').fill('taken@example.com');
     await page.locator('#password').fill('register123');
     await page.locator('#confirm-password').fill('register123');
+    await page.evaluate(() => window.__turnstileOptions?.callback?.('turnstile-token-2'));
     await page.locator('#auth-submit').click();
     await waitForText(page, '#auth-status', '该邮箱已注册');
+    assert.ok(await page.evaluate(() => window.__turnstileResets >= 2), 'expected Turnstile to reset after register failure');
 
     await page.locator('#forgot-toggle').click();
     await waitForText(page, '#auth-panel-title', '找回密码');

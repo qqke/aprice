@@ -25,7 +25,7 @@ globalThis.window = {
 const source = await readFile(new URL('../src/lib/browser-auth.js', import.meta.url), 'utf8');
 const patchedSource = source
   .replace(
-    "import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';",
+    "import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.105.4';",
     `function createClient(){
       const state = globalThis.__browserAuthTestState;
       state.authCalls.push({ type: 'createClient' });
@@ -229,9 +229,10 @@ assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name ==
 assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_delete_store' && call.body.target_id === 's1'));
 assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_delete_price' && call.body.target_id === 'price-1'));
 
-await auth.signUpWithEmailPassword({ email: 'new@example.com', password: 'password123', redirect: '/aprice/me/' });
+await auth.signUpWithEmailPassword({ email: 'new@example.com', password: 'password123', redirect: '/aprice/me/', captchaToken: 'turnstile-token' });
 const signUpCall = testState.authCalls.findLast((call) => call.type === 'signUp');
 assert.equal(signUpCall.options.options.emailRedirectTo, 'https://aprice.example/aprice/login/?redirect=%2Faprice%2Fme%2F');
+assert.equal(signUpCall.options.options.captchaToken, 'turnstile-token');
 
 testState.signUpResult = { data: { user: { email: 'new@example.com', identities: [] }, session: null }, error: null };
 await assert.rejects(
@@ -243,6 +244,11 @@ testState.signUpResult = null;
 await auth.sendPasswordResetEmail({ email: 'reset@example.com', redirect: 'https://evil.example/aprice/me/' });
 const resetCall = testState.authCalls.findLast((call) => call.type === 'resetPasswordForEmail');
 assert.equal(resetCall.options.emailRedirectTo, 'https://aprice.example/aprice/login/?mode=reset');
+
+await auth.changePassword({ currentPassword: 'oldpassword123', password: 'newpassword123' });
+const changePasswordCall = testState.authCalls.findLast((call) => call.type === 'updateUser');
+assert.equal(changePasswordCall.options.current_password, 'oldpassword123');
+assert.equal(changePasswordCall.options.password, 'newpassword123');
 
 const authEvents = [];
 const unsubscribe = await auth.subscribeAuthState((event, session) => authEvents.push({ event, session }));

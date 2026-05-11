@@ -79,13 +79,17 @@ export function getLoginPanelCopy(mode, { redirectTarget = '' } = {}) {
   };
 }
 
-export function validateLoginInputs({ mode, email, password, confirmPassword }) {
+export function validateLoginInputs({ mode, email, password, confirmPassword, turnstileConfigured = true, captchaToken = '' }) {
   const trimmedEmail = String(email || '').trim();
   const passwordValue = String(password || '');
   const confirmPasswordValue = String(confirmPassword || '');
+  const captchaValue = String(captchaToken || '').trim();
 
   if (mode !== 'reset-password' && !trimmedEmail) {
     return '请输入邮箱地址。';
+  }
+  if (mode === 'register' && !turnstileConfigured) {
+    return '注册验证尚未配置，请先设置 Turnstile Site Key。';
   }
   if ((mode === 'login' || mode === 'register') && !passwordValue) {
     return '请输入密码。';
@@ -95,6 +99,29 @@ export function validateLoginInputs({ mode, email, password, confirmPassword }) 
   }
   if ((mode === 'register' || mode === 'reset-password') && passwordValue !== confirmPasswordValue) {
     return '两次输入的密码不一致。';
+  }
+  if (mode === 'register' && !captchaValue) {
+    return '请先完成人机验证。';
+  }
+  return '';
+}
+
+export function validatePasswordChangeInputs({ currentPassword, password, confirmPassword }) {
+  const currentPasswordValue = String(currentPassword || '');
+  const passwordValue = String(password || '');
+  const confirmPasswordValue = String(confirmPassword || '');
+
+  if (!currentPasswordValue) {
+    return '请输入当前密码。';
+  }
+  if (passwordValue.length < 8) {
+    return '新密码至少需要 8 位。';
+  }
+  if (passwordValue !== confirmPasswordValue) {
+    return '两次输入的新密码不一致。';
+  }
+  if (currentPasswordValue === passwordValue) {
+    return '新密码不能和当前密码相同。';
   }
   return '';
 }
@@ -111,6 +138,15 @@ export function formatAuthError(error, submitMode) {
   }
   if (lowerMessage.includes('password should be at least')) {
     return '密码长度不够，请至少设置 8 位。';
+  }
+  if (lowerMessage.includes('captcha')) {
+    return '人机验证失败，请重新完成验证。';
+  }
+  if (lowerMessage.includes('current password') || lowerMessage.includes('current_password')) {
+    return '当前密码不正确，请重新输入。';
+  }
+  if (lowerMessage.includes('weak password') || lowerMessage.includes('password is too weak')) {
+    return '新密码强度不足，请使用更长且更复杂的密码。';
   }
   if (lowerMessage.includes('already registered') || lowerMessage.includes('user already registered')) {
     return '该邮箱已注册，请直接登录或重置密码。';

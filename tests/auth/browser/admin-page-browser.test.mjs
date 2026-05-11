@@ -37,7 +37,7 @@ async function main() {
         if (message.type() === 'error') pageErrors.push(message.text());
       });
 
-      await page.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+      await page.route('https://esm.sh/@supabase/supabase-js@2.105.4', async (route) => {
         await route.fulfill({
           status: 200,
           contentType: 'text/javascript; charset=utf-8',
@@ -330,7 +330,7 @@ async function main() {
       const guestContext = await browser.newContext();
       try {
         const guestPage = await guestContext.newPage();
-        await guestPage.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+        await guestPage.route('https://esm.sh/@supabase/supabase-js@2.105.4', async (route) => {
           await route.fulfill({
             status: 200,
             contentType: 'text/javascript; charset=utf-8',
@@ -373,7 +373,7 @@ async function main() {
         memberPage.on('console', (message) => {
           if (message.type() === 'error') pageErrors.push(message.text());
         });
-        await memberPage.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+        await memberPage.route('https://esm.sh/@supabase/supabase-js@2.105.4', async (route) => {
           await route.fulfill({
             status: 200,
             contentType: 'text/javascript; charset=utf-8',

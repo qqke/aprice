@@ -122,8 +122,8 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
         </nav>
       </div>
     </header>
-    <script is:inline define:vars={{ baseUrl: base, supabaseUrl: import.meta.env.PUBLIC_SUPABASE_URL || '', supabaseAnonKey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '', sessionHintKey: SESSION_HINT_KEY, useServerPriceRpc: (import.meta.env.PUBLIC_USE_SERVER_PRICE_RPC || '') === '1', enableTelemetryRpc: (import.meta.env.PUBLIC_ENABLE_TELEMETRY_RPC || '') === '1' }}>
-      window.__APriceConfig = { baseUrl, supabaseUrl, supabaseAnonKey, useServerPriceRpc, enableTelemetryRpc };
+    <script is:inline define:vars={{ baseUrl: base, supabaseUrl: import.meta.env.PUBLIC_SUPABASE_URL || '', supabaseAnonKey: import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '', turnstileSiteKey: import.meta.env.PUBLIC_TURNSTILE_SITE_KEY || '', sessionHintKey: SESSION_HINT_KEY, useServerPriceRpc: (import.meta.env.PUBLIC_USE_SERVER_PRICE_RPC || '') === '1', enableTelemetryRpc: (import.meta.env.PUBLIC_ENABLE_TELEMETRY_RPC || '') === '1', turnstileDevFallback: import.meta.env.DEV }}>
+      window.__APriceConfig = { baseUrl, supabaseUrl, supabaseAnonKey, turnstileSiteKey, turnstileDevFallback, useServerPriceRpc, enableTelemetryRpc };
       window.__APriceConfig.browserJsUrl = `${baseUrl}browser.js`;
       window.__APriceConfig.browserAuthJsUrl = `${baseUrl}browser-auth.js`;
       window.__APriceConfig.supabaseRestJsUrl = `${baseUrl}supabase-rest.js`;

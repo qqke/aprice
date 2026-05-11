@@ -75,6 +75,33 @@ const meGateCopy = getPrivatePageGateCopy('me');
           </form>
         </section>
 
+        <details class="tile tile--flow me-panel" id="me-panel-security">
+          <summary class="me-panel__summary">
+            <span class="me-panel__chevron" aria-hidden="true"></span>
+            <span class="me-panel__title">
+              <strong>账号安全</strong>
+              <small id="security-panel-summary">登录后可修改密码</small>
+            </span>
+          </summary>
+          <div class="me-panel__body">
+            <form class="form account-security-form" id="password-form">
+              <label class="field" for="current-password">
+                <input id="current-password" type="password" placeholder="当前密码" autocomplete="current-password" aria-label="当前密码" />
+              </label>
+              <label class="field" for="new-password">
+                <input id="new-password" type="password" placeholder="新密码（至少 8 位）" autocomplete="new-password" aria-label="新密码" />
+              </label>
+              <label class="field" for="new-password-confirm">
+                <input id="new-password-confirm" type="password" placeholder="再次输入新密码" autocomplete="new-password" aria-label="确认新密码" />
+              </label>
+              <div class="pillrow">
+                <button class="button" type="submit" id="password-submit">更新密码</button>
+              </div>
+              <div class="notice notice--compact" id="password-status" role="status" aria-live="polite" aria-atomic="true">登录后可修改密码。</div>
+            </form>
+          </div>
+        </details>
+
         <details class="tile tile--flow me-panel" id="me-panel-favorites">
           <summary class="me-panel__summary">
             <span class="me-panel__chevron" aria-hidden="true"></span>
@@ -149,9 +176,10 @@ const meGateCopy = getPrivatePageGateCopy('me');
 
   <script type="module" is:inline define:vars={{ loginUrl }}>
     const { clearRecentViews, escapeAttribute, escapeHtml, fetchProductsPage, fetchRecentViews, fetchStoresPage, formatDateTime, formatYen, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
-    const { fetchFavorites, fetchPersonalLogs, formatDataError, getCurrentUser, savePersonalLog, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+    const { changePassword, fetchFavorites, fetchPersonalLogs, formatDataError, getCurrentUser, savePersonalLog, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
     const { validatePositiveYen } = await import(window.__APriceConfig?.formValidationJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'form-validation.js');
+    const { formatAuthError, validatePasswordChangeInputs } = await import(window.__APriceConfig?.loginPageStateJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'login-page-state.js');
 
     const loginLink = document.querySelector('#me-login-link');
     const authGate = document.querySelector('#me-auth-gate');
@@ -166,8 +194,11 @@ const meGateCopy = getPrivatePageGateCopy('me');
     const favoriteFilterButtons = document.querySelectorAll('[data-favorite-filter]');
     const favoriteSortButtons = document.querySelectorAll('[data-favorite-sort]');
     const form = document.querySelector('#log-form');
+    const passwordForm = document.querySelector('#password-form');
     const saveLogButton = form?.querySelector('button[type="submit"]');
     const status = document.querySelector('#log-status');
+    const passwordStatus = document.querySelector('#password-status');
+    const securityPanelSummary = document.querySelector('#security-panel-summary');
     const productSearchInput = document.querySelector('#log-product-search');
     const productInput = document.querySelector('#log-product');
     const loadMoreProductsButton = document.querySelector('#load-more-products');
@@ -176,10 +207,15 @@ const meGateCopy = getPrivatePageGateCopy('me');
     const loadMoreStoresButton = document.querySelector('#load-more-stores');
     const priceInput = document.querySelector('#log-price');
     const noteInput = document.querySelector('#log-note');
+    const currentPasswordInput = document.querySelector('#current-password');
+    const newPasswordInput = document.querySelector('#new-password');
+    const newPasswordConfirmInput = document.querySelector('#new-password-confirm');
+    const passwordSubmitButton = document.querySelector('#password-submit');
     const favoriteProductButton = document.querySelector('#favorite-product-button');
     const favoriteStoreButton = document.querySelector('#favorite-store-button');
 
     const formControls = [productSearchInput, productInput, loadMoreProductsButton, storeSearchInput, storeInput, loadMoreStoresButton, priceInput, noteInput, favoriteProductButton, favoriteStoreButton];
+    const securityControls = [currentPasswordInput, newPasswordInput, newPasswordConfirmInput, passwordSubmitButton];
     let products = [];
     let stores = [];
     let favorites = [];
@@ -193,6 +229,13 @@ const meGateCopy = getPrivatePageGateCopy('me');
 
     function setControlsDisabled(disabled) {
       formControls.forEach((control) => {
+        if (!control) return;
+        control.disabled = disabled;
+      });
+    }
+
+    function setSecurityControlsDisabled(disabled) {
+      securityControls.forEach((control) => {
         if (!control) return;
         control.disabled = disabled;
       });
@@ -345,8 +388,11 @@ const meGateCopy = getPrivatePageGateCopy('me');
       `;
       if (favoritesPanelSummary) favoritesPanelSummary.textContent = '收藏 · 0 项';
       if (logsPanelSummary) logsPanelSummary.textContent = '价格记录 · 0 条';
+      if (securityPanelSummary) securityPanelSummary.textContent = '登录后可修改密码';
+      if (passwordStatus) passwordStatus.textContent = '请登录后再修改密码。';
       status.textContent = getPrivatePageStatusCopy('me', 'loggedOutStatus');
       setControlsDisabled(true);
+      setSecurityControlsDisabled(true);
     }
 
     function renderProductOptions({ keepCurrent = true } = {}) {
@@ -428,6 +474,9 @@ const meGateCopy = getPrivatePageGateCopy('me');
       syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: false });
       status.textContent = getPrivatePageStatusCopy('me', 'loading');
       setControlsDisabled(false);
+      setSecurityControlsDisabled(false);
+      if (securityPanelSummary) securityPanelSummary.textContent = '当前账号可修改密码';
+      if (passwordStatus) passwordStatus.textContent = '输入当前密码后设置新密码。';
 
       let logs;
       let loadedFavorites;
@@ -494,6 +543,44 @@ const meGateCopy = getPrivatePageGateCopy('me');
         await refresh();
       } catch (error) {
         status.textContent = getPrivatePageStatusCopy('me', 'saveFailure', { message: formatDataError(error) });
+      }
+    });
+
+    passwordForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!passwordStatus) return;
+      const validationMessage = validatePasswordChangeInputs({
+        currentPassword: currentPasswordInput?.value || '',
+        password: newPasswordInput?.value || '',
+        confirmPassword: newPasswordConfirmInput?.value || '',
+      });
+      if (validationMessage) {
+        passwordStatus.textContent = validationMessage;
+        return;
+      }
+
+      try {
+        const user = await getCurrentUser();
+        if (!user) {
+          syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
+          passwordStatus.textContent = '请登录后再修改密码。';
+          redirectToLogin(loginUrl, authGate);
+          return;
+        }
+        setSecurityControlsDisabled(true);
+        passwordStatus.textContent = '正在更新密码...';
+        await changePassword({
+          currentPassword: currentPasswordInput?.value || '',
+          password: newPasswordInput?.value || '',
+        });
+        if (currentPasswordInput) currentPasswordInput.value = '';
+        if (newPasswordInput) newPasswordInput.value = '';
+        if (newPasswordConfirmInput) newPasswordConfirmInput.value = '';
+        passwordStatus.textContent = '密码已更新。';
+      } catch (error) {
+        passwordStatus.textContent = `改密失败：${formatAuthError(error, 'change-password')}`;
+      } finally {
+        setSecurityControlsDisabled(false);
       }
     });
 

@@ -32,7 +32,7 @@ async function routeShellAuth(page, { signedIn = false, role = 'member', failPro
   const restCalls = [];
   let esmCalls = 0;
 
-  await page.route('https://esm.sh/@supabase/supabase-js@2.49.1', async (route) => {
+  await page.route('https://esm.sh/@supabase/supabase-js@2.105.4', async (route) => {
     esmCalls += 1;
     await route.fulfill({
       status: 200,
