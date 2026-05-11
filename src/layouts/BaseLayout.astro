@@ -112,7 +112,7 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
         </nav>
         <a class="chip session-chip" id="session-chip" href={loginHref}>{shellCopy.guestChip}</a>
       </div>
-      <div class="shell mobile-nav" id="mobile-nav" hidden>
+      <div class="shell mobile-nav" id="mobile-nav" hidden role="region" aria-label="移动导航">
         <nav class="mobile-nav__links" aria-label="移动导航">
           {nav.map((item) => (
             <a href={item.href} data-auth-nav-mobile={item.auth ? 'true' : undefined} aria-current={isCurrentNavItem(item) ? 'page' : undefined}>
@@ -309,11 +309,33 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
       }
 
       armSessionRefresh();
+      function closeMobileNav() {
+        if (!mobileNav || !navToggle) return;
+        navToggle.setAttribute('aria-expanded', 'false');
+        mobileNav.hidden = true;
+      }
       navToggle?.addEventListener('click', () => {
         if (!mobileNav || !navToggle) return;
         const nextExpanded = navToggle.getAttribute('aria-expanded') !== 'true';
         navToggle.setAttribute('aria-expanded', nextExpanded ? 'true' : 'false');
         mobileNav.hidden = !nextExpanded;
+      });
+      mobileNav?.addEventListener('click', (event) => {
+        const target = event.target;
+        const link = target instanceof Element ? target.closest('a[href]') : null;
+        if (link) closeMobileNav();
+      });
+      window.addEventListener('resize', () => {
+        if (!mobileNav || !navToggle) return;
+        if (!window.matchMedia('(min-width: 721px)').matches) return;
+        if (navToggle.getAttribute('aria-expanded') !== 'true') return;
+        closeMobileNav();
+      });
+      window.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        if (!mobileNav || !navToggle) return;
+        if (navToggle.getAttribute('aria-expanded') !== 'true') return;
+        closeMobileNav();
       });
       window.addEventListener('beforeunload', () => {
         unsubscribeAuth?.();
