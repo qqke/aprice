@@ -99,24 +99,28 @@ export async function signUpWithEmailPassword({ email, password, redirect = '', 
   return data;
 }
 
-export async function signInWithEmailPassword({ email, password }) {
+export async function signInWithEmailPassword({ email, password, captchaToken = '' }) {
   const client = await getSupabaseClient();
   const { data, error } = await client.auth.signInWithPassword({
     email,
     password,
+    options: {
+      captchaToken: String(captchaToken || '').trim() || undefined,
+    },
   });
   if (error) throw error;
   return data;
 }
 
-export async function sendPasswordResetEmail({ email, redirect = '' }) {
+export async function sendPasswordResetEmail({ email, redirect = '', captchaToken = '' }) {
   const client = await getSupabaseClient();
   const { error } = await client.auth.resetPasswordForEmail(email, {
     // 找回密码后回到登录页的重置模式，便于直接更新新密码。
-    emailRedirectTo: buildAuthRedirectUrl('login/', {
+    redirectTo: buildAuthRedirectUrl('login/', {
       mode: 'reset',
       redirect: normalizeInternalRedirectTarget(redirect, authRedirectConfig),
     }),
+    captchaToken: String(captchaToken || '').trim() || undefined,
   });
   if (error) throw error;
   return { ok: true };

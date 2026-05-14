@@ -41,7 +41,7 @@ PUBLIC_ENABLE_TELEMETRY_RPC=0
 3. 在 Supabase Auth 中启用邮箱登录
 4. 把站点地址加入邮件回调允许列表
 5. 在 Supabase Auth Bot and Abuse Protection 中启用 Turnstile，并填入 Cloudflare Turnstile Secret key
-6. 设置 `PUBLIC_TURNSTILE_SITE_KEY`，注册页会把 Turnstile token 传给 Supabase Auth
+6. 设置 `PUBLIC_TURNSTILE_SITE_KEY`，登录、注册和找回密码会把 Turnstile token 传给 Supabase Auth
 7. 在 Supabase Auth Password Security 中启用要求当前密码改密
 8. 登录和找回密码邮件会回到登录页，并保留原页面回跳参数
 9. 需要后台写权限时，把对应用户的 `profiles.role` 设为 `admin`

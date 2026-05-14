@@ -304,7 +304,12 @@ img {
 }
 
 .chip.nav-toggle {
-  display: inline-flex;
+  display: none;
+}
+
+.nav-toggle,
+.mobile-nav {
+  display: none;
 }
 
 .nav a:hover,
@@ -7018,6 +7023,7 @@ body:is(.scan-page, .me-page, .login-page, .admin-page, .product-page, .error-pa
   }
 
   body:is(.scan-page, .me-page, .login-page, .admin-page, .product-page, .error-page) .nav-toggle {
+    display: none;
     margin-left: 0;
     z-index: 2;
     position: relative;
@@ -7045,4 +7051,12 @@ body:is(.scan-page, .me-page, .login-page, .admin-page, .product-page, .error-pa
   body:is(.scan-page, .me-page, .login-page, .admin-page, .product-page, .error-page) .section {
     padding: 10px 0;
   }
+}
+
+.nav-toggle,
+.chip.nav-toggle,
+.mobile-nav,
+body.home-page .nav-toggle,
+body.home-page .mobile-nav {
+  display: none !important;
 }

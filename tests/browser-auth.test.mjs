@@ -241,9 +241,10 @@ await assert.rejects(
 );
 testState.signUpResult = null;
 
-await auth.sendPasswordResetEmail({ email: 'reset@example.com', redirect: 'https://evil.example/aprice/me/' });
+await auth.sendPasswordResetEmail({ email: 'reset@example.com', redirect: 'https://evil.example/aprice/me/', captchaToken: 'reset-turnstile-token' });
 const resetCall = testState.authCalls.findLast((call) => call.type === 'resetPasswordForEmail');
-assert.equal(resetCall.options.emailRedirectTo, 'https://aprice.example/aprice/login/?mode=reset');
+assert.equal(resetCall.options.redirectTo, 'https://aprice.example/aprice/login/?mode=reset');
+assert.equal(resetCall.options.captchaToken, 'reset-turnstile-token');
 
 await auth.changePassword({ currentPassword: 'oldpassword123', password: 'newpassword123' });
 const changePasswordCall = testState.authCalls.findLast((call) => call.type === 'updateUser');
@@ -265,5 +266,8 @@ testState.signOutError = null;
 testState.signInError = new Error('bad password');
 await assert.rejects(() => auth.signInWithEmailPassword({ email: 'member@example.com', password: 'bad' }), /bad password/);
 testState.signInError = null;
+await auth.signInWithEmailPassword({ email: 'member@example.com', password: 'password123', captchaToken: 'login-turnstile-token' });
+const signInCall = testState.authCalls.findLast((call) => call.type === 'signInWithPassword');
+assert.equal(signInCall.options.options.captchaToken, 'login-turnstile-token');
 
 console.log('browser-auth test passed');

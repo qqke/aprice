@@ -84,6 +84,7 @@ export function validateLoginInputs({ mode, email, password, confirmPassword, tu
   const passwordValue = String(password || '');
   const confirmPasswordValue = String(confirmPassword || '');
   const captchaValue = String(captchaToken || '').trim();
+  const requiresCaptcha = mode === 'login' || mode === 'register' || mode === 'request-reset';
 
   if (mode !== 'reset-password' && !trimmedEmail) {
     return '请输入邮箱地址。';
@@ -100,7 +101,7 @@ export function validateLoginInputs({ mode, email, password, confirmPassword, tu
   if ((mode === 'register' || mode === 'reset-password') && passwordValue !== confirmPasswordValue) {
     return '两次输入的密码不一致。';
   }
-  if (mode === 'register' && !captchaValue) {
+  if (requiresCaptcha && turnstileConfigured && !captchaValue) {
     return '请先完成人机验证。';
   }
   return '';

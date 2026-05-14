@@ -28,12 +28,17 @@ assert.equal(registerCopy.forgotToggle, '忘记密码');
 
 assert.equal(validateLoginInputs({ mode: 'login', email: '', password: 'abc' }), '请输入邮箱地址。');
 assert.equal(validateLoginInputs({ mode: 'login', email: 'name@example.com', password: '' }), '请输入密码。');
+assert.equal(validateLoginInputs({ mode: 'login', email: 'name@example.com', password: 'password123' }), '请先完成人机验证。');
+assert.equal(validateLoginInputs({ mode: 'login', email: 'name@example.com', password: 'password123', captchaToken: 'turnstile-token' }), '');
+assert.equal(validateLoginInputs({ mode: 'login', email: 'name@example.com', password: 'password123', turnstileConfigured: false }), '');
 assert.equal(validateLoginInputs({ mode: 'register', email: 'name@example.com', password: 'short', confirmPassword: 'short' }), '密码至少需要 8 位。');
 assert.equal(validateLoginInputs({ mode: 'register', email: 'name@example.com', password: 'password123', confirmPassword: 'password321' }), '两次输入的密码不一致。');
 assert.equal(validateLoginInputs({ mode: 'register', email: 'name@example.com', password: 'password123', confirmPassword: 'password123', turnstileConfigured: false }), '注册验证尚未配置，请先设置 Turnstile Site Key。');
 assert.equal(validateLoginInputs({ mode: 'register', email: 'name@example.com', password: 'password123', confirmPassword: 'password123' }), '请先完成人机验证。');
 assert.equal(validateLoginInputs({ mode: 'register', email: 'name@example.com', password: 'password123', confirmPassword: 'password123', captchaToken: 'turnstile-token' }), '');
-assert.equal(validateLoginInputs({ mode: 'request-reset', email: 'name@example.com', password: '' }), '');
+assert.equal(validateLoginInputs({ mode: 'request-reset', email: 'name@example.com', password: '' }), '请先完成人机验证。');
+assert.equal(validateLoginInputs({ mode: 'request-reset', email: 'name@example.com', password: '', captchaToken: 'turnstile-token' }), '');
+assert.equal(validateLoginInputs({ mode: 'request-reset', email: 'name@example.com', password: '', turnstileConfigured: false }), '');
 assert.equal(validateLoginInputs({ mode: 'reset-password', email: '', password: 'short', confirmPassword: 'short' }), '密码至少需要 8 位。');
 assert.equal(validateLoginInputs({ mode: 'reset-password', email: '', password: 'newpassword123', confirmPassword: 'otherpassword123' }), '两次输入的密码不一致。');
 assert.equal(validateLoginInputs({ mode: 'reset-password', email: '', password: 'newpassword123', confirmPassword: 'newpassword123' }), '');

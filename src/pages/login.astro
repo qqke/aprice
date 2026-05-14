@@ -53,7 +53,7 @@ export const prerender = true;
               </label>
               <div class="turnstile-field" id="turnstile-field" hidden>
                 <div class="turnstile-field__frame" id="turnstile-widget"></div>
-                <small class="muted" id="turnstile-status">注册前需要完成人机验证。</small>
+                <small class="muted" id="turnstile-status">继续前需要完成人机验证。</small>
               </div>
               <div class="pillrow auth-form__actions">
                 <button class="button" type="submit" id="auth-submit">登录</button>
@@ -166,6 +166,16 @@ export const prerender = true;
       if (turnstileStatus) turnstileStatus.textContent = message;
     }
 
+    function requiresTurnstile(currentMode = mode) {
+      return currentMode === 'login' || currentMode === 'register' || currentMode === 'request-reset';
+    }
+
+    function getTurnstilePrompt(currentMode = mode) {
+      if (currentMode === 'request-reset') return '找回密码前需要完成人机验证。';
+      if (currentMode === 'register') return '注册前需要完成人机验证。';
+      return '登录前需要完成人机验证。';
+    }
+
     function loadTurnstileScript() {
       if (window.turnstile) return Promise.resolve(window.turnstile);
       if (turnstileScriptPromise) return turnstileScriptPromise;
@@ -207,7 +217,7 @@ export const prerender = true;
     }
 
     async function renderTurnstileIfNeeded() {
-      if (!turnstileField || !turnstileWidget || mode !== 'register') return;
+      if (!turnstileField || !turnstileWidget || !requiresTurnstile()) return;
       turnstileField.hidden = false;
       if (!turnstileSiteKey) {
         setTurnstileStatus('Turnstile Site Key 未配置，注册暂不可提交。');
@@ -247,17 +257,23 @@ export const prerender = true;
 
     function syncTurnstilePanel() {
       if (!turnstileField) return;
-      const shouldShow = mode === 'register';
+      const shouldShow = requiresTurnstile() && (Boolean(turnstileSiteKey) || mode === 'register');
       turnstileField.hidden = !shouldShow;
       if (!shouldShow) {
         resetTurnstile();
         return;
+      }
+      if (!turnstileToken) {
+        setTurnstileStatus(getTurnstilePrompt());
       }
       void renderTurnstileIfNeeded();
     }
 
     // 根据当前模式切换表单字段、按钮文案和提示，保持一个页面覆盖注册、登录和找回密码。
     function setMode(nextMode) {
+      if (mode !== nextMode) {
+        resetTurnstile();
+      }
       mode = nextMode;
       const config = getLoginPanelCopy(mode, { redirectTarget });
       if (!config) return;
@@ -444,7 +460,7 @@ export const prerender = true;
       try {
         if (submitMode === 'login') {
           const { signInWithEmailPassword } = await loadAuthModule();
-          await signInWithEmailPassword({ email, password });
+          await signInWithEmailPassword({ email, password, captchaToken: turnstileToken });
           writeSessionHint('signed-in');
           if (status) status.textContent = '登录成功。';
           window.location.assign(getPostLoginTarget(redirectTarget, resolveBase('')));
@@ -466,7 +482,7 @@ export const prerender = true;
           }
         } else if (submitMode === 'request-reset') {
           const { sendPasswordResetEmail } = await loadAuthModule();
-          await sendPasswordResetEmail({ email, redirect: redirectTarget });
+          await sendPasswordResetEmail({ email, redirect: redirectTarget, captchaToken: turnstileToken });
           if (status) status.textContent = '重置链接已发送。';
         } else if (submitMode === 'reset-password') {
           const { updatePassword } = await loadAuthModule();
@@ -482,7 +498,7 @@ export const prerender = true;
       } catch (error) {
         if (status) status.textContent = `操作失败：${formatAuthError(error, submitMode)}`;
       } finally {
-        if (submitMode === 'register') {
+        if (requiresTurnstile(submitMode)) {
           if (!turnstileDevFallback) {
             resetTurnstile();
           }

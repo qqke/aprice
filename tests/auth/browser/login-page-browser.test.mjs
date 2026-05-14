@@ -28,6 +28,11 @@ function makeEsmShimModuleBody() {
     '  }',
     '  function record(type, options){',
     '    calls.push({ type, options });',
+    '    try {',
+    '      const stored = JSON.parse(globalThis.localStorage?.getItem("__authCallsLog") || "[]");',
+    '      stored.push({ type, options });',
+    '      globalThis.localStorage?.setItem("__authCallsLog", JSON.stringify(stored));',
+    '    } catch {}',
     '  }',
     '  return {',
     '    auth: {',
@@ -186,22 +191,25 @@ async function main() {
       const element = document.querySelector('#nav-toggle');
       return element ? getComputedStyle(element).display : null;
     });
-    assert.notEqual(mobileMenuDisplay, 'none', 'mobile subpages should keep the menu toggle');
+    assert.equal(mobileMenuDisplay, 'none', 'mobile subpages should hide the menu toggle');
     await page.setViewportSize({ width: 1280, height: 900 });
 
     await waitForText(page, '#session-state', '未登录');
     await waitForText(page, '[data-auth-nav]', '登录');
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.locator('#nav-toggle').click();
-    await waitForText(page, '[data-auth-nav-mobile]', '登录');
-    await page.locator('#nav-toggle').click();
-    await page.setViewportSize({ width: 1280, height: 900 });
 
     await page.locator('#email').fill('name@example.com');
     await page.locator('#password').fill('password123');
+    await page.evaluate(() => window.__turnstileOptions?.callback?.('login-turnstile-token'));
+    await waitForText(page, '#turnstile-status', '人机验证已完成');
     await page.locator('#auth-submit').click();
 
     await page.waitForURL(`**${redirectTarget}`);
+    {
+      const calls = await page.evaluate(() => JSON.parse(globalThis.localStorage?.getItem('__authCallsLog') || '[]'));
+      const signInCall = calls.find((call) => call.type === 'signIn');
+      assert.ok(signInCall, 'expected signIn call to be recorded');
+      assert.equal(signInCall.options.options.captchaToken, 'login-turnstile-token');
+    }
     await page.goto(`${baseUrl}/aprice/login/?redirect=${encodeURIComponent(redirectTarget)}`, { waitUntil: 'domcontentloaded' });
 
     await page.locator('#auth-form').waitFor({ state: 'attached' });
@@ -215,21 +223,11 @@ async function main() {
     await page.locator('#signed-in-action').waitFor({ state: 'attached' });
     assert.equal(await page.locator('#signed-in-action').getAttribute('href'), redirectTarget);
     await waitForText(page, '[data-auth-nav]', '退出');
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.locator('#nav-toggle').click();
-    await waitForText(page, '[data-auth-nav-mobile]', '退出');
-    await page.locator('#nav-toggle').click();
-    await page.setViewportSize({ width: 1280, height: 900 });
 
     await page.locator('#switch-account-button').click();
     await waitForVisible(page, '#auth-form-shell');
     await waitForHidden(page, '#signed-in-state');
     await waitForText(page, '[data-auth-nav]', '登录');
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.locator('#nav-toggle').click();
-    await waitForText(page, '[data-auth-nav-mobile]', '登录');
-    await page.locator('#nav-toggle').click();
-    await page.setViewportSize({ width: 1280, height: 900 });
     await waitForHidden(page, '#logout-button');
 
     await page.goto(`${baseUrl}/aprice/login/?redirect=${encodeURIComponent('https://evil.example/phish')}`, { waitUntil: 'domcontentloaded' });
@@ -237,6 +235,7 @@ async function main() {
     await page.locator('#session-state').waitFor({ state: 'attached' });
     await page.locator('#email').fill('name@example.com');
     await page.locator('#password').fill('password123');
+    await page.evaluate(() => window.__turnstileOptions?.callback?.('safe-redirect-turnstile-token'));
     await page.locator('#auth-submit').click();
     await page.waitForURL('**/aprice/');
 
@@ -285,15 +284,18 @@ async function main() {
     await page.locator('#forgot-toggle').click();
     await waitForText(page, '#auth-panel-title', '找回密码');
     await page.locator('#email').fill('name@example.com');
+    await page.evaluate(() => window.__turnstileOptions?.callback?.('reset-turnstile-token'));
+    await waitForText(page, '#turnstile-status', '人机验证已完成');
     await page.locator('#auth-submit').click();
     await waitForText(page, '#auth-status', '重置链接已发送');
     {
       const calls = await page.evaluate(() => globalThis.__authCalls || []);
       const resetCall = calls.find((call) => call.type === 'resetPasswordForEmail');
       assert.ok(resetCall, 'expected resetPasswordForEmail call to be recorded');
-      const resetRedirect = new URL(resetCall.options.emailRedirectTo);
+      const resetRedirect = new URL(resetCall.options.redirectTo);
       assert.equal(resetRedirect.searchParams.get('mode'), 'reset');
       assert.equal(resetRedirect.searchParams.get('redirect'), redirectTarget);
+      assert.equal(resetCall.options.captchaToken, 'reset-turnstile-token');
     }
 
     await page.goto(`${baseUrl}/aprice/login/?mode=reset&type=recovery&redirect=${encodeURIComponent(redirectTarget)}`, { waitUntil: 'domcontentloaded' });
