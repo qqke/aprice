@@ -75,6 +75,27 @@ const meGateCopy = getPrivatePageGateCopy('me');
           </form>
         </section>
 
+        <details class="tile tile--wide me-panel" id="me-panel-credits" open>
+          <summary class="me-panel__summary">
+            <span class="me-panel__chevron" aria-hidden="true"></span>
+            <span class="me-panel__title">
+              <strong>积分与补价任务</strong>
+              <small id="credits-panel-summary">登录后查看余额</small>
+            </span>
+          </summary>
+          <div class="me-panel__body">
+            <div class="list" id="credit-summary-list">
+              <div class="notice notice--compact">登录后可查看积分余额、扣分规则与任务。</div>
+            </div>
+            <div class="pillrow me-log-actions">
+              <button class="button" id="claim-price-task" type="button">领取随机补价任务</button>
+              <button class="button button--ghost" id="skip-price-task" type="button" hidden>跳过当前任务</button>
+            </div>
+            <div class="notice notice--compact" id="price-task-status">任务会优先派发缺价或过期价格。</div>
+            <div class="list" id="credit-ledger-list"></div>
+          </div>
+        </details>
+
         <details class="tile tile--flow me-panel" id="me-panel-security">
           <summary class="me-panel__summary">
             <span class="me-panel__chevron" aria-hidden="true"></span>
@@ -176,7 +197,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
 
   <script type="module" is:inline define:vars={{ loginUrl }}>
     const { clearRecentViews, escapeAttribute, escapeHtml, fetchProductsPage, fetchRecentViews, fetchStoresPage, formatDateTime, formatYen, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
-    const { changePassword, fetchFavorites, fetchPersonalLogs, formatDataError, getCurrentUser, savePersonalLog, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+    const { changePassword, claimRandomPriceTask, fetchCreditLedger, fetchCreditSummary, fetchFavorites, fetchPersonalLogs, formatDataError, getCurrentUser, recordProductSearch, savePersonalLog, skipPriceTask, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
     const { validatePositiveYen } = await import(window.__APriceConfig?.formValidationJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'form-validation.js');
     const { formatAuthError, validatePasswordChangeInputs } = await import(window.__APriceConfig?.loginPageStateJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'login-page-state.js');
@@ -213,6 +234,12 @@ const meGateCopy = getPrivatePageGateCopy('me');
     const passwordSubmitButton = document.querySelector('#password-submit');
     const favoriteProductButton = document.querySelector('#favorite-product-button');
     const favoriteStoreButton = document.querySelector('#favorite-store-button');
+    const creditsPanelSummary = document.querySelector('#credits-panel-summary');
+    const creditSummaryList = document.querySelector('#credit-summary-list');
+    const creditLedgerList = document.querySelector('#credit-ledger-list');
+    const claimPriceTaskButton = document.querySelector('#claim-price-task');
+    const skipPriceTaskButton = document.querySelector('#skip-price-task');
+    const priceTaskStatus = document.querySelector('#price-task-status');
 
     const formControls = [productSearchInput, productInput, loadMoreProductsButton, storeSearchInput, storeInput, loadMoreStoresButton, priceInput, noteInput, favoriteProductButton, favoriteStoreButton];
     const securityControls = [currentPasswordInput, newPasswordInput, newPasswordConfirmInput, passwordSubmitButton];
@@ -226,6 +253,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
     let storeSearchToken = 0;
     let productPager = { rows: [], offset: 0, hasMore: false, term: '' };
     let storePager = { rows: [], offset: 0, hasMore: false, term: '' };
+    let currentPriceTask = null;
 
     function setControlsDisabled(disabled) {
       formControls.forEach((control) => {
@@ -389,10 +417,70 @@ const meGateCopy = getPrivatePageGateCopy('me');
       if (favoritesPanelSummary) favoritesPanelSummary.textContent = '收藏 · 0 项';
       if (logsPanelSummary) logsPanelSummary.textContent = '价格记录 · 0 条';
       if (securityPanelSummary) securityPanelSummary.textContent = '登录后可修改密码';
+      if (creditsPanelSummary) creditsPanelSummary.textContent = '登录后查看余额';
+      if (creditSummaryList) creditSummaryList.innerHTML = '<div class="notice notice--compact">登录后可查看积分余额、免费次数和补价任务。</div>';
+      if (creditLedgerList) creditLedgerList.innerHTML = '';
+      if (claimPriceTaskButton) claimPriceTaskButton.disabled = true;
+      if (skipPriceTaskButton) skipPriceTaskButton.hidden = true;
+      if (priceTaskStatus) priceTaskStatus.textContent = '登录后可领取随机补价任务。';
       if (passwordStatus) passwordStatus.textContent = '请登录后再修改密码。';
       status.textContent = getPrivatePageStatusCopy('me', 'loggedOutStatus');
       setControlsDisabled(true);
       setSecurityControlsDisabled(true);
+    }
+
+    function renderCreditSummary(summary = {}, ledger = []) {
+      const balance = Number(summary.balance || 0);
+      const freeSearch = Number(summary.daily_free_searches || 0);
+      const freeReference = Number(summary.daily_free_price_references || 0);
+      const reward = Number(summary.approved_contribution_reward || 0);
+      const priceCost = Number(summary.price_reference_cost || 0);
+      const searchCost = Number(summary.search_cost_after_free || 0);
+      if (creditsPanelSummary) creditsPanelSummary.textContent = `积分 ${balance} · 今日价格参考 ${summary.references_today || 0}/${freeReference}`;
+      if (creditSummaryList) {
+        creditSummaryList.innerHTML = `
+          <div class="list__item">
+            <div>
+              <strong>当前积分 ${balance}</strong>
+              <small>价格参考免费 ${freeReference} 次/日，之后 ${priceCost} 分/次；商品检索免费 ${freeSearch} 次/日，之后 ${searchCost} 分/次。</small>
+            </div>
+            <span class="price">${balance}</span>
+          </div>
+          <div class="list__item">
+            <div>
+              <strong>贡献奖励</strong>
+              <small>多人一致升级公共价后，参与共识的用户奖励 ${reward} 积分。</small>
+            </div>
+            <span class="meta">+${reward}</span>
+          </div>
+        `;
+      }
+      if (creditLedgerList) {
+        creditLedgerList.innerHTML = ledger.length
+          ? ledger.slice(0, 8).map((item) => `
+            <div class="list__item">
+              <div>
+                <strong>${item.amount > 0 ? '获得积分' : '消耗积分'} ${item.amount}</strong>
+                <small>${escapeHtml(item.reason || 'credit')} · ${item.created_at ? formatDateTime(item.created_at) : ''} · ${escapeHtml(item.note || '')}</small>
+              </div>
+              <span class="${item.amount > 0 ? 'price' : 'meta'}">${item.amount > 0 ? '+' : ''}${item.amount}</span>
+            </div>
+          `).join('')
+          : '<div class="notice notice--compact">暂无积分流水。</div>';
+      }
+    }
+
+    function renderPriceTask(task) {
+      currentPriceTask = task || null;
+      if (skipPriceTaskButton) skipPriceTaskButton.hidden = !currentPriceTask;
+      if (!priceTaskStatus) return;
+      if (!task) {
+        priceTaskStatus.textContent = '当前没有领取中的任务。';
+        return;
+      }
+      const productName = lookupName(products, task.product_id);
+      const storeName = task.store_id ? lookupName(stores, task.store_id) : '任意门店';
+      priceTaskStatus.textContent = `当前任务：${productName} · ${storeName}，提交价格后进入共识池。`;
     }
 
     function renderProductOptions({ keepCurrent = true } = {}) {
@@ -434,6 +522,14 @@ const meGateCopy = getPrivatePageGateCopy('me');
       const term = String(productSearchInput?.value || '').trim();
       const offset = reset ? 0 : productPager.offset;
       if (loadMoreProductsButton) loadMoreProductsButton.disabled = true;
+      if (reset && term) {
+        try {
+          const credit = await recordProductSearch(term);
+          if (creditSummaryList) renderCreditSummary(credit, []);
+        } catch (error) {
+          status.textContent = `检索计费失败：${formatDataError(error)}`;
+        }
+      }
       const page = await fetchProductsPage({ term, limit: PAGE_SIZE, offset });
       if (token !== productSearchToken) return;
       const mergedRows = reset ? page.rows : [...productPager.rows, ...page.rows.filter((row) => !productPager.rows.some((existing) => existing.id === row.id))];
@@ -475,15 +571,20 @@ const meGateCopy = getPrivatePageGateCopy('me');
       status.textContent = getPrivatePageStatusCopy('me', 'loading');
       setControlsDisabled(false);
       setSecurityControlsDisabled(false);
+      if (claimPriceTaskButton) claimPriceTaskButton.disabled = false;
       if (securityPanelSummary) securityPanelSummary.textContent = '当前账号可修改密码';
       if (passwordStatus) passwordStatus.textContent = '输入当前密码后设置新密码。';
 
       let logs;
       let loadedFavorites;
+      let creditSummary;
+      let creditLedger;
       try {
-        [logs, loadedFavorites] = await Promise.all([
+        [logs, loadedFavorites, creditSummary, creditLedger] = await Promise.all([
           fetchPersonalLogs(user.id),
           fetchFavorites(user.id),
+          fetchCreditSummary(),
+          fetchCreditLedger(30),
         ]);
         await Promise.all([
           loadProductsPage({ reset: true }),
@@ -507,6 +608,8 @@ const meGateCopy = getPrivatePageGateCopy('me');
 
       renderLogs(logs);
       renderFavorites(favorites);
+      renderCreditSummary(creditSummary, creditLedger);
+      renderPriceTask(currentPriceTask);
       status.textContent = getPrivatePageStatusCopy('me', 'syncSummary', { logsCount: logs.length, favoritesCount: favorites.length });
     }
 
@@ -705,6 +808,39 @@ const meGateCopy = getPrivatePageGateCopy('me');
         await loadStoresPage({ reset: false });
       } catch (error) {
         status.textContent = `门店加载失败：${formatDataError(error)}`;
+      }
+    });
+
+    claimPriceTaskButton?.addEventListener('click', async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!user) {
+          syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
+          redirectToLogin(loginUrl, authGate);
+          return;
+        }
+        claimPriceTaskButton.disabled = true;
+        if (priceTaskStatus) priceTaskStatus.textContent = '正在领取任务...';
+        const task = await claimRandomPriceTask();
+        renderPriceTask(task);
+      } catch (error) {
+        if (priceTaskStatus) priceTaskStatus.textContent = `领取失败：${formatDataError(error)}`;
+      } finally {
+        claimPriceTaskButton.disabled = false;
+      }
+    });
+
+    skipPriceTaskButton?.addEventListener('click', async () => {
+      if (!currentPriceTask?.id) return;
+      try {
+        skipPriceTaskButton.disabled = true;
+        await skipPriceTask(currentPriceTask.id);
+        renderPriceTask(null);
+        if (priceTaskStatus) priceTaskStatus.textContent = '已跳过当前任务，可以重新领取。';
+      } catch (error) {
+        if (priceTaskStatus) priceTaskStatus.textContent = `跳过失败：${formatDataError(error)}`;
+      } finally {
+        skipPriceTaskButton.disabled = false;
       }
     });
 

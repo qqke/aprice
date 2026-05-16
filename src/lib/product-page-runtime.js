@@ -101,7 +101,7 @@ export function buildStoreMapModel(stores = [], { selectedStoreId = '', featured
 export async function initProductPage({ loginUrl }) {
 
 const { escapeAttribute, escapeHtml, recordRecentView, resolveBase, fetchNearbyPrices, fetchProductPricesPage, fetchStoresPage, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
-const { fetchFavorites, fetchPersonalLogs, formatDataError, getCurrentUser, indexLatestPersonalPricesByStore, submitStorePrice, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+const { fetchCreditSummary, fetchFavorites, fetchPersonalLogs, formatDataError, getCurrentUser, getSession, indexLatestPersonalPricesByStore, submitStorePrice, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
 const { getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
 const { validateOptionalHttpUrl, validatePositiveYen } = await import(window.__APriceConfig?.formValidationJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'form-validation.js');
 
@@ -140,6 +140,7 @@ const favoriteButton = document.querySelector('#favorite-product-button');
 const favoriteStoreButton = document.querySelector('#favorite-store-button');
 const authGate = document.querySelector('#product-auth-gate');
 const authGateLink = document.querySelector('#product-login-link');
+const creditStatus = document.querySelector('#product-credit-status');
 const heroGeoButton = document.querySelector('#hero-geo-sort');
 const geoButton = document.querySelector('#geo-sort');
 const geoStatus = document.querySelector('#geo-status');
@@ -183,6 +184,7 @@ let loadedPriceRows = [];
 let priceNextCursor = null;
 let pricePageLoading = false;
 let highlightedNearbyStoreId = '';
+let latestCredit = null;
 
 async function syncAuthGate() {
   const user = await getCurrentUser();
@@ -225,6 +227,25 @@ function compareStores(a, b) {
   if (aHasDistance) return -1;
   if (bHasDistance) return 1;
   return String(a.name || '').localeCompare(String(b.name || ''), 'ja-JP');
+}
+
+function formatCreditStatus(credit = latestCredit) {
+  if (!creditStatus) return;
+  if (!credit) {
+    creditStatus.textContent = '登录后可查看最新价格与积分余额。';
+    return;
+  }
+  const balance = Number(credit.balance || 0);
+  const freeRemaining = Number(credit.free_remaining ?? credit.daily_free_price_references ?? 0);
+  const charged = Number(credit.charged_points || 0);
+  const cost = Number(credit.settings?.price_reference_cost ?? credit.price_reference_cost ?? 1);
+  const chargeCopy = charged > 0 ? `本次消耗 ${charged} 积分` : '本次未扣积分';
+  creditStatus.textContent = `积分 ${balance} · 今日免费参考剩余 ${Math.max(0, freeRemaining)} 次 · ${chargeCopy} · 之后每次 ${cost} 积分`;
+}
+
+async function getPriceAccessToken() {
+  const session = await getSession();
+  return session?.access_token || '';
 }
 
 function storeMetaText(storeItem, { distance = null, personalPrice = null } = {}) {
@@ -617,6 +638,12 @@ async function refreshPersonalPriceState({ preserveSelection = true } = {}) {
   }
 
   personalPriceLogs = await fetchPersonalLogs(user.id);
+  try {
+    latestCredit = await fetchCreditSummary();
+    formatCreditStatus(latestCredit);
+  } catch {
+    formatCreditStatus(null);
+  }
   personalPriceIndex = indexLatestPersonalPricesByStore(personalPriceLogs, productId);
   renderStorePicker();
 
@@ -961,8 +988,14 @@ function syncTrendLoadMoreButton() {
 
 async function loadPrices() {
   try {
-    const page = await fetchProductPricesPage(productId, { limit: 90, sinceDays: 60 });
+    const token = await getPriceAccessToken();
+    if (!token) {
+      throw new Error('请登录后查看最新价格。');
+    }
+    const page = await fetchProductPricesPage(productId, { limit: 90, sinceDays: 60, token });
     loadedPriceRows = page.items || [];
+    latestCredit = page.credit || latestCredit;
+    formatCreditStatus(latestCredit);
     highlightedNearbyStoreId = selectedStoreId || loadedPriceRows[0]?.store_id || '';
     priceNextCursor = page.nextCursor || null;
     renderPrices(loadedPriceRows);
@@ -979,6 +1012,7 @@ async function loadPrices() {
     renderNearbyStores([]);
     renderInsights([]);
     syncTrendLoadMoreButton();
+    formatCreditStatus(null);
     if (geoStatus) geoStatus.textContent = `价格加载失败：${error.message}`;
     if (nearbyStatus) nearbyStatus.textContent = '价格加载失败后仍可选择门店记录个人价格。';
   }
@@ -989,10 +1023,15 @@ async function loadMoreTrendRows() {
   pricePageLoading = true;
   syncTrendLoadMoreButton();
   try {
+    const token = await getPriceAccessToken();
+    if (!token) {
+      throw new Error('请登录后查看最新价格。');
+    }
     const page = await fetchProductPricesPage(productId, {
       limit: 90,
       sinceDays: 60,
       cursor: priceNextCursor,
+      token,
     });
     const deduped = new Map(loadedPriceRows.map((row) => [row.id, row]));
     for (const row of page.items || []) {
@@ -1005,6 +1044,8 @@ async function loadMoreTrendRows() {
       return String(b?.id || '').localeCompare(String(a?.id || ''));
     });
     priceNextCursor = page.nextCursor || null;
+    latestCredit = page.credit || latestCredit;
+    formatCreditStatus(latestCredit);
     renderInsights(loadedPriceRows);
   } finally {
     pricePageLoading = false;
@@ -1175,7 +1216,11 @@ geoButton?.addEventListener('click', async () => {
   try {
     const location = await syncStoreLocation({ announce: true });
     if (!location) return;
-    const rows = await fetchNearbyPrices({ productId, lat: location.lat, lng: location.lng, radiusKm: 20, limit: 220, sinceDays: 60 });
+    const token = await getPriceAccessToken();
+    if (!token) {
+      throw new Error('请登录后查看附近最新价格。');
+    }
+    const rows = await fetchNearbyPrices({ productId, lat: location.lat, lng: location.lng, radiusKm: 20, limit: 220, sinceDays: 60, token });
     highlightedNearbyStoreId = selectedStoreId || rows[0]?.store_id || '';
     renderPrices(rows);
     renderNearbyStores(rows);

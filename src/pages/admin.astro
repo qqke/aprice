@@ -60,6 +60,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         <a class="button button--ghost" href="#admin-panel-product">商品</a>
         <a class="button button--ghost" href="#admin-panel-store">门店</a>
         <a class="button button--ghost" href="#admin-panel-recent-prices">最近价格</a>
+        <a class="button button--ghost" href="#admin-panel-commercial">商业化</a>
         <a class="button button--ghost" href="#admin-panel-telemetry">事件看板</a>
       </div>
 
@@ -246,13 +247,57 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
             <div class="list" id="admin-telemetry-recent"></div>
           </div>
         </details>
+
+        <details class="tile tile--wide tile--flow admin-panel" id="admin-panel-commercial" open>
+          <summary class="admin-panel__summary">
+            <span class="admin-panel__chevron" aria-hidden="true"></span>
+            <span class="admin-panel__title">
+              <strong>商业化设置</strong>
+              <small>积分充值、扣分规则与共识规则。</small>
+            </span>
+            <span class="pill" id="admin-commercial-summary-count">积分规则</span>
+            <span class="meta" id="admin-commercial-summary-status">未加载</span>
+          </summary>
+          <div class="admin-panel__body">
+            <form class="form admin-form" id="credit-adjust-form">
+              <div class="admin-form__row admin-form__row--two">
+                <label class="field"><input id="credit-user-id" placeholder="用户 UUID" aria-label="用户 UUID" /></label>
+                <label class="field"><input id="credit-amount" type="number" inputmode="numeric" placeholder="积分变化，例如 100 或 -10" aria-label="积分变化" /></label>
+              </div>
+              <label class="field"><input id="credit-note" placeholder="备注，例如 手动充值" aria-label="积分备注" /></label>
+              <button class="button admin-form__submit" type="submit">调整积分</button>
+            </form>
+            <form class="form admin-form" id="app-setting-form">
+              <div class="admin-form__row admin-form__row--two">
+                <label class="field">
+                  <select id="setting-key" aria-label="设置项">
+                    <option value="daily_free_searches">daily_free_searches</option>
+                    <option value="daily_free_price_references">daily_free_price_references</option>
+                    <option value="search_cost_after_free">search_cost_after_free</option>
+                    <option value="price_reference_cost">price_reference_cost</option>
+                    <option value="approved_contribution_reward">approved_contribution_reward</option>
+                    <option value="consensus_required_users">consensus_required_users</option>
+                    <option value="consensus_window_days">consensus_window_days</option>
+                    <option value="task_claim_limit_per_day">task_claim_limit_per_day</option>
+                    <option value="task_expiry_hours">task_expiry_hours</option>
+                    <option value="stale_price_days">stale_price_days</option>
+                    <option value="low_balance_threshold">low_balance_threshold</option>
+                  </select>
+                </label>
+                <label class="field"><input id="setting-value" type="number" inputmode="numeric" placeholder="数值" aria-label="设置值" /></label>
+              </div>
+              <button class="button admin-form__submit" type="submit">保存设置</button>
+            </form>
+            <div class="list" id="admin-commercial-settings"></div>
+          </div>
+        </details>
       </div>
     </div>
   </section>
 
   <script type="module" is:inline define:vars={{ loginUrl }}>
     const { fetchAllProducts, fetchAllStores, fetchRecentPrices } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
-    const { adminDeletePrice, adminDeleteProduct, adminDeleteStore, adminFetchTelemetryRecent, adminFetchTelemetrySummary, adminUpsertPrice, adminUpsertStore, createProduct, fetchCurrentProfile, formatDataError, getCurrentUser, signOut } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+    const { adminAdjustCredits, adminDeletePrice, adminDeleteProduct, adminDeleteStore, adminFetchTelemetryRecent, adminFetchTelemetrySummary, adminUpdateAppSetting, adminUpsertPrice, adminUpsertStore, createProduct, fetchAppSettings, fetchCurrentProfile, formatDataError, getCurrentUser, getSession, signOut } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { applyPrivatePageGateCopy, getPrivatePageGateCopy, getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
     const { validateCoordinate, validateJanCode, validateOptionalHttpUrl, validatePositiveYen } = await import(window.__APriceConfig?.formValidationJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'form-validation.js');
 
@@ -278,6 +323,9 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     const runtimeConfigList = document.querySelector('#admin-runtime-config');
     const telemetrySummaryList = document.querySelector('#admin-telemetry-summary');
     const telemetryRecentList = document.querySelector('#admin-telemetry-recent');
+    const commercialSettingsList = document.querySelector('#admin-commercial-settings');
+    const creditAdjustForm = document.querySelector('#credit-adjust-form');
+    const appSettingForm = document.querySelector('#app-setting-form');
     const productReset = document.querySelector('#product-reset');
     const storeReset = document.querySelector('#store-reset');
     const priceReset = document.querySelector('#price-reset');
@@ -299,6 +347,8 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       recentPricesStatus: document.querySelector('#admin-recent-prices-summary-status'),
       telemetryCount: document.querySelector('#admin-telemetry-summary-count'),
       telemetryStatus: document.querySelector('#admin-telemetry-summary-status'),
+      commercialCount: document.querySelector('#admin-commercial-summary-count'),
+      commercialStatus: document.querySelector('#admin-commercial-summary-status'),
     };
 
     const productFields = {
@@ -335,11 +385,23 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       is_member_price: document.querySelector('#price-member'),
     };
 
+    const creditFields = {
+      user_id: document.querySelector('#credit-user-id'),
+      amount: document.querySelector('#credit-amount'),
+      note: document.querySelector('#credit-note'),
+    };
+
+    const settingFields = {
+      setting_key: document.querySelector('#setting-key'),
+      setting_value: document.querySelector('#setting-value'),
+    };
+
     let products = [];
     let stores = [];
     let prices = [];
     let telemetrySummary = { days: 7, total_events: 0, active_users: 0, top_events: [] };
     let telemetryItems = [];
+    let appSettings = {};
     let selectedPriceId = '';
 
     function elValue(field) {
@@ -401,6 +463,8 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       setSummaryText('recentPricesStatus', prices.length ? '可检查' : '暂无数据');
       setSummaryText('telemetryCount', `事件 ${telemetrySummary?.total_events || 0} 条`);
       setSummaryText('telemetryStatus', telemetryItems.length ? '已加载' : '暂无数据');
+      setSummaryText('commercialCount', `设置 ${Object.keys(appSettings || {}).length} 项`);
+      setSummaryText('commercialStatus', Object.keys(appSettings || {}).length ? '已加载' : '未加载');
     }
 
     function refreshSelectors() {
@@ -466,6 +530,22 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
           <span class="meta">${config.useServerPriceRpc ? 'rpc:on' : 'rpc:off'}</span>
         </div>
       `;
+    }
+
+    function renderCommercialSettings() {
+      if (!commercialSettingsList) return;
+      const entries = Object.entries(appSettings || {});
+      commercialSettingsList.innerHTML = entries.length
+        ? entries.map(([key, value]) => `
+          <div class="list__item">
+            <div>
+              <strong>${escapeHtml(key)}</strong>
+              <small>当前值来自 DB 配置，RPC 运行时读取。</small>
+            </div>
+            <span class="price">${escapeHtml(String(value))}</span>
+          </div>
+        `).join('')
+        : '<div class="notice notice--compact">暂无商业化配置。</div>';
     }
 
     function renderProducts() {
@@ -596,11 +676,17 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         return false;
       }
 
+      const session = await getSession();
       const [productItems, storeItems, priceItems] = await Promise.all([
         fetchAllProducts(),
         fetchAllStores(),
-        fetchRecentPrices(12),
+        fetchRecentPrices(12, { token: session?.access_token || '' }),
       ]);
+      try {
+        appSettings = await fetchAppSettings();
+      } catch {
+        appSettings = {};
+      }
       let telemetrySummaryResult = { days: 7, total_events: 0, active_users: 0, top_events: [] };
       let telemetryRecentResult = { items: [] };
       try {
@@ -625,6 +711,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       renderStores();
       renderPrices();
       renderTelemetry();
+      renderCommercialSettings();
       updateAdminSummaries();
       if (status) status.textContent = getPrivatePageStatusCopy('admin', 'loaded', { email: profile.email || user.email });
       if (accessState) {
@@ -721,6 +808,46 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         await loadData();
       } catch (error) {
         if (status) status.textContent = getPrivatePageStatusCopy('admin', 'savePriceFailure', { message: formatDataError(error) });
+      }
+    });
+
+    creditAdjustForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      try {
+        const amount = Number(elValue(creditFields.amount));
+        if (!elValue(creditFields.user_id) || !Number.isInteger(amount) || amount === 0) {
+          if (status) status.textContent = '请填写用户 UUID 和非 0 整数积分。';
+          return;
+        }
+        const result = await adminAdjustCredits({
+          user_id: elValue(creditFields.user_id),
+          amount: String(amount),
+          note: elValue(creditFields.note),
+        });
+        if (status) status.textContent = `积分已调整，当前余额 ${result.balance ?? '未知'}。`;
+        setValue(creditFields.amount, '');
+        setValue(creditFields.note, '');
+      } catch (error) {
+        if (status) status.textContent = `积分调整失败：${formatDataError(error)}`;
+      }
+    });
+
+    appSettingForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      try {
+        const value = Number(elValue(settingFields.setting_value));
+        if (!Number.isInteger(value)) {
+          if (status) status.textContent = '设置值需要是整数。';
+          return;
+        }
+        await adminUpdateAppSetting({
+          setting_key: elValue(settingFields.setting_key),
+          setting_value: value,
+        });
+        if (status) status.textContent = '商业化设置已保存。';
+        await loadData();
+      } catch (error) {
+        if (status) status.textContent = `设置保存失败：${formatDataError(error)}`;
       }
     });
 

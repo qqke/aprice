@@ -206,6 +206,64 @@ export async function fetchPersonalLogs(userId) {
   });
 }
 
+export async function fetchCreditSummary() {
+  const session = await requireSession();
+  const result = await restRpc('fetch_credit_summary', {}, { token: session.access_token });
+  const summary = Array.isArray(result) ? result[0] : result;
+  return summary && typeof summary === 'object' ? summary : {};
+}
+
+export async function fetchCreditLedger(limit = 30) {
+  const session = await requireSession();
+  return restGet('credit_ledger', {
+    query: {
+      select: '*',
+      user_id: `eq.${session.user.id}`,
+      order: 'created_at.desc',
+      limit: Math.max(1, Math.min(Number(limit) || 30, 100)),
+    },
+    token: session.access_token,
+  });
+}
+
+export async function fetchAppSettings() {
+  const result = await restRpc('fetch_app_settings', {});
+  const settings = Array.isArray(result) ? result[0] : result;
+  return settings && typeof settings === 'object' ? settings : {};
+}
+
+export async function recordProductSearch(query) {
+  const session = await requireSession();
+  const result = await restRpc('record_product_search', { payload: { query: String(query || '') } }, { token: session.access_token });
+  const summary = Array.isArray(result) ? result[0] : result;
+  return summary && typeof summary === 'object' ? summary : {};
+}
+
+export async function claimRandomPriceTask() {
+  const session = await requireSession();
+  const result = await restRpc('claim_random_price_task', {}, { token: session.access_token });
+  return Array.isArray(result) ? result[0] : result;
+}
+
+export async function skipPriceTask(id) {
+  const session = await requireSession();
+  const result = await restRpc('skip_price_task', { payload: { id } }, { token: session.access_token });
+  return Array.isArray(result) ? result[0] : result;
+}
+
+export async function adminAdjustCredits(payload) {
+  const session = await requireSession();
+  const result = await restRpc('admin_adjust_credits', { payload }, { token: session.access_token });
+  const summary = Array.isArray(result) ? result[0] : result;
+  return summary && typeof summary === 'object' ? summary : {};
+}
+
+export async function adminUpdateAppSetting(payload) {
+  const session = await requireSession();
+  const result = await restRpc('admin_update_app_setting', { payload }, { token: session.access_token });
+  return Array.isArray(result) ? result[0] : result;
+}
+
 function personalLogSortTime(entry) {
   const time = new Date(entry?.created_at || entry?.purchased_at || 0).getTime();
   return Number.isFinite(time) ? time : 0;

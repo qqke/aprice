@@ -340,13 +340,14 @@ export async function fetchStoresPage({ term = '', limit = 10, offset = 0 } = {}
   };
 }
 
-export async function fetchRecentPrices(limit = 10) {
+export async function fetchRecentPrices(limit = 10, options = {}) {
   return restGet('prices', {
     query: {
       select: 'id, product_id, store_id, price_yen, is_member_price, source, note, collected_at, created_at, updated_at, stores:store_id (id, name, city, pref), products:product_id (id, name, barcode, brand)',
       order: 'collected_at.desc',
       limit,
     },
+    token: options.token,
   });
 }
 
@@ -423,7 +424,7 @@ async function fetchPricesForProductRpc(productId, options = {}) {
       lng: options.lng,
       radius_km: options.radiusKm,
     },
-  });
+  }, { token: options.token });
   return Array.isArray(rows) ? rows : [];
 }
 
@@ -437,11 +438,12 @@ async function fetchPricesPageRpc(productId, options = {}) {
     radius_km: options.radiusKm,
     cursor: options.cursor || null,
   };
-  const result = await restRpc('fetch_product_prices_page', { payload });
+  const result = await restRpc('fetch_product_prices_page', { payload }, { token: options.token });
   const page = Array.isArray(result) ? result[0] : result;
   const items = Array.isArray(page?.items) ? page.items : [];
   const nextCursor = page?.next_cursor && typeof page.next_cursor === 'object' ? page.next_cursor : null;
-  return { items, nextCursor };
+  const credit = page?.credit && typeof page.credit === 'object' ? page.credit : null;
+  return { items, nextCursor, credit };
 }
 
 export async function fetchPricesForProduct(productId, options = {}) {
@@ -461,6 +463,7 @@ export async function fetchPricesForProduct(productId, options = {}) {
         lat: options.lat,
         lng: options.lng,
         radiusKm: options.radiusKm,
+        token: options.token,
       });
     } catch {
       // Fall back to direct table query when RPC is not deployed.
@@ -473,9 +476,10 @@ export async function fetchPricesForProduct(productId, options = {}) {
         'id, product_id, store_id, price_yen, is_member_price, source, collected_at, note, stores:store_id (id, name, chain_name, address, city, pref, lat, lng, hours), products:product_id (id, name, barcode, brand, pack, tone)',
       product_id: `eq.${productId}`,
       order: 'collected_at.desc',
-      limit,
+        limit,
       ...(collectedSince ? { collected_at: `gte.${collectedSince}` } : {}),
     },
+    token: options.token,
   });
 }
 
@@ -493,18 +497,19 @@ export async function fetchProductPricesPage(productId, options = {}) {
         lng: options.lng,
         radiusKm: options.radiusKm,
         cursor: options.cursor || null,
+        token: options.token,
       });
     } catch {
       // Fall through to compatibility mode.
     }
   }
 
-  const rows = await fetchPricesForProduct(productId, { limit, sinceDays, lat: options.lat, lng: options.lng, radiusKm: options.radiusKm });
-  return { items: rows, nextCursor: null };
+  const rows = await fetchPricesForProduct(productId, { limit, sinceDays, lat: options.lat, lng: options.lng, radiusKm: options.radiusKm, token: options.token });
+  return { items: rows, nextCursor: null, credit: null };
 }
 
-export async function fetchNearbyPrices({ productId, lat, lng, radiusKm = 8, limit = 160, sinceDays = 30 }) {
-  const rows = await fetchPricesForProduct(productId, { limit, sinceDays, lat, lng, radiusKm });
+export async function fetchNearbyPrices({ productId, lat, lng, radiusKm = 8, limit = 160, sinceDays = 30, token = '' }) {
+  const rows = await fetchPricesForProduct(productId, { limit, sinceDays, lat, lng, radiusKm, token });
   return rows
     .map((row) => {
       const store = row.stores || null;
