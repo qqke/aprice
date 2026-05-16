@@ -7767,3 +7767,28 @@ body.admin-page .admin-toolbar,
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 720px) {
+  body.home-page .topbar__inner,
+  body:is(.scan-page, .me-page, .login-page, .admin-page, .product-page, .error-page) .topbar__inner {
+    grid-template-columns: minmax(0, 1fr) minmax(72px, auto);
+  }
+
+  body.home-page .nav,
+  body:is(.scan-page, .me-page, .login-page, .admin-page, .product-page, .error-page) .nav,
+  body.home-page .nav-toggle,
+  body:is(.scan-page, .me-page, .login-page, .admin-page, .product-page, .error-page) .nav-toggle,
+  body.home-page .mobile-nav,
+  body:is(.scan-page, .me-page, .login-page, .admin-page, .product-page, .error-page) .mobile-nav,
+  .nav,
+  .nav-toggle,
+  .chip.nav-toggle,
+  .mobile-nav {
+    display: none;
+  }
+
+  body.home-page .session-chip,
+  body:is(.scan-page, .me-page, .login-page, .admin-page, .product-page, .error-page) .session-chip {
+    grid-column: 2;
+  }
+}

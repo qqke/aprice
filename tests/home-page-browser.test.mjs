@@ -95,11 +95,8 @@ async function main() {
         const element = document.querySelector('#nav-toggle');
         return element ? getComputedStyle(element).display : null;
       });
-      assert.notEqual(mobileMenuDisplay, 'none', 'mobile homepage should show the menu toggle');
-      assert.equal(await page.locator('#mobile-nav').isHidden(), true, 'mobile nav should start collapsed');
-      await page.locator('#nav-toggle').click();
-      assert.equal(await page.locator('#nav-toggle').getAttribute('aria-expanded'), 'true');
-      assert.equal(await page.locator('#mobile-nav').isVisible(), true, 'mobile nav should open from the menu toggle');
+      assert.equal(mobileMenuDisplay, 'none', 'mobile homepage should hide the top menu toggle');
+      assert.equal(await page.locator('#mobile-nav').isHidden(), true, 'mobile homepage should keep the top nav hidden');
 
       const mobileMetaDisplay = await page.evaluate(() => {
         const element = document.querySelector('.home-meta');
