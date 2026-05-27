@@ -387,7 +387,7 @@ export const prerender = true;
 
     async function detectFromFrame(source) {
       if (!detector) {
-        setScanStatus('当前浏览器没有 BarcodeDetector，请直接输入条码。', 'warning');
+        setScanStatus('当前环境暂时无法自动识别条码，请直接输入 JAN 码。', 'warning');
         return;
       }
       if (!source) {
@@ -455,7 +455,7 @@ export const prerender = true;
         setScanStatus(
           detector
             ? '相机已启动，正在寻找条码...'
-            : '相机已启动，但当前浏览器没有 BarcodeDetector。可以继续手动输入。',
+            : '相机已启动，但自动识别暂不可用。可以继续手动输入 JAN 码。',
           detector ? 'success' : 'warning',
         );
         syncCameraControls();

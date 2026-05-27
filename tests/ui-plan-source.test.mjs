@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const globalCss = await readFile('src/styles/global.css', 'utf8');
+const scanPage = await readFile('src/pages/scan.astro', 'utf8');
 
 const tooSmallFontSizes = [];
 globalCss.split(/\r?\n/).forEach((line, index) => {
@@ -17,6 +18,12 @@ assert.equal(
   tooSmallFontSizes.length,
   0,
   `Plan.md requires a 0.75rem minimum font size. Found:\n${tooSmallFontSizes.join('\n')}`,
+);
+
+assert.equal(
+  scanPage.includes('没有 BarcodeDetector') || scanPage.includes('当前浏览器没有 BarcodeDetector'),
+  false,
+  'scan page should not expose implementation terms like BarcodeDetector in user-facing copy',
 );
 
 console.log('ui plan source test passed');
