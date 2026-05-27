@@ -43,12 +43,15 @@ export const prerender = true;
           <div id="auth-form-shell">
             <form class="form auth-form" id="auth-form">
               <label class="field" for="email" id="email-field">
+                <span class="field__label">邮箱地址</span>
                 <input id="email" type="email" placeholder="name@example.com" autocomplete="email" aria-label="邮箱地址" required />
               </label>
               <label class="field" for="password" id="password-field">
+                <span class="field__label">密码</span>
                 <input id="password" type="password" placeholder="至少 8 位密码" autocomplete="current-password" aria-label="密码" required />
               </label>
               <label class="field" for="confirm-password" id="confirm-field" hidden>
+                <span class="field__label">确认密码</span>
                 <input id="confirm-password" type="password" placeholder="再次输入密码" autocomplete="new-password" aria-label="确认密码" />
               </label>
               <div class="turnstile-field" id="turnstile-field" hidden>
@@ -162,6 +165,20 @@ export const prerender = true;
     let turnstileDevFallback = false;
     const isLocalDevFallbackEnabled = Boolean(window.__APriceConfig?.turnstileDevFallback);
 
+    function setNoticeTone(node, tone = 'neutral') {
+      if (!node?.classList) return;
+      node.classList.remove('notice--success', 'notice--error', 'notice--warning');
+      if (tone === 'success' || tone === 'error' || tone === 'warning') {
+        node.classList.add(`notice--${tone}`);
+      }
+    }
+
+    function setStatus(message, tone = 'neutral') {
+      if (!status) return;
+      status.textContent = message;
+      setNoticeTone(status, tone);
+    }
+
     function setTurnstileStatus(message) {
       if (turnstileStatus) turnstileStatus.textContent = message;
     }
@@ -211,7 +228,7 @@ export const prerender = true;
     function enableDevTurnstileFallback() {
       if (!isLocalDevFallbackEnabled) return false;
       turnstileDevFallback = true;
-      turnstileToken = 'dev-turnstile-token';
+      turnstileToken = '';
       setTurnstileStatus('Turnstile 在本地开发环境不可用，已切换到本地调试模式。');
       return true;
     }
@@ -286,7 +303,7 @@ export const prerender = true;
       if (forgotToggle) forgotToggle.textContent = config.forgotToggle;
       if (hint) hint.textContent = config.hint;
       if (status && !status.dataset.locked) {
-        status.textContent = config.status;
+        setStatus(config.status);
       }
 
       const showPassword = mode !== 'request-reset';
@@ -378,7 +395,7 @@ export const prerender = true;
             if (panelPill) panelPill.textContent = config.pill;
           }
           if (mode === 'reset-password' && status) {
-            status.textContent = '请通过重置链接进入，再设置新密码。';
+            setStatus('请通过重置链接进入，再设置新密码。', 'warning');
           }
           syncAuthPanels();
           return;
@@ -400,7 +417,7 @@ export const prerender = true;
           </div>
         `;
         if (mode === 'reset-password' && status) {
-          status.textContent = '已获取重置会话，可直接更新新密码。';
+          setStatus('已获取重置会话，可直接更新新密码。', 'success');
         } else {
           if (panelTitle) panelTitle.textContent = '账号状态';
           if (panelDescription) panelDescription.textContent = redirectTarget ? '账号已登录，可返回原页面。' : `账号已登录，可打开${isAdmin ? '管理页' : '个人页'}。`;
@@ -435,7 +452,7 @@ export const prerender = true;
       const submitMode = mode;
       if (status) {
         status.dataset.locked = 'true';
-        status.textContent = '处理中...';
+        setStatus('处理中...');
       }
 
       const validationMessage = validateLoginInputs({
@@ -445,10 +462,11 @@ export const prerender = true;
         confirmPassword: confirmPasswordInput?.value || '',
         turnstileConfigured: Boolean(turnstileSiteKey),
         captchaToken: turnstileToken,
+        devFallback: turnstileDevFallback,
       });
       if (validationMessage) {
         if (status) {
-          status.textContent = validationMessage;
+          setStatus(validationMessage, 'error');
           delete status.dataset.locked;
         }
         return;
@@ -462,7 +480,7 @@ export const prerender = true;
           const { signInWithEmailPassword } = await loadAuthModule();
           await signInWithEmailPassword({ email, password, captchaToken: turnstileToken });
           writeSessionHint('signed-in');
-          if (status) status.textContent = '登录成功。';
+          setStatus('登录成功。', 'success');
           window.location.assign(getPostLoginTarget(redirectTarget, resolveBase('')));
           return;
         } else if (submitMode === 'register') {
@@ -478,12 +496,12 @@ export const prerender = true;
             return;
           }
           if (status) {
-            status.textContent = '注册成功，请检查邮箱。';
+            setStatus('注册成功，请检查邮箱。', 'success');
           }
         } else if (submitMode === 'request-reset') {
           const { sendPasswordResetEmail } = await loadAuthModule();
           await sendPasswordResetEmail({ email, redirect: redirectTarget, captchaToken: turnstileToken });
-          if (status) status.textContent = '重置链接已发送。';
+          setStatus('重置链接已发送。', 'success');
         } else if (submitMode === 'reset-password') {
           const { updatePassword } = await loadAuthModule();
           await updatePassword(password);
@@ -491,12 +509,12 @@ export const prerender = true;
           setMode('login');
           if (passwordInput) passwordInput.value = '';
           if (confirmPasswordInput) confirmPasswordInput.value = '';
-          if (status) status.textContent = '密码已更新。';
+          setStatus('密码已更新。', 'success');
           window.location.assign(getPostLoginTarget(redirectTarget, resolveBase('')));
           return;
         }
       } catch (error) {
-        if (status) status.textContent = `操作失败：${formatAuthError(error, submitMode)}`;
+        setStatus(`操作失败：${formatAuthError(error, submitMode)}`, 'error');
       } finally {
         if (requiresTurnstile(submitMode)) {
           if (!turnstileDevFallback) {
@@ -536,7 +554,7 @@ export const prerender = true;
       setMode('login');
       if (status) {
         status.dataset.locked = 'true';
-        status.textContent = '已切换账号，请重新登录。';
+        setStatus('已切换账号，请重新登录。', 'warning');
         delete status.dataset.locked;
       }
       await refreshSession();
@@ -548,7 +566,7 @@ export const prerender = true;
       writeSessionHint(null);
       if (status) {
         status.dataset.locked = 'true';
-        status.textContent = '已退出登录。';
+        setStatus('已退出登录。', 'success');
         delete status.dataset.locked;
       }
       setMode('login');

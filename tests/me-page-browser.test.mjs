@@ -240,6 +240,12 @@ async function main() {
       await signedPage.locator('#me-auth-gate').waitFor({ state: 'attached' });
       await waitForHidden(signedPage, '#me-auth-gate');
       await signedPage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('已同步 1 条价格记录和 2 条收藏。'));
+      assert.equal(await signedPage.locator('#me-panel-logs').evaluate((element) => element.open), true);
+      assert.equal(await signedPage.locator('#me-panel-credits').evaluate((element) => element.open), true);
+      assert.equal(await signedPage.locator('#me-panel-security').evaluate((element) => element.open), false);
+      assert.equal(await signedPage.locator('#me-panel-favorites').evaluate((element) => element.open), false);
+      assert.equal(await signedPage.locator('#me-panel-recent').evaluate((element) => element.open), false);
+      assert.equal(await signedPage.locator('#log-status').evaluate((element) => element.classList.contains('notice--success')), true);
 
       assert.equal(await signedPage.locator('#log-product').isEnabled(), true);
       assert.equal(await signedPage.locator('#log-store').isEnabled(), true);
@@ -304,6 +310,7 @@ async function main() {
       await signedPage.locator('#log-price').fill('0');
       await signedPage.locator('#log-form button[type="submit"]').click();
       await signedPage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('请输入有效的日元价格。'));
+      assert.equal(await signedPage.locator('#log-status').evaluate((element) => element.classList.contains('notice--error')), true);
       assert.equal(restCalls.filter((call) => call.method === 'POST' && call.url.includes('/rest/v1/user_price_logs')).length, logPostCountBeforeInvalid);
 
       await signedPage.locator('#log-product').selectOption('eve-a');
@@ -331,11 +338,13 @@ async function main() {
       await signedPage.locator('#log-note').fill('me failure regression');
       await signedPage.locator('#log-form button[type="submit"]').click();
       await signedPage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('记录失败：forced log failure'));
+      assert.equal(await signedPage.locator('#log-status').evaluate((element) => element.classList.contains('notice--error')), true);
 
       failNextFavoriteInsert = true;
       await signedPage.locator('#log-product').selectOption('eve-a');
       await signedPage.locator('#favorite-product-button').click();
       await signedPage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('收藏失败：forced favorite failure'));
+      assert.equal(await signedPage.locator('#log-status').evaluate((element) => element.classList.contains('notice--error')), true);
 
       await signedPage.locator('#log-product').selectOption('eve-a');
       await signedPage.locator('#log-store').selectOption('welcia-shibuya');

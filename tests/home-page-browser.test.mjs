@@ -76,8 +76,16 @@ async function main() {
       assert.equal(await page.locator('#recent-status').count(), 0, 'homepage should remove recent status module');
       assert.equal(await page.locator('#load-recent-prices').count(), 0, 'homepage should remove recent trigger');
 
+      const productRequestsBeforeShortQuery = requests.filter((url) => url.includes('/rest/v1/products')).length;
+      await page.locator('#home-search').fill('E');
+      await page.waitForTimeout(380);
+      assert.equal(
+        requests.filter((url) => url.includes('/rest/v1/products')).length,
+        productRequestsBeforeShortQuery,
+        'homepage instant search should wait until the query has at least 2 characters',
+      );
+
       await page.locator('#home-search').fill('EVE');
-      await page.locator('#home-search-button').click();
       await page.waitForFunction(() => {
         const text = String(document.querySelector('#nearby-status')?.textContent || '');
         return /EVE A · 2 条价格/.test(text);
@@ -89,6 +97,18 @@ async function main() {
       assert.match(nearbyMapStatusText || '', /已显示在地图上|可交互：已显示/);
       assert.equal(await page.locator('#nearby-map .home-map__marker').count(), 2);
       assert.match(await page.locator('#nearby-map iframe').getAttribute('src'), /maps\.google\.com\/maps/);
+
+      await page.locator('#nearby-toggle').click();
+      assert.equal(await page.locator('#nearby-toggle').getAttribute('aria-expanded'), 'false');
+      assert.equal(await page.evaluate(() => localStorage.getItem('aprice:nearby-collapsed')), 'true');
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.locator('#home-search').waitFor({ state: 'attached', timeout: 5000 });
+      assert.equal(await page.locator('#nearby-toggle').getAttribute('aria-expanded'), 'false');
+      assert.equal(
+        await page.evaluate(() => getComputedStyle(document.querySelector('#nearby-panel')).display),
+        'none',
+        'homepage nearby panel should persist the collapsed state',
+      );
 
       await page.setViewportSize({ width: 390, height: 844 });
       const mobileMenuDisplay = await page.evaluate(() => {
@@ -146,6 +166,12 @@ async function main() {
       await failingPage.waitForFunction(() => String(document.querySelector('#search-status')?.textContent || '').includes('搜索失败：forced search failure'));
       assert.match(await failingPage.locator('#search-results').textContent(), /搜索失败/);
       assert.match(await failingPage.locator('#nearby-status').textContent(), /搜索失败后仍可重新尝试/);
+      assert.equal(await failingPage.locator('#search-results .notice--error').count(), 1, 'home search failures should render an error notice variant');
+      assert.equal(
+        await failingPage.evaluate(() => document.querySelector('#nearby-status')?.classList.contains('notice--error')),
+        true,
+        'home nearby failure status should use the error notice variant',
+      );
       assert.ok(failingRequests.some((url) => url.includes('/rest/v1/products')));
       await failingPage.close();
 

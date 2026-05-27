@@ -78,11 +78,14 @@ const base = import.meta.env.BASE_URL || '/';
 
     <section class="home-section">
       <div class="shell home-section__shell">
-        <div class="home-section__title">
-          <h2>附近比价</h2>
-          <small>优先展示最近采样到的附近结果</small>
+        <div class="home-section__title" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <div>
+            <h2>附近比价</h2>
+            <small>优先展示最近采样到的附近结果</small>
+          </div>
+          <button type="button" class="button button--ghost" id="nearby-toggle" aria-expanded="true" aria-controls="nearby-panel" style="min-height: 36px; padding: 4px 12px; font-size: 0.88rem; margin: 0; width: auto; flex: none;">折叠</button>
         </div>
-        <div class="home-panel home-panel--nearby">
+        <div class="home-panel home-panel--nearby" id="nearby-panel">
           <div class="home-nearby-workspace">
             <aside class="home-nearby-context">
               <div class="home-panel__bar home-panel__bar--stacked" aria-hidden="true">
@@ -171,14 +174,51 @@ const base = import.meta.env.BASE_URL || '/';
     const nearbyResults = document.querySelector('#nearby-results');
     const nearbyMap = document.querySelector('#nearby-map');
     const nearbyMapStatus = document.querySelector('#nearby-map-status');
+    const nearbyToggle = document.querySelector('#nearby-toggle');
+    const nearbyPanel = document.querySelector('#nearby-panel');
 
     let activeProduct = null;
+
+    // Expand/Collapse Nearby comparison panel persistence
+    try {
+      const isCollapsed = localStorage.getItem('aprice:nearby-collapsed') === 'true';
+      if (isCollapsed && nearbyPanel && nearbyToggle) {
+        nearbyPanel.style.display = 'none';
+        nearbyToggle.setAttribute('aria-expanded', 'false');
+        nearbyToggle.textContent = '展开';
+      }
+    } catch {}
+
+    nearbyToggle?.addEventListener('click', () => {
+      if (!nearbyPanel || !nearbyToggle) return;
+      const collapsed = nearbyPanel.style.display === 'none';
+      if (collapsed) {
+        nearbyPanel.style.display = '';
+        nearbyToggle.setAttribute('aria-expanded', 'true');
+        nearbyToggle.textContent = '折叠';
+        try { localStorage.setItem('aprice:nearby-collapsed', 'false'); } catch {}
+      } else {
+        nearbyPanel.style.display = 'none';
+        nearbyToggle.setAttribute('aria-expanded', 'false');
+        nearbyToggle.textContent = '展开';
+        try { localStorage.setItem('aprice:nearby-collapsed', 'true'); } catch {}
+      }
+    });
     let searchResults = [];
     let focusedResultIndex = -1;
 
-    function setNearbyStatus(message, emphasized = false) {
+    function setNoticeTone(node, tone = 'neutral') {
+      if (!node?.classList) return;
+      node.classList.remove('notice--success', 'notice--error', 'notice--warning');
+      if (tone === 'success' || tone === 'error' || tone === 'warning') {
+        node.classList.add(`notice--${tone}`);
+      }
+    }
+
+    function setNearbyStatus(message, emphasized = false, tone = 'neutral') {
       if (!nearbyStatus) return;
       nearbyStatus.textContent = message;
+      setNoticeTone(nearbyStatus, tone);
       if ('classList' in nearbyStatus && nearbyStatus.classList?.toggle) {
         nearbyStatus.classList.toggle('home-status--selected', emphasized);
       }
@@ -188,10 +228,11 @@ const base = import.meta.env.BASE_URL || '/';
       return resolveBase(productId ? `product/${productId}/` : '');
     }
 
-    function renderEmptyList(node, title, detail, meta) {
+    function renderEmptyList(node, title, detail, meta, tone = 'neutral') {
       if (!node) return;
+      const toneClass = tone === 'success' || tone === 'error' || tone === 'warning' ? ` notice notice--${tone}` : '';
       node.innerHTML = `
-          <div class="list__item">
+          <div class="list__item${toneClass}">
             <div>
               <strong>${escapeHtml(title)}</strong>
               <small>${escapeHtml(detail)}</small>
@@ -577,8 +618,8 @@ const base = import.meta.env.BASE_URL || '/';
 
         setNearbyStatus(`${product.name} · ${prices.length} 条价格`, true);
       } catch (error) {
-        renderEmptyList(nearbyResults, '价格读取失败', '请稍后再试，或换一个商品。', '错误');
-        setNearbyStatus(`${product.name} 价格读取失败：${error.message}`, true);
+        renderEmptyList(nearbyResults, '价格读取失败', '请稍后再试，或换一个商品。', '错误', 'error');
+        setNearbyStatus(`${product.name} 价格读取失败：${error.message}`, true, 'error');
         renderNearbyMapIdleState('地图读取失败', `当前无法加载附近门店地图：${error.message}`);
       }
     }
@@ -592,6 +633,7 @@ const base = import.meta.env.BASE_URL || '/';
       }
 
       status.textContent = `搜索“${query}”...`;
+      if (status && status.classList) status.classList.add('home-loading');
       try {
         const items = await searchProducts(query);
         renderSearchResults(items);
@@ -606,6 +648,8 @@ const base = import.meta.env.BASE_URL || '/';
             status.textContent = `找到 ${items.length} 条匹配结果。先选中一个商品，再查看附近价格。`;
             clearNearbyState();
           } else {
+            focusedResultIndex = 0;
+            renderSearchResults(items);
             status.textContent = `找到 ${items.length} 条匹配结果。当前商品已保留，可继续切换。`;
           }
         } else {
@@ -614,13 +658,25 @@ const base = import.meta.env.BASE_URL || '/';
         }
       } catch (error) {
         status.textContent = `搜索失败：${error.message}`;
-        renderEmptyList(results, '搜索失败', '请稍后再试。', '错误');
-        setNearbyStatus('搜索失败后仍可重新尝试。', false);
+        renderEmptyList(results, '搜索失败', '请稍后再试。', '错误', 'error');
+        setNearbyStatus('搜索失败后仍可重新尝试。', false, 'error');
+      } finally {
+        if (status && status.classList) status.classList.remove('home-loading');
       }
     }
 
+    let debounceTimer = null;
+    input?.addEventListener('input', () => {
+      clearTimeout(debounceTimer);
+      const value = input.value.trim();
+      if (value.length >= 2) {
+        debounceTimer = setTimeout(() => runSearch(value), 300);
+      }
+    });
+
     form?.addEventListener('submit', async (event) => {
       event.preventDefault();
+      clearTimeout(debounceTimer);
       await runSearch(input?.value || '');
     });
 

@@ -79,7 +79,7 @@ export function getLoginPanelCopy(mode, { redirectTarget = '' } = {}) {
   };
 }
 
-export function validateLoginInputs({ mode, email, password, confirmPassword, turnstileConfigured = true, captchaToken = '' }) {
+export function validateLoginInputs({ mode, email, password, confirmPassword, turnstileConfigured = true, captchaToken = '', devFallback = false }) {
   const trimmedEmail = String(email || '').trim();
   const passwordValue = String(password || '');
   const confirmPasswordValue = String(confirmPassword || '');
@@ -101,7 +101,7 @@ export function validateLoginInputs({ mode, email, password, confirmPassword, tu
   if ((mode === 'register' || mode === 'reset-password') && passwordValue !== confirmPasswordValue) {
     return '两次输入的密码不一致。';
   }
-  if (requiresCaptcha && turnstileConfigured && !captchaValue) {
+  if (requiresCaptcha && turnstileConfigured && !captchaValue && !devFallback) {
     return '请先完成人机验证。';
   }
   return '';

@@ -107,12 +107,21 @@ async function main() {
       await page.goto(scanUrl, { waitUntil: 'domcontentloaded' });
       await page.locator('#barcode-input').waitFor({ state: 'attached', timeout: 10000 });
       await page.locator('#barcode-search').waitFor({ state: 'attached', timeout: 10000 });
+      assert.equal(await page.locator('#camera[aria-label="相机扫码预览"][role="img"]').count(), 1);
+      assert.equal(await page.locator('.scan-frame .scan-camera-actions #stop-scan').count(), 1);
+      assert.equal(await page.locator('.scan-frame .scan-camera-actions #snap-scan').count(), 1);
+      assert.equal(
+        await page.locator('.scan-frame .scan-camera-actions').evaluate((element) => getComputedStyle(element).position),
+        'absolute',
+        'scan auxiliary camera controls should sit on the camera overlay',
+      );
       const productRequestCountBeforeEmptySearch = requests.filter((call) => call.url.includes('/rest/v1/products')).length;
       await page.locator('#barcode-search').click();
       await page.locator('#barcode-input').press('Enter');
       await page.waitForTimeout(100);
       const productRequestCountAfterEmptySearch = requests.filter((call) => call.url.includes('/rest/v1/products')).length;
       assert.equal(productRequestCountAfterEmptySearch, productRequestCountBeforeEmptySearch);
+      assert.equal(await page.locator('#scan-status').evaluate((element) => element.classList.contains('notice--error')), true);
 
       await page.locator('#barcode-input').fill('0019014614042');
       await page.locator('#barcode-search').click();
@@ -125,6 +134,7 @@ async function main() {
       assert.match(await page.locator('#scan-result-list').textContent(), /アイムス 11歳以上用 毎日の健康ケア チキン 小粒 5kg/);
       assert.equal(await page.locator('#scan-result-list a').getAttribute('href'), '/aprice/product/0019014614042/');
       assert.equal(await page.locator('#scan-result-list .product-thumb--scan').getAttribute('src'), 'https://cdn.example.com/products/0019014614042.jpg');
+      assert.equal(await page.locator('#scan-status').evaluate((element) => element.classList.contains('notice--success')), true);
       await page.close();
 
       const foundPage = await browser.newPage();

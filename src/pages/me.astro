@@ -67,9 +67,9 @@ const meGateCopy = getPrivatePageGateCopy('me');
                 <input id="log-note" placeholder="备注，例如会员价 / 促销 / 税后" aria-label="备注" />
               </label>
             <div class="pillrow me-log-actions">
-              <button class="button" type="submit">保存价格记录</button>
-              <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>
-              <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button>
+              <button class="button" type="submit">💾 保存价格记录</button>
+              <button class="button button--ghost" id="favorite-product-button" type="button">⭐ 收藏商品</button>
+              <button class="button button--ghost" id="favorite-store-button" type="button">📍 收藏门店</button>
             </div>
             <div class="notice notice--compact" id="log-status">{getPrivatePageStatusCopy('me', 'loggedOutStatus')}</div>
           </form>
@@ -152,7 +152,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
           </div>
         </details>
 
-        <details class="tile tile--wide me-panel" id="me-panel-logs">
+        <details class="tile tile--wide me-panel" id="me-panel-logs" open>
           <summary class="me-panel__summary">
             <span class="me-panel__chevron" aria-hidden="true"></span>
             <span class="me-panel__title">
@@ -254,6 +254,26 @@ const meGateCopy = getPrivatePageGateCopy('me');
     let productPager = { rows: [], offset: 0, hasMore: false, term: '' };
     let storePager = { rows: [], offset: 0, hasMore: false, term: '' };
     let currentPriceTask = null;
+
+    function setNoticeTone(node, tone = 'neutral') {
+      if (!node?.classList) return;
+      node.classList.remove('notice--success', 'notice--error', 'notice--warning');
+      if (tone === 'success' || tone === 'error' || tone === 'warning') {
+        node.classList.add(`notice--${tone}`);
+      }
+    }
+
+    function setStatus(message, tone = 'neutral') {
+      if (!status) return;
+      status.textContent = message;
+      setNoticeTone(status, tone);
+    }
+
+    function setPasswordStatus(message, tone = 'neutral') {
+      if (!passwordStatus) return;
+      passwordStatus.textContent = message;
+      setNoticeTone(passwordStatus, tone);
+    }
 
     function setControlsDisabled(disabled) {
       formControls.forEach((control) => {
@@ -423,8 +443,8 @@ const meGateCopy = getPrivatePageGateCopy('me');
       if (claimPriceTaskButton) claimPriceTaskButton.disabled = true;
       if (skipPriceTaskButton) skipPriceTaskButton.hidden = true;
       if (priceTaskStatus) priceTaskStatus.textContent = '登录后可领取随机补价任务。';
-      if (passwordStatus) passwordStatus.textContent = '请登录后再修改密码。';
-      status.textContent = getPrivatePageStatusCopy('me', 'loggedOutStatus');
+      setPasswordStatus('请登录后再修改密码。', 'warning');
+      setStatus(getPrivatePageStatusCopy('me', 'loggedOutStatus'), 'warning');
       setControlsDisabled(true);
       setSecurityControlsDisabled(true);
     }
@@ -527,7 +547,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
           const credit = await recordProductSearch(term);
           if (creditSummaryList) renderCreditSummary(credit, []);
         } catch (error) {
-          status.textContent = `检索计费失败：${formatDataError(error)}`;
+          setStatus(`检索计费失败：${formatDataError(error)}`, 'error');
         }
       }
       const page = await fetchProductsPage({ term, limit: PAGE_SIZE, offset });
@@ -568,12 +588,12 @@ const meGateCopy = getPrivatePageGateCopy('me');
       }
 
       syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: false });
-      status.textContent = getPrivatePageStatusCopy('me', 'loading');
+      setStatus(getPrivatePageStatusCopy('me', 'loading'));
       setControlsDisabled(false);
       setSecurityControlsDisabled(false);
       if (claimPriceTaskButton) claimPriceTaskButton.disabled = false;
       if (securityPanelSummary) securityPanelSummary.textContent = '当前账号可修改密码';
-      if (passwordStatus) passwordStatus.textContent = '输入当前密码后设置新密码。';
+      setPasswordStatus('输入当前密码后设置新密码。');
 
       let logs;
       let loadedFavorites;
@@ -601,7 +621,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
         renderLogs([]);
         renderFavorites([]);
         setControlsDisabled(true);
-        status.textContent = getPrivatePageStatusCopy('me', 'saveFailure', { message: formatDataError(error) });
+        setStatus(getPrivatePageStatusCopy('me', 'saveFailure', { message: formatDataError(error) }), 'error');
         return;
       }
       favorites = loadedFavorites;
@@ -610,27 +630,27 @@ const meGateCopy = getPrivatePageGateCopy('me');
       renderFavorites(favorites);
       renderCreditSummary(creditSummary, creditLedger);
       renderPriceTask(currentPriceTask);
-      status.textContent = getPrivatePageStatusCopy('me', 'syncSummary', { logsCount: logs.length, favoritesCount: favorites.length });
+      setStatus(getPrivatePageStatusCopy('me', 'syncSummary', { logsCount: logs.length, favoritesCount: favorites.length }), 'success');
     }
 
     form?.addEventListener('submit', async (event) => {
       event.preventDefault();
-      status.textContent = '保存中...';
+      setStatus('保存中...');
       const priceValue = validatePositiveYen(priceInput.value);
       if (!priceValue.ok) {
-        status.textContent = priceValue.message;
+        setStatus(priceValue.message, 'error');
         return;
       }
       try {
         const user = await getCurrentUser();
         if (!user) {
           syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
-          status.textContent = getPrivatePageStatusCopy('me', 'saveRequired');
+          setStatus(getPrivatePageStatusCopy('me', 'saveRequired'), 'error');
           redirectToLogin(loginUrl, authGate);
           return;
         }
         if (!productInput?.value) {
-          status.textContent = getPrivatePageStatusCopy('me', 'saveSelectionRequired');
+          setStatus(getPrivatePageStatusCopy('me', 'saveSelectionRequired'), 'error');
           return;
         }
         await savePersonalLog({
@@ -640,12 +660,12 @@ const meGateCopy = getPrivatePageGateCopy('me');
           note: noteInput.value.trim(),
           purchased_at: new Date().toISOString().slice(0, 10),
         });
-        status.textContent = getPrivatePageStatusCopy('me', 'saveSuccess');
+        setStatus(getPrivatePageStatusCopy('me', 'saveSuccess'), 'success');
         priceInput.value = '';
         noteInput.value = '';
         await refresh();
       } catch (error) {
-        status.textContent = getPrivatePageStatusCopy('me', 'saveFailure', { message: formatDataError(error) });
+        setStatus(getPrivatePageStatusCopy('me', 'saveFailure', { message: formatDataError(error) }), 'error');
       }
     });
 
@@ -658,7 +678,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
         confirmPassword: newPasswordConfirmInput?.value || '',
       });
       if (validationMessage) {
-        passwordStatus.textContent = validationMessage;
+        setPasswordStatus(validationMessage, 'error');
         return;
       }
 
@@ -666,12 +686,12 @@ const meGateCopy = getPrivatePageGateCopy('me');
         const user = await getCurrentUser();
         if (!user) {
           syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
-          passwordStatus.textContent = '请登录后再修改密码。';
+          setPasswordStatus('请登录后再修改密码。', 'error');
           redirectToLogin(loginUrl, authGate);
           return;
         }
         setSecurityControlsDisabled(true);
-        passwordStatus.textContent = '正在更新密码...';
+        setPasswordStatus('正在更新密码...');
         await changePassword({
           currentPassword: currentPasswordInput?.value || '',
           password: newPasswordInput?.value || '',
@@ -679,9 +699,9 @@ const meGateCopy = getPrivatePageGateCopy('me');
         if (currentPasswordInput) currentPasswordInput.value = '';
         if (newPasswordInput) newPasswordInput.value = '';
         if (newPasswordConfirmInput) newPasswordConfirmInput.value = '';
-        passwordStatus.textContent = '密码已更新。';
+        setPasswordStatus('密码已更新。', 'success');
       } catch (error) {
-        passwordStatus.textContent = `改密失败：${formatAuthError(error, 'change-password')}`;
+        setPasswordStatus(`改密失败：${formatAuthError(error, 'change-password')}`, 'error');
       } finally {
         setSecurityControlsDisabled(false);
       }
@@ -691,56 +711,56 @@ const meGateCopy = getPrivatePageGateCopy('me');
       const priceValue = validatePositiveYen(priceInput.value);
       if (!priceValue.ok) {
         event.preventDefault();
-        status.textContent = priceValue.message;
+        setStatus(priceValue.message, 'error');
       }
     });
 
     favoriteProductButton?.addEventListener('click', async () => {
       if (!productInput?.value) {
-        status.textContent = getPrivatePageStatusCopy('me', 'favoriteProductRequired');
+        setStatus(getPrivatePageStatusCopy('me', 'favoriteProductRequired'), 'error');
         return;
       }
       const user = await getCurrentUser();
       if (!user) {
         syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
-        status.textContent = getPrivatePageStatusCopy('me', 'favoriteProductRequired');
+        setStatus(getPrivatePageStatusCopy('me', 'favoriteProductRequired'), 'error');
         redirectToLogin(loginUrl, authGate);
         return;
       }
       try {
         await toggleFavorite('product', productInput.value);
-        status.textContent = getPrivatePageStatusCopy('me', 'favoriteProductSuccess');
+        setStatus(getPrivatePageStatusCopy('me', 'favoriteProductSuccess'), 'success');
         await refresh();
       } catch (error) {
-        status.textContent = getPrivatePageStatusCopy('me', 'favoriteFailure', { message: error.message });
+        setStatus(getPrivatePageStatusCopy('me', 'favoriteFailure', { message: error.message }), 'error');
       }
     });
 
     favoriteStoreButton?.addEventListener('click', async () => {
       if (!storeInput?.value) {
-        status.textContent = getPrivatePageStatusCopy('me', 'favoriteStoreRequired');
+        setStatus(getPrivatePageStatusCopy('me', 'favoriteStoreRequired'), 'error');
         return;
       }
       const user = await getCurrentUser();
       if (!user) {
         syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
-        status.textContent = getPrivatePageStatusCopy('me', 'favoriteStoreRequired');
+        setStatus(getPrivatePageStatusCopy('me', 'favoriteStoreRequired'), 'error');
         redirectToLogin(loginUrl, authGate);
         return;
       }
       try {
         await toggleFavorite('store', storeInput.value);
-        status.textContent = getPrivatePageStatusCopy('me', 'favoriteStoreSuccess');
+        setStatus(getPrivatePageStatusCopy('me', 'favoriteStoreSuccess'), 'success');
         await refresh();
       } catch (error) {
-        status.textContent = getPrivatePageStatusCopy('me', 'favoriteFailure', { message: error.message });
+        setStatus(getPrivatePageStatusCopy('me', 'favoriteFailure', { message: error.message }), 'error');
       }
     });
 
     clearRecentViewsButton?.addEventListener('click', () => {
       clearRecentViews();
       renderRecentViews(fetchRecentViews());
-      status.textContent = getPrivatePageStatusCopy('me', 'recentViewsCleared');
+      setStatus(getPrivatePageStatusCopy('me', 'recentViewsCleared'), 'success');
     });
 
     favsEl?.addEventListener('click', async (event) => {
@@ -753,17 +773,17 @@ const meGateCopy = getPrivatePageGateCopy('me');
       const user = await getCurrentUser();
       if (!user) {
         syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
-        status.textContent = getPrivatePageStatusCopy('me', 'removeFavoriteRequired');
+        setStatus(getPrivatePageStatusCopy('me', 'removeFavoriteRequired'), 'error');
         redirectToLogin(loginUrl, authGate);
         return;
       }
 
       try {
         await toggleFavorite(favoriteType, favoriteEntity);
-        status.textContent = getPrivatePageStatusCopy('me', 'favoriteSaved');
+        setStatus(getPrivatePageStatusCopy('me', 'favoriteSaved'), 'success');
         await refresh();
       } catch (error) {
-        status.textContent = getPrivatePageStatusCopy('me', 'favoriteFailure', { message: error.message });
+        setStatus(getPrivatePageStatusCopy('me', 'favoriteFailure', { message: error.message }), 'error');
       }
     });
 
@@ -783,7 +803,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
       try {
         await loadProductsPage({ reset: true });
       } catch (error) {
-        status.textContent = `商品加载失败：${formatDataError(error)}`;
+        setStatus(`商品加载失败：${formatDataError(error)}`, 'error');
       }
     });
 
@@ -791,7 +811,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
       try {
         await loadStoresPage({ reset: true });
       } catch (error) {
-        status.textContent = `门店加载失败：${formatDataError(error)}`;
+        setStatus(`门店加载失败：${formatDataError(error)}`, 'error');
       }
     });
 
@@ -799,7 +819,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
       try {
         await loadProductsPage({ reset: false });
       } catch (error) {
-        status.textContent = `商品加载失败：${formatDataError(error)}`;
+        setStatus(`商品加载失败：${formatDataError(error)}`, 'error');
       }
     });
 
@@ -807,7 +827,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
       try {
         await loadStoresPage({ reset: false });
       } catch (error) {
-        status.textContent = `门店加载失败：${formatDataError(error)}`;
+        setStatus(`门店加载失败：${formatDataError(error)}`, 'error');
       }
     });
 

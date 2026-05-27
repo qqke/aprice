@@ -255,6 +255,7 @@ async function main() {
       const signUpCountBeforeCaptcha = await page.evaluate(() => (globalThis.__authCalls || []).filter((call) => call.type === 'signUp').length);
       await page.locator('#auth-submit').click();
       await waitForText(page, '#auth-status', '请先完成人机验证');
+      assert.equal(await page.locator('#auth-status').evaluate((element) => element.classList.contains('notice--error')), true);
       const signUpCountAfterCaptchaBlock = await page.evaluate(() => (globalThis.__authCalls || []).filter((call) => call.type === 'signUp').length);
       assert.equal(signUpCountAfterCaptchaBlock, signUpCountBeforeCaptcha);
       await page.evaluate(() => window.__turnstileOptions?.callback?.('turnstile-token'));
@@ -262,6 +263,7 @@ async function main() {
     }
     await page.locator('#auth-submit').click();
     await waitForText(page, '#auth-status', '注册成功');
+    assert.equal(await page.locator('#auth-status').evaluate((element) => element.classList.contains('notice--success')), true);
     {
       const calls = await page.evaluate(() => globalThis.__authCalls || []);
       const signUpCall = calls.find((call) => call.type === 'signUp');

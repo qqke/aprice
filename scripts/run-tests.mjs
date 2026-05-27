@@ -23,6 +23,7 @@ const tests = [
   'tests/product-page-map-helpers.test.mjs',
   'tests/browser-price-rpc.test.mjs',
   'tests/no-relative-browser-imports.test.mjs',
+  'tests/ui-plan-source.test.mjs',
   'tests/built-home-page-smoke.mjs',
   'tests/built-login-page-smoke.mjs',
   'tests/built-404-page-smoke.mjs',

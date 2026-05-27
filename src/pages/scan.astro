@@ -19,14 +19,16 @@ export const prerender = true;
         <section class="tile tile--wide">
           <div class="stack">
             <div class="scan-frame">
-              <video id="camera" class="scan-video" playsinline muted></video>
+              <video id="camera" class="scan-video" playsinline muted aria-label="相机扫码预览" role="img"></video>
               <canvas id="capture" hidden></canvas>
               <div class="scan-beam"></div>
+              <div class="scan-camera-actions" aria-label="相机辅助操作">
+                <button class="button button--ghost" id="stop-scan" type="button">停止</button>
+                <button class="button button--ghost" id="snap-scan" type="button">识别当前帧</button>
+              </div>
             </div>
-            <div class="pillrow">
+            <div class="pillrow scan-start-actions">
               <button class="button" id="start-scan" type="button">启动相机扫描</button>
-              <button class="button button--ghost" id="stop-scan" type="button">停止</button>
-              <button class="button button--ghost" id="snap-scan" type="button">尝试识别当前帧</button>
             </div>
             <div class="notice notice--compact">页面加载后会自动启动后置相机（需 HTTPS）。</div>
           </div>
@@ -142,11 +144,30 @@ export const prerender = true;
     let canAddProduct = false;
     let loginUrl = '';
 
+    function setNoticeTone(node, tone = 'neutral') {
+      if (!node?.classList) return;
+      node.classList.remove('notice--success', 'notice--error', 'notice--warning');
+      if (tone === 'success' || tone === 'error' || tone === 'warning') {
+        node.classList.add(`notice--${tone}`);
+      }
+    }
+
+    function setScanStatus(message, tone = 'neutral') {
+      if (!status) return;
+      status.textContent = message;
+      setNoticeTone(status, tone);
+    }
+
+    function setMissingSummary(message, tone = 'neutral') {
+      if (!missingSummary) return;
+      missingSummary.textContent = message;
+      setNoticeTone(missingSummary, tone);
+    }
+
     function syncCameraControls() {
       const isActive = Boolean(stream);
       if (startButton) {
-        startButton.disabled = isActive;
-        startButton.textContent = isActive ? '相机已启动' : '启动相机扫描';
+        startButton.hidden = isActive;
       }
       if (stopButton) stopButton.disabled = !isActive;
       if (snapButton) snapButton.disabled = !isActive || !detector;
@@ -216,11 +237,12 @@ export const prerender = true;
     function showMissingPanel(code) {
       if (!missingPanel) return;
       resetMissingForm(code);
-      if (missingSummary) {
-        missingSummary.textContent = canAddProduct
+      setMissingSummary(
+        canAddProduct
           ? `条码 ${code} 没有匹配到商品，可填写后直接添加。`
-          : '请先登录后再新增商品。';
-      }
+          : '请先登录后再新增商品。',
+        'warning',
+      );
       if (missingCodePill) missingCodePill.textContent = `JAN ${code}`;
       missingPanel.hidden = false;
       queueMicrotask(() => missingFields.name?.focus());
@@ -275,7 +297,7 @@ export const prerender = true;
       stream = null;
       if (video) video.srcObject = null;
       cameraReady = false;
-      if (!silent && status) status.textContent = '已停止。';
+      if (!silent) setScanStatus('已停止。', 'warning');
       syncCameraControls();
     }
 
@@ -283,12 +305,12 @@ export const prerender = true;
       const cleaned = String(code || '').trim();
       const barcode = validateJanCode(cleaned);
       if (!barcode.ok) {
-        if (status) status.textContent = cleaned ? barcode.message : '请输入条码。';
+        setScanStatus(cleaned ? barcode.message : '请输入条码。', 'error');
         return null;
       }
 
       const token = ++lookupToken;
-      if (status) status.textContent = `正在查询条码 ${barcode.value}...`;
+      setScanStatus(`正在查询条码 ${barcode.value}...`);
 
       try {
         const product = await fetchProductByBarcode(barcode.value);
@@ -299,17 +321,13 @@ export const prerender = true;
         if (product) {
           hideMissingPanel();
           renderProduct(product);
-          if (status) status.textContent = `识别成功：${product.name}`;
+          setScanStatus(`识别成功：${product.name}`, 'success');
           return product;
         }
 
         renderMissing(barcode.value);
         showMissingPanel(barcode.value);
-        if (status) {
-          status.textContent = canAddProduct
-            ? `未找到条码 ${barcode.value}，正在从 JANCODE 获取商品信息...`
-            : `未找到条码 ${barcode.value}，正在从 JANCODE 获取商品信息...`;
-        }
+        setScanStatus(`未找到条码 ${barcode.value}，正在从 JANCODE 获取商品信息...`, 'warning');
         try {
           const draft = await fetchJancodeProductDraft(barcode.value);
           if (token !== lookupToken) return null;
@@ -318,58 +336,62 @@ export const prerender = true;
             applyDraftToMissingForm(draft);
             if (canAddProduct) {
               writePendingMissingProduct({ barcode: barcode.value });
-              if (missingSummary) missingSummary.textContent = '已从 JANCODE 获取商品信息，正在自动添加。';
-              if (status) status.textContent = `已从 JANCODE 预填 ${draft.name || barcode.value}，正在自动添加。`;
+              setMissingSummary('已从 JANCODE 获取商品信息，正在自动添加。', 'warning');
+              setScanStatus(`已从 JANCODE 预填 ${draft.name || barcode.value}，正在自动添加。`, 'warning');
               const saved = await submitProductSubmission(draft);
               if (token !== lookupToken) return null;
               const savedProduct = Array.isArray(saved) ? saved[0] : saved;
               clearPendingMissingProduct();
               if (savedProduct) {
-                if (missingSummary) missingSummary.textContent = '商品已自动添加，可立即在搜索和扫码结果中使用。';
-                if (status) status.textContent = `商品已自动添加：${savedProduct.name || barcode.value}`;
+                setMissingSummary('商品已自动添加，可立即在搜索和扫码结果中使用。', 'success');
+                setScanStatus(`商品已自动添加：${savedProduct.name || barcode.value}`, 'success');
                 return null;
               }
-              if (status) status.textContent = `商品已自动添加：${draft.name || barcode.value}`;
+              setScanStatus(`商品已自动添加：${draft.name || barcode.value}`, 'success');
               return null;
             } else {
               writePendingMissingProduct({ barcode: barcode.value });
-              if (missingSummary) missingSummary.textContent = '已从 JANCODE 获取商品信息，正在跳转登录后自动添加。';
-              if (status) status.textContent = `已从 JANCODE 预填 ${draft.name || barcode.value}，正在跳转登录。`;
+              setMissingSummary('已从 JANCODE 获取商品信息，正在跳转登录后自动添加。', 'warning');
+              setScanStatus(`已从 JANCODE 预填 ${draft.name || barcode.value}，正在跳转登录。`, 'warning');
               if (loginUrl) {
                 window.location.assign(loginUrl);
                 return null;
               }
             }
-          } else if (status) {
-            status.textContent = canAddProduct
-              ? `未找到条码 ${barcode.value} 的 JANCODE 信息，可手动填写后添加商品。`
-              : `未找到条码 ${barcode.value} 的 JANCODE 信息，请先登录后再新增商品。`;
+          } else {
+            setScanStatus(
+              canAddProduct
+                ? `未找到条码 ${barcode.value} 的 JANCODE 信息，可手动填写后添加商品。`
+                : `未找到条码 ${barcode.value} 的 JANCODE 信息，请先登录后再新增商品。`,
+              'warning',
+            );
           }
         } catch (draftError) {
           if (token !== lookupToken) return null;
-          if (status) {
-            status.textContent = canAddProduct
+          setScanStatus(
+            canAddProduct
               ? `JANCODE 预填失败：${friendlyDataError(draftError)}，请手动填写后添加商品。`
-              : `JANCODE 预填失败：${friendlyDataError(draftError)}，请先登录后再新增商品。`;
-          }
+              : `JANCODE 预填失败：${friendlyDataError(draftError)}，请先登录后再新增商品。`,
+            'error',
+          );
         }
         return null;
       } catch (error) {
         if (token !== lookupToken) return null;
 
         await stopCamera({ silent: true });
-        if (status) status.textContent = `查询失败：${friendlyDataError(error)}`;
+        setScanStatus(`查询失败：${friendlyDataError(error)}`, 'error');
         return null;
       }
     }
 
     async function detectFromFrame(source) {
       if (!detector) {
-        if (status) status.textContent = '当前浏览器没有 BarcodeDetector，请直接输入条码。';
+        setScanStatus('当前浏览器没有 BarcodeDetector，请直接输入条码。', 'warning');
         return;
       }
       if (!source) {
-        if (status) status.textContent = '请先启动相机，再尝试识别。';
+        setScanStatus('请先启动相机，再尝试识别。', 'error');
         return;
       }
 
@@ -382,9 +404,9 @@ export const prerender = true;
             return;
           }
         }
-        if (status) status.textContent = '当前画面没有识别到条码，请再靠近一点。';
+        setScanStatus('当前画面没有识别到条码，请再靠近一点。', 'warning');
       } catch (error) {
-        if (status) status.textContent = `识别失败：${error.message}`;
+        setScanStatus(`识别失败：${error.message}`, 'error');
       }
     }
 
@@ -419,7 +441,7 @@ export const prerender = true;
       hideMissingPanel();
 
       if (!navigator.mediaDevices?.getUserMedia) {
-        if (status) status.textContent = '当前浏览器不支持相机访问。请使用手动输入。';
+        setScanStatus('当前浏览器不支持相机访问。请使用手动输入。', 'warning');
         syncCameraControls();
         return;
       }
@@ -430,18 +452,19 @@ export const prerender = true;
         await video.play();
         detector = 'BarcodeDetector' in window ? new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'code_128'] }) : null;
         cameraReady = true;
-        if (status) {
-          status.textContent = detector
+        setScanStatus(
+          detector
             ? '相机已启动，正在寻找条码...'
-            : '相机已启动，但当前浏览器没有 BarcodeDetector。可以继续手动输入。';
-        }
+            : '相机已启动，但当前浏览器没有 BarcodeDetector。可以继续手动输入。',
+          detector ? 'success' : 'warning',
+        );
         syncCameraControls();
         if (rafId) cancelAnimationFrame(rafId);
         if (detector) {
           rafId = requestAnimationFrame(scanFrame);
         }
       } catch (error) {
-        if (status) status.textContent = `相机启动失败：${error.message}。你仍然可以继续手动输入 JAN 码。`;
+        setScanStatus(`相机启动失败：${error.message}。你仍然可以继续手动输入 JAN 码。`, 'warning');
         cameraReady = false;
         syncCameraControls();
       }
@@ -451,7 +474,7 @@ export const prerender = true;
     stopButton?.addEventListener('click', () => stopCamera());
     snapButton?.addEventListener('click', async () => {
       if (!cameraReady || !video?.videoWidth || !capture) {
-        if (status) status.textContent = '请先启动相机后再尝试识别。';
+        setScanStatus('请先启动相机后再尝试识别。', 'error');
         return;
       }
 
@@ -465,7 +488,7 @@ export const prerender = true;
     searchButton?.addEventListener('click', async () => {
       const code = input?.value?.trim();
       if (!code) {
-        if (status) status.textContent = '请输入条码。';
+        setScanStatus('请输入条码。', 'error');
         return;
       }
       await handleBarcode(code);
@@ -476,7 +499,7 @@ export const prerender = true;
         event.preventDefault();
         const code = input.value?.trim();
         if (!code) {
-          if (status) status.textContent = '请输入条码。';
+          setScanStatus('请输入条码。', 'error');
           return;
         }
         await handleBarcode(code);
@@ -513,17 +536,17 @@ export const prerender = true;
       const barcode = missingFields.barcode?.value?.trim() || '';
       const imageUrl = validateOptionalHttpUrl(missingFields.image_url?.value || '');
       if (!barcode) {
-        if (status) status.textContent = '缺少条码，无法保存。';
+        setScanStatus('缺少条码，无法保存。', 'error');
         return;
       }
       if (!imageUrl.ok) {
-        if (status) status.textContent = imageUrl.message;
+        setScanStatus(imageUrl.message, 'error');
         return;
       }
 
       try {
         if (!canAddProduct) {
-          if (status) status.textContent = '请先登录后再新增商品。';
+          setScanStatus('请先登录后再新增商品。', 'error');
           return;
         }
         const saved = await submitProductSubmission({
@@ -540,19 +563,20 @@ export const prerender = true;
         const savedProduct = Array.isArray(saved) ? saved[0] : saved;
         if (savedProduct) {
           clearPendingMissingProduct();
-          if (missingSummary) missingSummary.textContent = '商品已添加，可立即在搜索和扫码结果中使用。';
-          if (status) status.textContent = `商品已添加：${savedProduct.name || barcode}`;
+          setMissingSummary('商品已添加，可立即在搜索和扫码结果中使用。', 'success');
+          setScanStatus(`商品已添加：${savedProduct.name || barcode}`, 'success');
           return;
         }
 
         clearPendingMissingProduct();
-        if (status) status.textContent = `商品已添加：${barcode}`;
+        setScanStatus(`商品已添加：${barcode}`, 'success');
       } catch (error) {
-        if (status) {
-          status.textContent = String(error?.message || '').includes('Please sign in first')
+        setScanStatus(
+          String(error?.message || '').includes('Please sign in first')
             ? '请先登录后再新增商品。'
-            : `添加失败：${friendlyDataError(error)}`;
-        }
+            : `添加失败：${friendlyDataError(error)}`,
+          'error',
+        );
       }
     });
 
