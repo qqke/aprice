@@ -18,7 +18,80 @@ async function main() {
       const page = await browser.newPage();
       const pageErrors = [];
       const rpcCalls = [];
+      const dataCalls = [];
       let failNextRpcPath = '';
+      let generatedPriceCount = 0;
+      const initialProducts = makeAdminPageResponseForRequest('https://example.test/rest/v1/products', 'GET');
+      const initialStores = makeAdminPageResponseForRequest('https://example.test/rest/v1/stores', 'GET');
+      let adminProducts = [
+        ...initialProducts,
+        ...Array.from({ length: 32 }, (_, index) => {
+          const number = String(index + 1).padStart(2, '0');
+          return {
+            id: `catalog-extra-${number}`,
+            barcode: `49910000000${number}`,
+            name: `Catalog Extra ${number}`,
+            brand: 'Aprice',
+            pack: `${index + 1} tabs`,
+            category: 'extra',
+            tone: 'sunset',
+            description: `Extra product ${number}`,
+            image_url: '',
+            updated_at: `2026-04-${String(Math.min(index + 1, 28)).padStart(2, '0')}T01:00:00.000Z`,
+          };
+        }),
+      ];
+      let adminStores = [
+        ...initialStores,
+        ...Array.from({ length: 32 }, (_, index) => {
+          const number = String(index + 1).padStart(2, '0');
+          return {
+            id: `store-extra-${number}`,
+            name: `Store Extra ${number}`,
+            chain_name: 'Aprice',
+            address: `Tokyo, Extra ${number}`,
+            city: 'Tokyo',
+            pref: 'Tokyo',
+            lat: 35.62 + index / 1000,
+            lng: 139.7 + index / 1000,
+            hours: '09:00-21:00',
+            updated_at: `2026-04-${String(Math.min(index + 1, 28)).padStart(2, '0')}T01:00:00.000Z`,
+          };
+        }),
+      ];
+      let adminPrices = makeAdminPageResponseForRequest('https://example.test/rest/v1/prices', 'GET');
+      let pendingPrices = makeAdminPageResponseForRequest('https://example.test/rest/v1/user_price_logs', 'GET');
+      let pendingProducts = makeAdminPageResponseForRequest('https://example.test/rest/v1/product_submissions', 'GET');
+
+      function cloneRows(rows) {
+        return JSON.parse(JSON.stringify(rows));
+      }
+
+      function searchTermFromUrl(url) {
+        const or = String(url.searchParams.get('or') || '').toLowerCase();
+        const match = or.match(/ilike\.%([^%,)]+)%/);
+        return (match?.[1] || '').replace(/\\/g, '').trim();
+      }
+
+      function filterRows(rows, url, keys) {
+        const term = searchTermFromUrl(url);
+        if (!term) return rows;
+        return rows.filter((row) => keys.some((key) => String(row?.[key] || '').toLowerCase().includes(term)));
+      }
+
+      function paginateRows(rows, url) {
+        const limit = Number(url.searchParams.get('limit') || rows.length);
+        const offset = Number(url.searchParams.get('offset') || 0);
+        return rows.slice(offset, offset + Math.max(0, limit || rows.length));
+      }
+
+      function productForId(id) {
+        return adminProducts.find((item) => item.id === id) || { id, name: id, barcode: '', brand: '' };
+      }
+
+      function storeForId(id) {
+        return adminStores.find((item) => item.id === id) || { id, name: id, city: '', pref: '' };
+      }
 
       async function clickConfirmAndWait(selector, pathPart) {
         page.once('dialog', (dialog) => dialog.accept());
@@ -68,15 +141,16 @@ async function main() {
 
       await page.route('**/rest/v1/**', async (route) => {
         const requestUrl = route.request().url();
+        const url = new URL(requestUrl);
         const method = route.request().method();
+        const bodyText = route.request().postData() || '';
+        let bodyJson = null;
+        try {
+          bodyJson = bodyText ? JSON.parse(bodyText) : null;
+        } catch {
+          bodyJson = null;
+        }
         if (method === 'POST') {
-          const bodyText = route.request().postData() || '';
-          let bodyJson = null;
-          try {
-            bodyJson = bodyText ? JSON.parse(bodyText) : null;
-          } catch {
-            bodyJson = null;
-          }
           rpcCalls.push({
             url: requestUrl,
             method,
@@ -84,6 +158,7 @@ async function main() {
             bodyJson,
           });
         }
+        dataCalls.push({ url: requestUrl, method, bodyText, bodyJson });
 
         if (failNextRpcPath && requestUrl.includes(failNextRpcPath)) {
           failNextRpcPath = '';
@@ -95,7 +170,150 @@ async function main() {
           return;
         }
 
-        const responseRows = makeAdminPageResponseForRequest(requestUrl, method);
+        const isPayloadRpc =
+          requestUrl.includes('/rpc/admin_upsert_product') ||
+          requestUrl.includes('/rpc/admin_upsert_store') ||
+          requestUrl.includes('/rpc/admin_upsert_price') ||
+          requestUrl.includes('/rpc/submit_product_submission') ||
+          requestUrl.includes('/rpc/admin_review_price_submission') ||
+          requestUrl.includes('/rpc/admin_review_product_submission');
+
+        if (isPayloadRpc && (!bodyJson || typeof bodyJson !== 'object' || !bodyJson.payload)) {
+          await route.fulfill({
+            status: 404,
+            contentType: 'application/json; charset=utf-8',
+            body: JSON.stringify({
+              code: 'PGRST202',
+              message: 'Could not find the function with the supplied arguments',
+            }),
+          });
+          return;
+        }
+
+        if (requestUrl.includes('/rpc/admin_upsert_product') && method === 'POST') {
+          const payload = bodyJson.payload;
+          const nextProduct = {
+            id: payload.id,
+            barcode: payload.barcode || payload.id,
+            name: payload.name || '',
+            brand: payload.brand || '',
+            pack: payload.pack || '',
+            category: payload.category || '',
+            tone: payload.tone || 'sunset',
+            description: payload.description || '',
+            image_url: payload.image_url || '',
+            updated_at: '2026-05-28T00:00:00.000Z',
+          };
+          adminProducts = [nextProduct, ...adminProducts.filter((item) => item.id !== nextProduct.id)];
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json; charset=utf-8',
+            body: JSON.stringify(nextProduct),
+          });
+          return;
+        }
+
+        if (requestUrl.includes('/rpc/admin_upsert_store') && method === 'POST') {
+          const payload = bodyJson.payload;
+          const nextStore = {
+            id: payload.id,
+            name: payload.name || '',
+            chain_name: payload.chain_name || '',
+            address: payload.address || '',
+            city: payload.city || '',
+            pref: payload.pref || '',
+            lat: Number(payload.lat),
+            lng: Number(payload.lng),
+            hours: payload.hours || '',
+            updated_at: '2026-05-28T00:00:00.000Z',
+          };
+          adminStores = [nextStore, ...adminStores.filter((item) => item.id !== nextStore.id)];
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json; charset=utf-8',
+            body: JSON.stringify(nextStore),
+          });
+          return;
+        }
+
+        if (requestUrl.includes('/rpc/admin_upsert_price') && method === 'POST') {
+          const payload = bodyJson.payload;
+          const nextPrice = {
+            id: payload.id || `price-generated-${++generatedPriceCount}`,
+            product_id: payload.product_id,
+            store_id: payload.store_id,
+            price_yen: Number(payload.price_yen),
+            is_member_price: String(payload.is_member_price) === 'true' || payload.is_member_price === true,
+            source: payload.source || 'manual',
+            note: payload.note || '',
+            collected_at: payload.collected_at || '2026-05-28T00:00:00.000Z',
+            stores: storeForId(payload.store_id),
+            products: productForId(payload.product_id),
+          };
+          adminPrices = [nextPrice, ...adminPrices.filter((item) => item.id !== nextPrice.id)];
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json; charset=utf-8',
+            body: JSON.stringify(nextPrice),
+          });
+          return;
+        }
+
+        if (requestUrl.includes('/rpc/admin_review_price_submission') && method === 'POST') {
+          const payload = bodyJson.payload;
+          const target = pendingPrices.find((item) => item.id === payload.id) || null;
+          pendingPrices = pendingPrices.filter((item) => item.id !== payload.id);
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json; charset=utf-8',
+            body: JSON.stringify({ ...(target || {}), review_status: payload.action === 'approve' ? 'approved' : 'rejected' }),
+          });
+          return;
+        }
+
+        if (requestUrl.includes('/rpc/admin_review_product_submission') && method === 'POST') {
+          const payload = bodyJson.payload;
+          const target = pendingProducts.find((item) => item.id === payload.id) || null;
+          pendingProducts = pendingProducts.filter((item) => item.id !== payload.id);
+          if (target && payload.action === 'approve') {
+            adminProducts = [{
+              id: target.barcode,
+              barcode: target.barcode,
+              name: target.name,
+              brand: target.brand,
+              pack: target.pack,
+              category: target.category,
+              tone: target.tone,
+              description: target.description,
+              image_url: target.image_url,
+              updated_at: '2026-05-28T00:00:00.000Z',
+            }, ...adminProducts];
+          }
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json; charset=utf-8',
+            body: JSON.stringify({ ...(target || {}), review_status: payload.action === 'approve' ? 'approved' : 'rejected' }),
+          });
+          return;
+        }
+
+        if (requestUrl.includes('/rpc/admin_delete_product') && method === 'POST') {
+          adminProducts = adminProducts.filter((item) => item.id !== bodyJson.target_id);
+        }
+        if (requestUrl.includes('/rpc/admin_delete_store') && method === 'POST') {
+          adminStores = adminStores.filter((item) => item.id !== bodyJson.target_id);
+        }
+        if (requestUrl.includes('/rpc/admin_delete_price') && method === 'POST') {
+          adminPrices = adminPrices.filter((item) => item.id !== bodyJson.target_id);
+        }
+
+        let responseRows = makeAdminPageResponseForRequest(requestUrl, method);
+        if (url.pathname.endsWith('/products')) responseRows = paginateRows(filterRows(adminProducts, url, ['id', 'barcode', 'name', 'brand', 'category']), url);
+        if (url.pathname.endsWith('/stores')) responseRows = paginateRows(filterRows(adminStores, url, ['id', 'name', 'chain_name', 'address', 'city', 'pref']), url);
+        if (url.pathname.endsWith('/prices')) responseRows = adminPrices;
+        if (url.pathname.endsWith('/user_price_logs')) responseRows = pendingPrices;
+        if (url.pathname.endsWith('/product_submissions')) responseRows = pendingProducts;
+        responseRows = Array.isArray(responseRows) ? cloneRows(responseRows) : responseRows;
         if (requestUrl.includes('/rest/v1/products') && method === 'GET' && Array.isArray(responseRows) && responseRows[0]) {
           responseRows[0] = {
             ...responseRows[0],
@@ -135,7 +353,11 @@ async function main() {
       await page.locator('#admin-prices').waitFor({ state: 'attached' });
       await page.locator('#admin-panel-telemetry').waitFor({ state: 'attached' });
       await page.locator('#admin-panel-product').waitFor({ state: 'attached' });
+      await page.locator('#admin-panel-price-review').waitFor({ state: 'attached' });
+      await page.locator('#admin-panel-product-review').waitFor({ state: 'attached' });
       await page.locator('#admin-product-summary-count').waitFor({ state: 'attached' });
+      await page.locator('#admin-product-search').waitFor({ state: 'attached' });
+      await page.locator('#admin-store-search').waitFor({ state: 'attached' });
       await page.locator('#admin-auth-gate').waitFor({ state: 'hidden' });
 
       await waitForText(page, '#admin-status', '可以开始维护数据');
@@ -149,6 +371,8 @@ async function main() {
       const productSummaryText = await page.locator('#admin-panel-product').textContent();
       const storeSummaryText = await page.locator('#admin-panel-store').textContent();
       const priceSummaryText = await page.locator('#admin-panel-price').textContent();
+      const priceReviewSummaryText = await page.locator('#admin-panel-price-review').textContent();
+      const productReviewSummaryText = await page.locator('#admin-panel-product-review').textContent();
       const telemetrySummaryText = await page.locator('#admin-panel-telemetry').textContent();
       const productOptions = await page.locator('#price-product option').allTextContents();
       const storeOptions = await page.locator('#price-store option').allTextContents();
@@ -159,9 +383,11 @@ async function main() {
       assert.match(telemetrySummaryText || '', /事件看板/);
       assert.match(telemetrySummaryText || '', /事件 0 条/);
       assert.match(telemetrySummaryText || '', /价格 RPC 未启用/);
-      assert.match(productSummaryText || '', /商品 2 条/);
-      assert.match(storeSummaryText || '', /门店 2 条/);
+      assert.match(productSummaryText || '', /商品 30 条/);
+      assert.match(storeSummaryText || '', /门店 30 条/);
       assert.match(priceSummaryText || '', /最近价格 2 条/);
+      assert.match(priceReviewSummaryText || '', /待审价格 2 条/);
+      assert.match(productReviewSummaryText || '', /待审商品 1 条/);
       assert.match(productListText || '', /Loxonin S/);
       assert.match(storeListText || '', /Sugi Pharmacy Hiroo/);
       assert.match(priceListText || '', /¥698/);
@@ -176,6 +402,12 @@ async function main() {
       assert.equal(await page.locator('#store-name').inputValue(), 'Welcia Shibuya');
       assert.equal(await page.locator('#store-chain').inputValue(), 'Welcia');
       assert.equal(await page.locator('#admin-panel-store').evaluate((el) => el.open), true);
+      await page.locator('#store-name').fill('Welcia Shibuya Edited');
+      await page.locator('#store-hours').fill('09:30-22:30');
+      await page.locator('#store-form button[type="submit"]').click();
+      await waitForText(page, '#admin-status', '可以开始维护数据');
+      await waitForText(page, '#admin-stores', 'Welcia Shibuya Edited');
+      await waitForText(page, '#admin-stores', '09:30-22:30');
 
       await openPanel('#admin-panel-recent-prices');
       await page.locator('[data-edit-price="price-admin-1"]').click();
@@ -184,6 +416,19 @@ async function main() {
       assert.equal(await page.locator('#price-yen').inputValue(), '698');
       assert.equal(await page.locator('#price-member').isChecked(), false);
       assert.equal(await page.locator('#admin-panel-price').evaluate((el) => el.open), true);
+      await page.locator('#price-yen').fill('699');
+      await page.locator('#price-source').fill('admin edit');
+      await page.locator('#price-form button[type="submit"]').click();
+      await waitForText(page, '#admin-status', '可以开始维护数据');
+      await waitForText(page, '#admin-prices', '¥699');
+
+      await openPanel('#admin-panel-recent-products');
+      await page.locator('[data-edit-product="eve-a"]').click();
+      assert.equal(await page.locator('#product-id').inputValue(), 'eve-a');
+      await page.locator('#product-name').fill('EVE A Edited');
+      await page.locator('#product-form button[type="submit"]').click();
+      await waitForText(page, '#admin-status', '可以开始维护数据');
+      await waitForText(page, '#admin-products', 'EVE A Edited');
 
       await openPanel('#admin-panel-product');
       await page.locator('#product-id').fill('admin-fixture-product');
@@ -207,11 +452,11 @@ async function main() {
         `expected admin_upsert_product RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
       );
       assert.ok(
-        rpcCalls.some((call) => call.url.includes('/rpc/admin_upsert_product') && call.method === 'POST' && call.bodyJson?.id === 'admin-fixture-product' && call.bodyJson?.name === 'Admin Fixture Product' && call.bodyJson?.image_url === 'https://cdn.example.com/products/admin-fixture-product.jpg'),
+        rpcCalls.some((call) => call.url.includes('/rpc/admin_upsert_product') && call.method === 'POST' && call.bodyJson?.payload?.id === 'admin-fixture-product' && call.bodyJson?.payload?.name === 'Admin Fixture Product' && call.bodyJson?.payload?.image_url === 'https://cdn.example.com/products/admin-fixture-product.jpg'),
         `expected admin_upsert_product payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
       );
 
-      assert.equal(await page.locator('[data-edit-product="eve-a"]').count(), 0);
+      assert.equal(await page.locator('[data-edit-product="eve-a"]').count(), 1);
 
       await openPanel('#admin-panel-product');
       failNextRpcPath = '/rpc/admin_upsert_product';
@@ -245,7 +490,7 @@ async function main() {
       assert.ok(rpcCalls.some((call) => call.url.includes('/rpc/admin_upsert_store')),
         `expected admin_upsert_store RPC, got ${rpcCalls.map((call) => `${call.method} ${call.url}`).join(' | ')}`);
       assert.ok(
-        rpcCalls.some((call) => call.url.includes('/rpc/admin_upsert_store') && call.bodyJson?.id === 'admin-fixture-store' && call.bodyJson?.name === 'Admin Fixture Store' && call.bodyJson?.chain_name === 'Aprice'),
+        rpcCalls.some((call) => call.url.includes('/rpc/admin_upsert_store') && call.bodyJson?.payload?.id === 'admin-fixture-store' && call.bodyJson?.payload?.name === 'Admin Fixture Store' && call.bodyJson?.payload?.chain_name === 'Aprice'),
         `expected admin_upsert_store payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
       );
 
@@ -269,10 +514,10 @@ async function main() {
       assert.ok(
         rpcCalls.some((call) =>
           call.url.includes('/rpc/admin_upsert_price') &&
-          call.bodyJson?.product_id === 'loxonin-s' &&
-          call.bodyJson?.store_id === 'sugi-hiroo' &&
-          String(call.bodyJson?.price_yen) === '688' &&
-          String(call.bodyJson?.is_member_price) === 'true'
+          call.bodyJson?.payload?.product_id === 'loxonin-s' &&
+          call.bodyJson?.payload?.store_id === 'sugi-hiroo' &&
+          String(call.bodyJson?.payload?.price_yen) === '688' &&
+          String(call.bodyJson?.payload?.is_member_price) === 'true'
         ),
         `expected admin_upsert_price payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
       );
@@ -281,6 +526,54 @@ async function main() {
       await page.locator('#price-yen').fill('689');
       await page.locator('#price-form button[type="submit"]').click();
       await waitForText(page, '#admin-status', '保存价格失败');
+
+      await openPanel('#admin-panel-price-review');
+      await waitForText(page, '#admin-price-review-list', 'front shelf community');
+      await page.locator('[data-review-price-approve="11111111-1111-4111-8111-111111111111"]').click();
+      await waitForRequestMatch(rpcCalls, (call) => call.url.includes('/rpc/admin_review_price_submission'));
+      await waitForText(page, '#admin-status', '价格提交已通过');
+      assert.ok(
+        rpcCalls.some((call) =>
+          call.url.includes('/rpc/admin_review_price_submission') &&
+          call.bodyJson?.payload?.id === '11111111-1111-4111-8111-111111111111' &&
+          call.bodyJson?.payload?.action === 'approve'
+        ),
+        `expected admin_review_price_submission payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
+      );
+
+      await openPanel('#admin-panel-product-review');
+      await waitForText(page, '#admin-product-review-list', 'Submitted Supplement');
+      await page.locator('[data-review-product-approve="33333333-3333-4333-8333-333333333333"]').click();
+      await waitForRequestMatch(rpcCalls, (call) => call.url.includes('/rpc/admin_review_product_submission'));
+      await waitForText(page, '#admin-status', '商品提交已通过');
+      assert.ok(
+        rpcCalls.some((call) =>
+          call.url.includes('/rpc/admin_review_product_submission') &&
+          call.bodyJson?.payload?.id === '33333333-3333-4333-8333-333333333333' &&
+          call.bodyJson?.payload?.action === 'approve'
+        ),
+        `expected admin_review_product_submission payload, got ${rpcCalls.map((call) => JSON.stringify(call.bodyJson)).join(' | ')}`,
+      );
+
+      await openPanel('#admin-panel-recent-products');
+      await page.locator('#admin-product-load-more').click();
+      await waitForRequestMatch(dataCalls, (call) => call.method === 'GET' && call.url.includes('/rest/v1/products') && call.url.includes('offset=30'));
+      await waitForText(page, '#admin-products', 'Catalog Extra 29');
+
+      await page.locator('#admin-store-load-more').click();
+      await waitForRequestMatch(dataCalls, (call) => call.method === 'GET' && call.url.includes('/rest/v1/stores') && call.url.includes('offset=30'));
+      await waitForText(page, '#admin-stores', 'Store Extra 29');
+
+      await page.locator('#admin-store-search').fill('Chiyoda');
+      await waitForRequestMatch(dataCalls, (call) => call.method === 'GET' && call.url.includes('/rest/v1/stores') && call.url.includes('or='));
+      await waitForText(page, '#admin-stores', 'Admin Fixture Store');
+      await page.locator('#admin-store-search').fill('');
+      await waitForText(page, '#admin-stores', 'Welcia Shibuya Edited');
+
+      await openPanel('#admin-panel-store');
+      await page.locator('#store-reset').click();
+      await page.locator('#store-form button[type="submit"]').click();
+      await waitForText(page, '#admin-status', '请填写门店 ID。');
 
       await openPanel('#admin-panel-recent-stores');
       failNextRpcPath = '/rpc/admin_delete_store';

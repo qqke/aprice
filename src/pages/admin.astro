@@ -60,6 +60,8 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         <a class="button button--ghost" href="#admin-panel-product">商品</a>
         <a class="button button--ghost" href="#admin-panel-store">门店</a>
         <a class="button button--ghost" href="#admin-panel-recent-prices">最近价格</a>
+        <a class="button button--ghost" href="#admin-panel-price-review">价格审核</a>
+        <a class="button button--ghost" href="#admin-panel-product-review">商品审核</a>
         <a class="button button--ghost" href="#admin-panel-commercial">商业化</a>
         <a class="button button--ghost" href="#admin-panel-telemetry">事件看板</a>
       </div>
@@ -197,6 +199,10 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
             <span class="meta" id="admin-recent-products-summary-status">未加载</span>
           </summary>
           <div class="admin-panel__body">
+            <div class="admin-form__row admin-form__row--two">
+              <label class="field"><input id="admin-product-search" placeholder="搜索商品名、品牌、分类或条码" aria-label="管理商品搜索" /></label>
+              <button class="button button--ghost" id="admin-product-load-more" type="button">加载更多商品</button>
+            </div>
             <div class="list" id="admin-products"></div>
           </div>
         </details>
@@ -212,6 +218,10 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
             <span class="meta" id="admin-recent-stores-summary-status">未加载</span>
           </summary>
           <div class="admin-panel__body">
+            <div class="admin-form__row admin-form__row--two">
+              <label class="field"><input id="admin-store-search" placeholder="搜索门店、连锁、城市或地址" aria-label="管理门店搜索" /></label>
+              <button class="button button--ghost" id="admin-store-load-more" type="button">加载更多门店</button>
+            </div>
             <div class="list" id="admin-stores"></div>
           </div>
         </details>
@@ -228,6 +238,36 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
           </summary>
           <div class="admin-panel__body">
             <div class="list" id="admin-prices"></div>
+          </div>
+        </details>
+
+        <details class="tile tile--wide tile--flow admin-panel" id="admin-panel-price-review">
+          <summary class="admin-panel__summary">
+            <span class="admin-panel__chevron" aria-hidden="true"></span>
+            <span class="admin-panel__title">
+              <strong>价格审核</strong>
+              <small>处理用户公开补价。</small>
+            </span>
+            <span class="pill" id="admin-price-review-summary-count">待审价格 0 条</span>
+            <span class="meta" id="admin-price-review-summary-status">未加载</span>
+          </summary>
+          <div class="admin-panel__body">
+            <div class="list" id="admin-price-review-list"></div>
+          </div>
+        </details>
+
+        <details class="tile tile--wide tile--flow admin-panel" id="admin-panel-product-review">
+          <summary class="admin-panel__summary">
+            <span class="admin-panel__chevron" aria-hidden="true"></span>
+            <span class="admin-panel__title">
+              <strong>商品审核</strong>
+              <small>处理扫码补充的商品。</small>
+            </span>
+            <span class="pill" id="admin-product-review-summary-count">待审商品 0 条</span>
+            <span class="meta" id="admin-product-review-summary-status">未加载</span>
+          </summary>
+          <div class="admin-panel__body">
+            <div class="list" id="admin-product-review-list"></div>
           </div>
         </details>
 
@@ -296,8 +336,8 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
   </section>
 
   <script type="module" is:inline define:vars={{ loginUrl }}>
-    const { fetchAllProducts, fetchAllStores, fetchRecentPrices } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
-    const { adminAdjustCredits, adminDeletePrice, adminDeleteProduct, adminDeleteStore, adminFetchTelemetryRecent, adminFetchTelemetrySummary, adminUpdateAppSetting, adminUpsertPrice, adminUpsertStore, createProduct, fetchAppSettings, fetchCurrentProfile, formatDataError, getCurrentUser, getSession, signOut } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+    const { fetchProductsPage, fetchRecentPrices, fetchStoresPage } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
+    const { adminAdjustCredits, adminDeletePrice, adminDeleteProduct, adminDeleteStore, adminFetchTelemetryRecent, adminFetchTelemetrySummary, adminReviewPriceSubmission, adminReviewProductSubmission, adminUpdateAppSetting, adminUpsertPrice, adminUpsertStore, createProduct, fetchAppSettings, fetchCurrentProfile, fetchPendingPriceSubmissions, fetchProductSubmissions, formatDataError, getCurrentUser, getSession, signOut } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { applyPrivatePageGateCopy, getPrivatePageGateCopy, getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
     const { validateCoordinate, validateJanCode, validateOptionalHttpUrl, validatePositiveYen } = await import(window.__APriceConfig?.formValidationJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'form-validation.js');
 
@@ -313,6 +353,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     const productForm = document.querySelector('#product-form');
     const storeForm = document.querySelector('#store-form');
     const priceForm = document.querySelector('#price-form');
+    const productPanel = document.querySelector('#admin-panel-product');
     const storePanel = document.querySelector('#admin-panel-store');
     const pricePanel = document.querySelector('#admin-panel-price');
     const productSelect = document.querySelector('#price-product');
@@ -320,6 +361,12 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     const productList = document.querySelector('#admin-products');
     const storeList = document.querySelector('#admin-stores');
     const priceList = document.querySelector('#admin-prices');
+    const priceReviewList = document.querySelector('#admin-price-review-list');
+    const productReviewList = document.querySelector('#admin-product-review-list');
+    const productSearchInput = document.querySelector('#admin-product-search');
+    const productLoadMore = document.querySelector('#admin-product-load-more');
+    const storeSearchInput = document.querySelector('#admin-store-search');
+    const storeLoadMore = document.querySelector('#admin-store-load-more');
     const runtimeConfigList = document.querySelector('#admin-runtime-config');
     const telemetrySummaryList = document.querySelector('#admin-telemetry-summary');
     const telemetryRecentList = document.querySelector('#admin-telemetry-recent');
@@ -345,6 +392,10 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       recentStoresStatus: document.querySelector('#admin-recent-stores-summary-status'),
       recentPricesCount: document.querySelector('#admin-recent-prices-summary-count'),
       recentPricesStatus: document.querySelector('#admin-recent-prices-summary-status'),
+      priceReviewCount: document.querySelector('#admin-price-review-summary-count'),
+      priceReviewStatus: document.querySelector('#admin-price-review-summary-status'),
+      productReviewCount: document.querySelector('#admin-product-review-summary-count'),
+      productReviewStatus: document.querySelector('#admin-product-review-summary-status'),
       telemetryCount: document.querySelector('#admin-telemetry-summary-count'),
       telemetryStatus: document.querySelector('#admin-telemetry-summary-status'),
       commercialCount: document.querySelector('#admin-commercial-summary-count'),
@@ -399,10 +450,19 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     let products = [];
     let stores = [];
     let prices = [];
+    let pendingPrices = [];
+    let pendingProductSubmissions = [];
     let telemetrySummary = { days: 7, total_events: 0, active_users: 0, top_events: [] };
     let telemetryItems = [];
     let appSettings = {};
+    let selectedProductId = '';
     let selectedPriceId = '';
+    let productSearchTerm = '';
+    let productOffset = 0;
+    let productHasMore = false;
+    let storeSearchTerm = '';
+    let storeOffset = 0;
+    let storeHasMore = false;
 
     function elValue(field) {
       if (!field) return '';
@@ -417,6 +477,20 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         return;
       }
       field.value = value ?? '';
+    }
+
+    function requireText(value, label) {
+      const trimmed = String(value || '').trim();
+      return trimmed ? { ok: true, value: trimmed, message: '' } : { ok: false, value: '', message: `请填写${label}。` };
+    }
+
+    async function withBusyButton(button, operation) {
+      if (button instanceof HTMLButtonElement) button.disabled = true;
+      try {
+        return await operation();
+      } finally {
+        if (button instanceof HTMLButtonElement) button.disabled = false;
+      }
     }
 
     function optionHtml(items) {
@@ -450,21 +524,27 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
 
     function updateAdminSummaries() {
       setSummaryText('productCount', `商品 ${products.length} 条`);
-      setSummaryText('productStatus', products.length ? '已加载' : '暂无数据');
+      setSummaryText('productStatus', selectedProductId ? '正在编辑' : (products.length ? '已加载' : '暂无数据'));
       setSummaryText('storeCount', `门店 ${stores.length} 条`);
       setSummaryText('storeStatus', stores.length ? '已加载' : '暂无数据');
       setSummaryText('priceCount', `最近价格 ${prices.length} 条`);
       setSummaryText('priceStatus', selectedPriceId ? '正在编辑' : (prices.length ? '已加载' : '暂无数据'));
       setSummaryText('recentProductsCount', `商品 ${products.length} 条`);
-      setSummaryText('recentProductsStatus', products.length ? '可回填' : '暂无数据');
+      setSummaryText('recentProductsStatus', productHasMore ? '可继续加载' : (products.length ? '可回填' : '暂无数据'));
       setSummaryText('recentStoresCount', `门店 ${stores.length} 条`);
-      setSummaryText('recentStoresStatus', stores.length ? '可回填' : '暂无数据');
+      setSummaryText('recentStoresStatus', storeHasMore ? '可继续加载' : (stores.length ? '可回填' : '暂无数据'));
       setSummaryText('recentPricesCount', `价格 ${prices.length} 条`);
       setSummaryText('recentPricesStatus', prices.length ? '可检查' : '暂无数据');
+      setSummaryText('priceReviewCount', `待审价格 ${pendingPrices.length} 条`);
+      setSummaryText('priceReviewStatus', pendingPrices.length ? '待处理' : '暂无数据');
+      setSummaryText('productReviewCount', `待审商品 ${pendingProductSubmissions.length} 条`);
+      setSummaryText('productReviewStatus', pendingProductSubmissions.length ? '待处理' : '暂无数据');
       setSummaryText('telemetryCount', `事件 ${telemetrySummary?.total_events || 0} 条`);
       setSummaryText('telemetryStatus', telemetryItems.length ? '已加载' : '暂无数据');
       setSummaryText('commercialCount', `设置 ${Object.keys(appSettings || {}).length} 项`);
       setSummaryText('commercialStatus', Object.keys(appSettings || {}).length ? '已加载' : '未加载');
+      if (productLoadMore instanceof HTMLButtonElement) productLoadMore.disabled = !productHasMore;
+      if (storeLoadMore instanceof HTMLButtonElement) storeLoadMore.disabled = !storeHasMore;
     }
 
     function refreshSelectors() {
@@ -486,6 +566,13 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       });
     }
 
+    function populateProductForm(product) {
+      if (!product) return;
+      selectedProductId = product.id || '';
+      fillFields(productFields, product);
+      updateAdminSummaries();
+    }
+
     function populateStoreForm(store) {
       if (!store) return;
       fillFields(storeFields, store, {
@@ -505,7 +592,9 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     }
 
     function resetProductForm() {
+      selectedProductId = '';
       resetFields(productFields, { tone: 'sunset' });
+      updateAdminSummaries();
     }
 
     function resetStoreForm() {
@@ -558,6 +647,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
               <small>${escapeHtml(item.barcode)} · ${escapeHtml(item.brand)} · ${escapeHtml(item.pack)}${item.image_url ? ' · 已配置图片' : ''}</small>
             </div>
             <div class="pillrow admin-record-actions">
+              <button class="button button--ghost" data-edit-product="${escapeHtml(item.id)}" type="button">编辑</button>
               <button class="button button--ghost" data-delete-product="${escapeHtml(item.id)}" type="button">删除</button>
             </div>
           </div>
@@ -602,6 +692,42 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         : '<div class="list__item"><div><strong>暂无价格</strong><small>请保存一条价格。</small></div><span class="meta">暂无</span></div>';
     }
 
+    function renderPendingPrices() {
+      if (!priceReviewList) return;
+      priceReviewList.innerHTML = pendingPrices.length
+        ? pendingPrices.map((item) => `
+          <div class="list__item admin-record-item">
+            <div>
+              <strong>${escapeHtml(item.products?.name || item.product_id || 'Unknown product')}</strong>
+              <small>${escapeHtml(item.stores?.name || item.store_id || 'Unknown store')} · ¥${escapeHtml(item.price_yen)} · ${escapeHtml(item.note || '')}</small>
+            </div>
+            <div class="pillrow admin-record-actions">
+              <button class="button button--ghost" data-review-price-reject="${escapeHtml(item.id)}" type="button">驳回</button>
+              <button class="button" data-review-price-approve="${escapeHtml(item.id)}" type="button">通过</button>
+            </div>
+          </div>
+        `).join('')
+        : '<div class="list__item"><div><strong>暂无待审价格</strong><small>用户公开补价会显示在这里。</small></div><span class="meta">0</span></div>';
+    }
+
+    function renderPendingProductSubmissions() {
+      if (!productReviewList) return;
+      productReviewList.innerHTML = pendingProductSubmissions.length
+        ? pendingProductSubmissions.map((item) => `
+          <div class="list__item admin-record-item">
+            <div>
+              <strong>${escapeHtml(item.name || item.barcode)}</strong>
+              <small>${escapeHtml(item.barcode)} · ${escapeHtml(item.brand)} · ${escapeHtml(item.pack)}${item.image_url ? ' · 图片已提交' : ''}</small>
+            </div>
+            <div class="pillrow admin-record-actions">
+              <button class="button button--ghost" data-review-product-reject="${escapeHtml(item.id)}" type="button">驳回</button>
+              <button class="button" data-review-product-approve="${escapeHtml(item.id)}" type="button">通过</button>
+            </div>
+          </div>
+        `).join('')
+        : '<div class="list__item"><div><strong>暂无待审商品</strong><small>扫码补充商品会显示在这里。</small></div><span class="meta">0</span></div>';
+    }
+
     function renderTelemetry() {
       if (telemetrySummaryList) {
         const topEvents = Array.isArray(telemetrySummary?.top_events) ? telemetrySummary.top_events : [];
@@ -634,6 +760,36 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
 
     syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: false });
     switchAccountLink?.setAttribute('href', loginUrl);
+
+    async function loadProductPage({ reset = false } = {}) {
+      const page = await fetchProductsPage({
+        term: productSearchTerm,
+        limit: 30,
+        offset: reset ? 0 : productOffset,
+      });
+      const rows = Array.isArray(page?.rows) ? page.rows : [];
+      products = reset ? rows : products.concat(rows);
+      productOffset = Number(page?.nextOffset || products.length);
+      productHasMore = Boolean(page?.hasMore);
+      refreshSelectors();
+      renderProducts();
+      updateAdminSummaries();
+    }
+
+    async function loadStorePage({ reset = false } = {}) {
+      const page = await fetchStoresPage({
+        term: storeSearchTerm,
+        limit: 30,
+        offset: reset ? 0 : storeOffset,
+      });
+      const rows = Array.isArray(page?.rows) ? page.rows : [];
+      stores = reset ? rows : stores.concat(rows);
+      storeOffset = Number(page?.nextOffset || stores.length);
+      storeHasMore = Boolean(page?.hasMore);
+      refreshSelectors();
+      renderStores();
+      updateAdminSummaries();
+    }
 
     async function loadData() {
       const [user, profile] = await Promise.all([getCurrentUser(), fetchCurrentProfile()]);
@@ -677,10 +833,12 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       }
 
       const session = await getSession();
-      const [productItems, storeItems, priceItems] = await Promise.all([
-        fetchAllProducts(),
-        fetchAllStores(),
+      const [productPage, storePage, priceItems, pendingPriceItems, pendingProductItems] = await Promise.all([
+        fetchProductsPage({ term: productSearchTerm, limit: 30, offset: 0 }),
+        fetchStoresPage({ term: storeSearchTerm, limit: 30, offset: 0 }),
         fetchRecentPrices(12, { token: session?.access_token || '' }),
+        fetchPendingPriceSubmissions(30),
+        fetchProductSubmissions(30),
       ]);
       try {
         appSettings = await fetchAppSettings();
@@ -700,9 +858,15 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       }
       syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: false });
       if (logoutButton) logoutButton.hidden = false;
-      products = productItems;
-      stores = storeItems;
+      products = Array.isArray(productPage?.rows) ? productPage.rows : [];
+      productOffset = Number(productPage?.nextOffset || products.length);
+      productHasMore = Boolean(productPage?.hasMore);
+      stores = Array.isArray(storePage?.rows) ? storePage.rows : [];
+      storeOffset = Number(storePage?.nextOffset || stores.length);
+      storeHasMore = Boolean(storePage?.hasMore);
       prices = priceItems;
+      pendingPrices = Array.isArray(pendingPriceItems) ? pendingPriceItems : [];
+      pendingProductSubmissions = Array.isArray(pendingProductItems) ? pendingProductItems : [];
       telemetrySummary = telemetrySummaryResult || { days: 7, total_events: 0, active_users: 0, top_events: [] };
       telemetryItems = Array.isArray(telemetryRecentResult?.items) ? telemetryRecentResult.items : [];
 
@@ -710,6 +874,8 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       renderProducts();
       renderStores();
       renderPrices();
+      renderPendingPrices();
+      renderPendingProductSubmissions();
       renderTelemetry();
       renderCommercialSettings();
       updateAdminSummaries();
@@ -730,85 +896,103 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
 
     productForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
-      try {
-        const barcode = validateJanCode(elValue(productFields.barcode));
-        const imageUrl = validateOptionalHttpUrl(elValue(productFields.image_url));
-        if (!barcode.ok) {
-          if (status) status.textContent = barcode.message;
-          return;
+      await withBusyButton(event.submitter, async () => {
+        try {
+          const barcode = validateJanCode(elValue(productFields.barcode));
+          const imageUrl = validateOptionalHttpUrl(elValue(productFields.image_url));
+          if (!barcode.ok) {
+            if (status) status.textContent = barcode.message;
+            return;
+          }
+          if (!imageUrl.ok) {
+            if (status) status.textContent = imageUrl.message;
+            return;
+          }
+          selectedProductId = elValue(productFields.id);
+          await createProduct({
+            id: selectedProductId,
+            barcode: barcode.value,
+            name: elValue(productFields.name),
+            brand: elValue(productFields.brand),
+            pack: elValue(productFields.pack),
+            category: elValue(productFields.category),
+            tone: elValue(productFields.tone),
+            description: elValue(productFields.description),
+            image_url: imageUrl.value,
+          });
+          if (status) status.textContent = getPrivatePageStatusCopy('admin', 'saveProductSuccess');
+          await loadData();
+        } catch (error) {
+          if (status) status.textContent = getPrivatePageStatusCopy('admin', 'saveProductFailure', { message: formatDataError(error) });
         }
-        if (!imageUrl.ok) {
-          if (status) status.textContent = imageUrl.message;
-          return;
-        }
-        await createProduct({
-          id: elValue(productFields.id),
-          barcode: barcode.value,
-          name: elValue(productFields.name),
-          brand: elValue(productFields.brand),
-          pack: elValue(productFields.pack),
-          category: elValue(productFields.category),
-          tone: elValue(productFields.tone),
-          description: elValue(productFields.description),
-          image_url: imageUrl.value,
-        });
-        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'saveProductSuccess');
-        await loadData();
-      } catch (error) {
-        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'saveProductFailure', { message: formatDataError(error) });
-      }
+      });
     });
 
     storeForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
-      try {
-        const lat = validateCoordinate(elValue(storeFields.lat), { label: '纬度', min: -90, max: 90 });
-        const lng = validateCoordinate(elValue(storeFields.lng), { label: '经度', min: -180, max: 180 });
-        if (!lat.ok || !lng.ok) {
-          if (status) status.textContent = !lat.ok ? lat.message : lng.message;
-          return;
+      await withBusyButton(event.submitter, async () => {
+        try {
+          const storeId = requireText(elValue(storeFields.id), '门店 ID');
+          const storeName = requireText(elValue(storeFields.name), '门店名称');
+          const storeAddress = requireText(elValue(storeFields.address), '门店地址');
+          if (!storeId.ok || !storeName.ok || !storeAddress.ok) {
+            if (status) status.textContent = (!storeId.ok ? storeId : !storeName.ok ? storeName : storeAddress).message;
+            return;
+          }
+          const lat = validateCoordinate(elValue(storeFields.lat), { label: '纬度', min: -90, max: 90 });
+          const lng = validateCoordinate(elValue(storeFields.lng), { label: '经度', min: -180, max: 180 });
+          if (!lat.ok || !lng.ok) {
+            if (status) status.textContent = !lat.ok ? lat.message : lng.message;
+            return;
+          }
+          await adminUpsertStore({
+            id: storeId.value,
+            name: storeName.value,
+            chain_name: elValue(storeFields.chain_name),
+            address: storeAddress.value,
+            city: elValue(storeFields.city),
+            pref: elValue(storeFields.pref),
+            lat: String(lat.value),
+            lng: String(lng.value),
+            hours: elValue(storeFields.hours),
+          });
+          if (status) status.textContent = getPrivatePageStatusCopy('admin', 'saveStoreSuccess');
+          await loadData();
+        } catch (error) {
+          if (status) status.textContent = getPrivatePageStatusCopy('admin', 'saveStoreFailure', { message: formatDataError(error) });
         }
-        await adminUpsertStore({
-          id: elValue(storeFields.id),
-          name: elValue(storeFields.name),
-          chain_name: elValue(storeFields.chain_name),
-          address: elValue(storeFields.address),
-          city: elValue(storeFields.city),
-          pref: elValue(storeFields.pref),
-          lat: String(lat.value),
-          lng: String(lng.value),
-          hours: elValue(storeFields.hours),
-        });
-        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'saveStoreSuccess');
-        await loadData();
-      } catch (error) {
-        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'saveStoreFailure', { message: formatDataError(error) });
-      }
+      });
     });
 
     priceForm?.addEventListener('submit', async (event) => {
       event.preventDefault();
-      try {
-        const price = validatePositiveYen(elValue(priceFields.price_yen));
-        if (!price.ok) {
-          if (status) status.textContent = price.message;
-          return;
+      await withBusyButton(event.submitter, async () => {
+        try {
+          const price = validatePositiveYen(elValue(priceFields.price_yen));
+          if (!price.ok) {
+            if (status) status.textContent = price.message;
+            return;
+          }
+          if (!elValue(priceFields.product_id) || !elValue(priceFields.store_id)) {
+            if (status) status.textContent = '请选择商品和门店。';
+            return;
+          }
+          await adminUpsertPrice({
+            id: selectedPriceId,
+            product_id: elValue(priceFields.product_id),
+            store_id: elValue(priceFields.store_id),
+            price_yen: String(price.value),
+            source: elValue(priceFields.source),
+            note: elValue(priceFields.note),
+            collected_at: elValue(priceFields.collected_at),
+            is_member_price: elValue(priceFields.is_member_price),
+          });
+          if (status) status.textContent = getPrivatePageStatusCopy('admin', 'savePriceSuccess');
+          await loadData();
+        } catch (error) {
+          if (status) status.textContent = getPrivatePageStatusCopy('admin', 'savePriceFailure', { message: formatDataError(error) });
         }
-        await adminUpsertPrice({
-          id: selectedPriceId,
-          product_id: elValue(priceFields.product_id),
-          store_id: elValue(priceFields.store_id),
-          price_yen: String(price.value),
-          source: elValue(priceFields.source),
-          note: elValue(priceFields.note),
-          collected_at: elValue(priceFields.collected_at),
-          is_member_price: elValue(priceFields.is_member_price),
-        });
-        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'savePriceSuccess');
-        await loadData();
-      } catch (error) {
-        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'savePriceFailure', { message: formatDataError(error) });
-      }
+      });
     });
 
     creditAdjustForm?.addEventListener('submit', async (event) => {
@@ -901,7 +1085,12 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       const target = event.target;
       const button = target instanceof Element ? target.closest('button') : null;
       if (!button) return;
+      const editId = button.dataset.editProduct;
       const deleteId = button.dataset.deleteProduct;
+      if (editId) {
+        if (productPanel) productPanel.open = true;
+        populateProductForm(products.find((item) => item.id === editId));
+      }
       if (deleteId && window.confirm(`删除商品 ${deleteId} ?`)) {
         try {
           await adminDeleteProduct(deleteId);
@@ -958,6 +1147,85 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         } catch (error) {
           if (status) status.textContent = getPrivatePageStatusCopy('admin', 'deletePriceFailure', { message: error.message });
         }
+      }
+    });
+
+    priceReviewList?.addEventListener('click', async (event) => {
+      const target = event.target;
+      const button = target instanceof Element ? target.closest('button') : null;
+      if (!button) return;
+      const approveId = button.dataset.reviewPriceApprove;
+      const rejectId = button.dataset.reviewPriceReject;
+      const id = approveId || rejectId;
+      if (!id) return;
+      try {
+        await adminReviewPriceSubmission({
+          id,
+          action: approveId ? 'approve' : 'reject',
+          confidence_score: approveId ? 90 : 0,
+          review_note: approveId ? 'Approved from admin page' : 'Rejected from admin page',
+        });
+        if (status) status.textContent = approveId ? '价格提交已通过。' : '价格提交已驳回。';
+        await loadData();
+      } catch (error) {
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'reviewFailure', { message: formatDataError(error) });
+      }
+    });
+
+    productReviewList?.addEventListener('click', async (event) => {
+      const target = event.target;
+      const button = target instanceof Element ? target.closest('button') : null;
+      if (!button) return;
+      const approveId = button.dataset.reviewProductApprove;
+      const rejectId = button.dataset.reviewProductReject;
+      const id = approveId || rejectId;
+      if (!id) return;
+      try {
+        await adminReviewProductSubmission({
+          id,
+          action: approveId ? 'approve' : 'reject',
+          review_note: approveId ? 'Approved from admin page' : 'Rejected from admin page',
+        });
+        if (status) status.textContent = approveId ? '商品提交已通过。' : '商品提交已驳回。';
+        await loadData();
+      } catch (error) {
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'reviewFailure', { message: formatDataError(error) });
+      }
+    });
+
+    productSearchInput?.addEventListener('input', async (event) => {
+      productSearchTerm = event.target instanceof HTMLInputElement ? event.target.value.trim() : '';
+      try {
+        await loadProductPage({ reset: true });
+      } catch (error) {
+        if (status) status.textContent = `商品搜索失败：${formatDataError(error)}`;
+      }
+    });
+
+    productLoadMore?.addEventListener('click', async () => {
+      if (!productHasMore) return;
+      try {
+        await loadProductPage();
+      } catch (error) {
+        if (status) status.textContent = `加载更多商品失败：${formatDataError(error)}`;
+      }
+    });
+
+    storeSearchInput?.addEventListener('input', async (event) => {
+      storeSearchTerm = event.target instanceof HTMLInputElement ? event.target.value.trim() : '';
+      try {
+        await loadStorePage({ reset: true });
+      } catch (error) {
+        if (status) status.textContent = `门店搜索失败：${formatDataError(error)}`;
+      }
+    });
+
+    storeLoadMore?.addEventListener('click', async () => {
+      if (!storeHasMore) return;
+      try {
+        await loadStorePage();
+      } catch (error) {
+        if (status) status.textContent = `加载更多门店失败：${formatDataError(error)}`;
       }
     });
 

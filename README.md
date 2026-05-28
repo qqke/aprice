@@ -48,6 +48,14 @@ PUBLIC_ENABLE_TELEMETRY_RPC=0
 10. 建议优先执行 `supabase/migrations`（包含社区价审核、遥测入库、价格查询 RPC），`supabase/schema.sql` 作为新环境基线快照
 11. 普通用户扫码未命中的商品会写入 `product_submissions`，管理员审核通过后才进入 `products`
 
+## 管理后台
+
+- `/admin/` 仅 `profiles.role = 'admin'` 的账号可用。
+- 商品、门店、价格写入通过 Supabase RPC：`admin_upsert_product`、`admin_upsert_store`、`admin_upsert_price`。
+- 用户公开补价由 `user_price_logs.review_status = 'pending'` 进入价格审核。
+- 扫码补充商品由 `product_submissions.review_status = 'pending'` 进入商品审核。
+- 修改 Supabase 函数后，如线上 API 仍提示 `PGRST202`，在 Supabase Dashboard 触发 schema cache refresh 或重新部署 API。
+
 ## Feature Flags & Rollback
 
 - `PUBLIC_USE_SERVER_PRICE_RPC=1`

@@ -74,8 +74,9 @@ async function main() {
           }
         }
 
-        if (url.pathname.includes('/rpc/create_product') && request.method() === 'POST') {
-          const payload = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
+        if (url.pathname.includes('/rpc/submit_product_submission') && request.method() === 'POST') {
+          const body = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
+          const payload = body.payload || {};
           const savedProduct = {
             id: 'submission-1',
             barcode: payload.barcode || '',
@@ -115,10 +116,11 @@ async function main() {
         'absolute',
         'scan auxiliary camera controls should sit on the camera overlay',
       );
+      await page.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('相机'));
       const productRequestCountBeforeEmptySearch = requests.filter((call) => call.url.includes('/rest/v1/products')).length;
       await page.locator('#barcode-search').click();
       await page.locator('#barcode-input').press('Enter');
-      await page.waitForTimeout(100);
+      await page.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('请输入条码'));
       const productRequestCountAfterEmptySearch = requests.filter((call) => call.url.includes('/rest/v1/products')).length;
       assert.equal(productRequestCountAfterEmptySearch, productRequestCountBeforeEmptySearch);
       assert.equal(await page.locator('#scan-status').evaluate((element) => element.classList.contains('notice--error')), true);
@@ -174,8 +176,9 @@ async function main() {
         const url = new URL(requestUrl);
         foundRequests.push({ method: request.method(), url: requestUrl, body: request.postData() || '' });
 
-        if (url.pathname.includes('/rpc/create_product') && request.method() === 'POST') {
-          const payload = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
+        if (url.pathname.includes('/rpc/submit_product_submission') && request.method() === 'POST') {
+          const body = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
+          const payload = body.payload || {};
           const savedProduct = {
             id: 'submission-1',
             barcode: payload.barcode || '',
@@ -212,27 +215,6 @@ async function main() {
           return;
         }
 
-        if (url.pathname.includes('/rpc/create_product')) {
-          const payload = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
-          const savedProduct = {
-            id: 'submission-1',
-            barcode: payload.barcode || '',
-            name: payload.name || '',
-            brand: payload.brand || '',
-            pack: payload.pack || '',
-            category: payload.category || '',
-            tone: payload.tone || 'sunset',
-            description: payload.description || '',
-            image_url: payload.image_url || '',
-          };
-          await route.fulfill({
-            status: 200,
-            contentType: 'application/json; charset=utf-8',
-            body: JSON.stringify([savedProduct]),
-          });
-          return;
-        }
-
         await route.fulfill({
           status: 200,
           contentType: 'application/json; charset=utf-8',
@@ -244,18 +226,25 @@ async function main() {
       await foundPage.locator('#barcode-input').fill('4987240210733');
       await foundPage.locator('#barcode-search').click();
       await waitForRequestMatch(foundRequests, (call) => call.url.includes('/rest/v1/products') && call.url.includes('barcode=eq.4987240210733'));
-      await waitForRequestMatch(foundRequests, (call) => call.url.includes('/rpc/create_product') && call.method === 'POST');
-      await foundPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('商品已自动添加'));
+      await waitForRequestMatch(foundRequests, (call) => call.url.includes('/rpc/submit_product_submission') && call.method === 'POST');
+      await foundPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('商品已自动提交审核'));
 
       assert.equal(await foundPage.locator('#barcode-input').inputValue(), '4987240210733');
       assert.match(await foundPage.locator('#missing-product-name').inputValue(), /龍角散ダイレクトスティック ピーチ/);
       assert.ok(
-        foundRequests.some((call) => call.url.includes('/rpc/create_product') && call.method === 'POST'),
-        `expected create_product RPC, got ${foundRequests.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
+        foundRequests.some((call) => call.url.includes('/rpc/submit_product_submission') && call.method === 'POST'),
+        `expected submit_product_submission RPC, got ${foundRequests.map((call) => `${call.method} ${call.url}`).join(' | ')}`,
       );
       assert.ok(
-        foundRequests.some((call) => call.url.includes('/rpc/create_product') && call.method === 'POST' && call.body.includes('"barcode":"4987240210733"') && call.body.includes('"name":"龍角散ダイレクトスティック ピーチ(16包)"') && call.body.includes('"brand":"株式会社龍角散"')),
-        `expected create_product payload, got ${foundRequests.map((call) => call.body).join(' | ')}`,
+        foundRequests.some((call) => {
+          const body = JSON.parse(call.body || '{}');
+          return call.url.includes('/rpc/submit_product_submission') &&
+            call.method === 'POST' &&
+            body.payload?.barcode === '4987240210733' &&
+            body.payload?.name === '龍角散ダイレクトスティック ピーチ(16包)' &&
+            body.payload?.brand === '株式会社龍角散';
+        }),
+        `expected submit_product_submission payload, got ${foundRequests.map((call) => call.body).join(' | ')}`,
       );
       await foundPage.close();
 
@@ -319,7 +308,7 @@ async function main() {
       const guestUrl = new URL(guestPage.url());
       assert.equal(guestUrl.pathname, '/aprice/login/');
       assert.equal(guestUrl.searchParams.get('redirect'), '/aprice/scan/');
-      assert.equal(guestRequests.some((call) => call.url.includes('/rpc/create_product') && call.method === 'POST'), false);
+      assert.equal(guestRequests.some((call) => call.url.includes('/rpc/submit_product_submission') && call.method === 'POST'), false);
       await guestPage.close();
 
       const manualPage = await browser.newPage();
@@ -348,8 +337,9 @@ async function main() {
         const url = new URL(requestUrl);
         manualRequests.push({ method: request.method(), url: requestUrl, body: request.postData() || '' });
 
-        if (url.pathname.includes('/rpc/create_product') && request.method() === 'POST') {
-          const payload = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
+        if (url.pathname.includes('/rpc/submit_product_submission') && request.method() === 'POST') {
+          const body = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
+          const payload = body.payload || {};
           await route.fulfill({
             status: 200,
             contentType: 'application/json; charset=utf-8',
@@ -369,7 +359,7 @@ async function main() {
       await manualPage.locator('#barcode-input').fill('4900000000000');
       await manualPage.locator('#barcode-search').click();
       await manualPage.locator('#missing-product-panel').waitFor({ state: 'visible', timeout: 10000 });
-      await manualPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('可手动填写后添加商品'));
+      await manualPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('可手动填写后提交审核'));
       assert.equal(await manualPage.locator('#missing-product-save').isEnabled(), true);
       assert.equal(await manualPage.locator('#missing-product-barcode').inputValue(), '4900000000000');
 
@@ -381,21 +371,21 @@ async function main() {
       await manualPage.locator('#missing-product-description').fill('Added by browser test');
       await manualPage.locator('#missing-product-image-url').fill('https://cdn.example.com/products/manual-missing-product.jpg');
       await manualPage.locator('#missing-product-form button[type="submit"]').click();
-      await manualPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('商品已添加：Manual Missing Product'));
+      await manualPage.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('商品已提交审核：Manual Missing Product'));
       assert.ok(
         manualRequests.some((call) =>
           call.method === 'POST' &&
-          call.url.includes('/rpc/create_product') &&
-          call.body.includes('"barcode":"4900000000000"') &&
-          call.body.includes('"name":"Manual Missing Product"') &&
-          call.body.includes('"brand":"Manual Brand"') &&
-          call.body.includes('"pack":"24 tabs"') &&
-          call.body.includes('"category":"manual-category"') &&
-          call.body.includes('"tone":"azure"') &&
-          call.body.includes('"description":"Added by browser test"') &&
-          call.body.includes('"image_url":"https://cdn.example.com/products/manual-missing-product.jpg"')
+          call.url.includes('/rpc/submit_product_submission') &&
+          JSON.parse(call.body || '{}').payload?.barcode === '4900000000000' &&
+          JSON.parse(call.body || '{}').payload?.name === 'Manual Missing Product' &&
+          JSON.parse(call.body || '{}').payload?.brand === 'Manual Brand' &&
+          JSON.parse(call.body || '{}').payload?.pack === '24 tabs' &&
+          JSON.parse(call.body || '{}').payload?.category === 'manual-category' &&
+          JSON.parse(call.body || '{}').payload?.tone === 'azure' &&
+          JSON.parse(call.body || '{}').payload?.description === 'Added by browser test' &&
+          JSON.parse(call.body || '{}').payload?.image_url === 'https://cdn.example.com/products/manual-missing-product.jpg'
         ),
-        `expected manual create_product payload, got ${manualRequests.map((call) => call.body).join(' | ')}`,
+        `expected manual submit_product_submission payload, got ${manualRequests.map((call) => call.body).join(' | ')}`,
       );
       await manualPage.close();
 

@@ -197,20 +197,20 @@ await auth.createProduct({ barcode: '4900000000000', name: 'Created Product', im
 assert.ok(testState.restCalls.some((call) =>
   call.type === 'rpc' &&
   call.name === 'admin_upsert_product' &&
-  call.body.id === '4900000000000' &&
-  call.body.barcode === '4900000000000' &&
-  call.body.name === 'Created Product' &&
-  call.body.image_url === 'https://cdn.example.com/products/created-product.jpg' &&
+  call.body.payload.id === '4900000000000' &&
+  call.body.payload.barcode === '4900000000000' &&
+  call.body.payload.name === 'Created Product' &&
+  call.body.payload.image_url === 'https://cdn.example.com/products/created-product.jpg' &&
   call.options.token === 'session-token'
 ));
 
 await auth.submitProductSubmission({ barcode: '4900000000001', name: 'Submitted Product', image_url: 'https://cdn.example.com/products/submitted-product.jpg' });
 assert.ok(testState.restCalls.some((call) =>
   call.type === 'rpc' &&
-  call.name === 'create_product' &&
-  call.body.barcode === '4900000000001' &&
-  call.body.name === 'Submitted Product' &&
-  call.body.image_url === 'https://cdn.example.com/products/submitted-product.jpg' &&
+  call.name === 'submit_product_submission' &&
+  call.body.payload.barcode === '4900000000001' &&
+  call.body.payload.name === 'Submitted Product' &&
+  call.body.payload.image_url === 'https://cdn.example.com/products/submitted-product.jpg' &&
   call.options.token === 'session-token'
 ));
 
@@ -223,8 +223,8 @@ await auth.adminDeleteStore('s1');
 await auth.adminDeletePrice('price-1');
 assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_review_price_submission' && call.body.payload.id === 'pending-1'));
 assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_review_product_submission' && call.body.payload.id === 'product-pending-1'));
-assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_upsert_store' && call.body.id === 'store-1'));
-assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_upsert_price' && call.body.price_yen === 698));
+assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_upsert_store' && call.body.payload.id === 'store-1'));
+assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_upsert_price' && call.body.payload.price_yen === 698));
 assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_delete_product' && call.body.target_id === 'p1'));
 assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_delete_store' && call.body.target_id === 's1'));
 assert.ok(testState.restCalls.some((call) => call.type === 'rpc' && call.name === 'admin_delete_price' && call.body.target_id === 'price-1'));

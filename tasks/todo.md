@@ -63,3 +63,5 @@ pm test 通过；GitHub Actions 继续从 PUBLIC_SUPABASE_URL 和 PUBLIC_SUPABAS
 - 404 页面已新增为 `src/pages/404.astro`，提供首页、扫码和个人页的回退路径；`npm run build`、`npm test`、`npm run check` 已通过。
 - 404 兜底已改成 `astro.config.mjs` 里的 dev request hook，本地 `astro dev` 会命中自定义 404；构建产物继续走 `src/pages/404.astro`。
 - 404 页增加了 uilt-404-page-smoke.mjs 回归测试，静态产物里的返回入口会被检查是否保留 '/aprice' 前缀。
+
+- [x] 管理后台补齐 RPC payload 契约、商品/门店/价格编辑回归、价格审核和商品审核计划

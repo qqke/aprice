@@ -27,6 +27,10 @@ function trackEvent(name, payload = {}) {
   return event;
 }
 
+function asPayloadArg(payload = {}) {
+  return { payload: payload && typeof payload === 'object' ? payload : {} };
+}
+
 function ensureConfigured() {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     throw new Error('Missing Supabase environment variables');
@@ -478,7 +482,7 @@ export async function createProduct(payload) {
     image_url: imageUrl.value,
   };
   try {
-    return await restRpc('admin_upsert_product', normalizedPayload, { token: session.access_token });
+    return await restRpc('admin_upsert_product', asPayloadArg(normalizedPayload), { token: session.access_token });
   } catch (error) {
     throw new Error(friendlyDataError(error));
   }
@@ -491,19 +495,19 @@ export async function submitProductSubmission(payload) {
   if (!barcode.ok) throw new Error(barcode.message);
   if (!imageUrl.ok) throw new Error(imageUrl.message);
   if (!String(payload?.name || '').trim()) throw new Error('请填写商品名称。');
-  const result = await restRpc('create_product', {
+  const result = await restRpc('submit_product_submission', asPayloadArg({
     ...payload,
     id: payload?.id || barcode.value,
     barcode: barcode.value,
     image_url: imageUrl.value,
-  }, { token: session.access_token });
-  trackEvent('submit_product', { barcode: barcode.ok ? barcode.value : '', source: 'create_product' });
+  }), { token: session.access_token });
+  trackEvent('submit_product', { barcode: barcode.ok ? barcode.value : '', source: 'submit_product_submission' });
   return result;
 }
 
 export async function adminUpsertStore(payload) {
   const session = await requireSession();
-  return restRpc('admin_upsert_store', payload, { token: session.access_token });
+  return restRpc('admin_upsert_store', asPayloadArg(payload), { token: session.access_token });
 }
 
 export function formatDataError(error) {
@@ -512,7 +516,7 @@ export function formatDataError(error) {
 
 export async function adminUpsertPrice(payload) {
   const session = await requireSession();
-  return restRpc('admin_upsert_price', payload, { token: session.access_token });
+  return restRpc('admin_upsert_price', asPayloadArg(payload), { token: session.access_token });
 }
 
 export async function adminDeleteProduct(targetId) {
