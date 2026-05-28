@@ -792,106 +792,131 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     }
 
     async function loadData() {
-      const [user, profile] = await Promise.all([getCurrentUser(), fetchCurrentProfile()]);
-      if (!user) {
-        if (logoutButton) logoutButton.hidden = true;
-        const copy = getPrivatePageGateCopy('admin', 'guest');
-        syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
-        applyPrivatePageGateCopy({ titleEl: gateTitle, descriptionEl: gateDescription, primaryButtonEl: loginLink, secondaryButtonEl: switchLink }, copy);
-        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'notLoggedIn');
-        if (accessState) {
-          accessState.innerHTML = `
-            <div class="list__item">
-              <div>
-                <strong>${getPrivatePageStatusCopy('admin', 'accessLoggedOutTitle')}</strong>
-                <small>${getPrivatePageStatusCopy('admin', 'accessLoggedOutDescription')}</small>
+      try {
+        const [user, profile] = await Promise.all([getCurrentUser(), fetchCurrentProfile()]);
+        if (!user) {
+          if (logoutButton) logoutButton.hidden = true;
+          const copy = getPrivatePageGateCopy('admin', 'guest');
+          syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
+          applyPrivatePageGateCopy({ titleEl: gateTitle, descriptionEl: gateDescription, primaryButtonEl: loginLink, secondaryButtonEl: switchLink }, copy);
+          if (status) status.textContent = getPrivatePageStatusCopy('admin', 'notLoggedIn');
+          if (accessState) {
+            accessState.innerHTML = `
+              <div class="list__item">
+                <div>
+                  <strong>${getPrivatePageStatusCopy('admin', 'accessLoggedOutTitle')}</strong>
+                  <small>${getPrivatePageStatusCopy('admin', 'accessLoggedOutDescription')}</small>
+                </div>
+                <span class="meta">guest</span>
               </div>
-              <span class="meta">guest</span>
-            </div>
-          `;
+            `;
+          }
+          return false;
         }
-        return false;
-      }
-      if (profile?.role !== 'admin') {
-        if (logoutButton) logoutButton.hidden = true;
-        const copy = getPrivatePageGateCopy('admin', 'forbidden');
-        syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
-        applyPrivatePageGateCopy({ titleEl: gateTitle, descriptionEl: gateDescription, primaryButtonEl: loginLink, secondaryButtonEl: switchLink }, copy);
-        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'notAdmin');
-        if (accessState) {
-          accessState.innerHTML = `
-            <div class="list__item">
-              <div>
-                <strong>${profile?.email || user.email || '已登录用户'}</strong>
-                <small>${getPrivatePageStatusCopy('admin', 'accessNotAdminDescription')}</small>
+        if (profile?.role !== 'admin') {
+          if (logoutButton) logoutButton.hidden = true;
+          const copy = getPrivatePageGateCopy('admin', 'forbidden');
+          syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
+          applyPrivatePageGateCopy({ titleEl: gateTitle, descriptionEl: gateDescription, primaryButtonEl: loginLink, secondaryButtonEl: switchLink }, copy);
+          if (status) status.textContent = getPrivatePageStatusCopy('admin', 'notAdmin');
+          if (accessState) {
+            accessState.innerHTML = `
+              <div class="list__item">
+                <div>
+                  <strong>${profile?.email || user.email || '已登录用户'}</strong>
+                  <small>${getPrivatePageStatusCopy('admin', 'accessNotAdminDescription')}</small>
+                </div>
+                <span class="meta">${profile?.role || 'unknown'}</span>
               </div>
-              <span class="meta">${profile?.role || 'unknown'}</span>
-            </div>
-          `;
+            `;
+          }
+          return false;
         }
-        return false;
-      }
 
-      const session = await getSession();
-      const [productPage, storePage, priceItems, pendingPriceItems, pendingProductItems] = await Promise.all([
-        fetchProductsPage({ term: productSearchTerm, limit: 30, offset: 0 }),
-        fetchStoresPage({ term: storeSearchTerm, limit: 30, offset: 0 }),
-        fetchRecentPrices(12, { token: session?.access_token || '' }),
-        fetchPendingPriceSubmissions(30),
-        fetchProductSubmissions(30),
-      ]);
-      try {
-        appSettings = await fetchAppSettings();
-      } catch {
-        appSettings = {};
-      }
-      let telemetrySummaryResult = { days: 7, total_events: 0, active_users: 0, top_events: [] };
-      let telemetryRecentResult = { items: [] };
-      try {
-        [telemetrySummaryResult, telemetryRecentResult] = await Promise.all([
-          adminFetchTelemetrySummary({ days: 7 }),
-          adminFetchTelemetryRecent({ limit: 30 }),
+        const session = await getSession();
+        const emptyPage = { rows: [], nextOffset: 0, hasMore: false };
+        const [productPageResult, storePageResult, priceItemsResult, pendingPriceItemsResult, pendingProductItemsResult] = await Promise.allSettled([
+          fetchProductsPage({ term: productSearchTerm, limit: 30, offset: 0 }),
+          fetchStoresPage({ term: storeSearchTerm, limit: 30, offset: 0 }),
+          fetchRecentPrices(12, { token: session?.access_token || '' }),
+          fetchPendingPriceSubmissions(30),
+          fetchProductSubmissions(30),
         ]);
-      } catch {
-        telemetrySummaryResult = { days: 7, total_events: 0, active_users: 0, top_events: [] };
-        telemetryRecentResult = { items: [] };
-      }
-      syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: false });
-      if (logoutButton) logoutButton.hidden = false;
-      products = Array.isArray(productPage?.rows) ? productPage.rows : [];
-      productOffset = Number(productPage?.nextOffset || products.length);
-      productHasMore = Boolean(productPage?.hasMore);
-      stores = Array.isArray(storePage?.rows) ? storePage.rows : [];
-      storeOffset = Number(storePage?.nextOffset || stores.length);
-      storeHasMore = Boolean(storePage?.hasMore);
-      prices = priceItems;
-      pendingPrices = Array.isArray(pendingPriceItems) ? pendingPriceItems : [];
-      pendingProductSubmissions = Array.isArray(pendingProductItems) ? pendingProductItems : [];
-      telemetrySummary = telemetrySummaryResult || { days: 7, total_events: 0, active_users: 0, top_events: [] };
-      telemetryItems = Array.isArray(telemetryRecentResult?.items) ? telemetryRecentResult.items : [];
+        const productPage = productPageResult.status === 'fulfilled' ? productPageResult.value : emptyPage;
+        const storePage = storePageResult.status === 'fulfilled' ? storePageResult.value : emptyPage;
+        const priceItems = priceItemsResult.status === 'fulfilled' ? priceItemsResult.value : [];
+        const pendingPriceItems = pendingPriceItemsResult.status === 'fulfilled' ? pendingPriceItemsResult.value : [];
+        const pendingProductItems = pendingProductItemsResult.status === 'fulfilled' ? pendingProductItemsResult.value : [];
+        try {
+          appSettings = await fetchAppSettings();
+        } catch {
+          appSettings = {};
+        }
+        let telemetrySummaryResult = { days: 7, total_events: 0, active_users: 0, top_events: [] };
+        let telemetryRecentResult = { items: [] };
+        try {
+          [telemetrySummaryResult, telemetryRecentResult] = await Promise.all([
+            adminFetchTelemetrySummary({ days: 7 }),
+            adminFetchTelemetryRecent({ limit: 30 }),
+          ]);
+        } catch {
+          telemetrySummaryResult = { days: 7, total_events: 0, active_users: 0, top_events: [] };
+          telemetryRecentResult = { items: [] };
+        }
+        syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: false });
+        if (logoutButton) logoutButton.hidden = false;
+        products = Array.isArray(productPage?.rows) ? productPage.rows : [];
+        productOffset = Number(productPage?.nextOffset || products.length);
+        productHasMore = Boolean(productPage?.hasMore);
+        stores = Array.isArray(storePage?.rows) ? storePage.rows : [];
+        storeOffset = Number(storePage?.nextOffset || stores.length);
+        storeHasMore = Boolean(storePage?.hasMore);
+        prices = priceItems;
+        pendingPrices = Array.isArray(pendingPriceItems) ? pendingPriceItems : [];
+        pendingProductSubmissions = Array.isArray(pendingProductItems) ? pendingProductItems : [];
+        telemetrySummary = telemetrySummaryResult || { days: 7, total_events: 0, active_users: 0, top_events: [] };
+        telemetryItems = Array.isArray(telemetryRecentResult?.items) ? telemetryRecentResult.items : [];
 
-      refreshSelectors();
-      renderProducts();
-      renderStores();
-      renderPrices();
-      renderPendingPrices();
-      renderPendingProductSubmissions();
-      renderTelemetry();
-      renderCommercialSettings();
-      updateAdminSummaries();
-      if (status) status.textContent = getPrivatePageStatusCopy('admin', 'loaded', { email: profile.email || user.email });
-      if (accessState) {
-        accessState.innerHTML = `
-          <div class="list__item">
-            <div>
-              <strong>${profile.email || user.email || 'admin'}</strong>
-              <small>${getPrivatePageStatusCopy('admin', 'accessAdminDescription')}</small>
+        refreshSelectors();
+        renderProducts();
+        renderStores();
+        renderPrices();
+        renderPendingPrices();
+        renderPendingProductSubmissions();
+        renderTelemetry();
+        renderCommercialSettings();
+        updateAdminSummaries();
+        if (status) status.textContent = getPrivatePageStatusCopy('admin', 'loaded', { email: profile.email || user.email });
+        if (accessState) {
+          accessState.innerHTML = `
+            <div class="list__item">
+              <div>
+                <strong>${profile.email || user.email || 'admin'}</strong>
+                <small>${getPrivatePageStatusCopy('admin', 'accessAdminDescription')}</small>
+              </div>
+              <span class="meta">admin</span>
             </div>
-            <span class="meta">admin</span>
-          </div>
-        `;
+          `;
+        }
+        return true;
+      } catch (error) {
+        if (logoutButton) logoutButton.hidden = true;
+        syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
+        applyPrivatePageGateCopy({ titleEl: gateTitle, descriptionEl: gateDescription, primaryButtonEl: loginLink, secondaryButtonEl: switchLink }, getPrivatePageGateCopy('admin', 'guest'));
+        if (status) status.textContent = `读取登录状态失败：${formatDataError(error)}`;
+        if (accessState) {
+          accessState.innerHTML = `
+            <div class="list__item">
+              <div>
+                <strong>加载失败</strong>
+                <small>请刷新后重试。</small>
+              </div>
+              <span class="meta">error</span>
+            </div>
+          `;
+        }
+        return false;
       }
-      return true;
     }
 
     productForm?.addEventListener('submit', async (event) => {
