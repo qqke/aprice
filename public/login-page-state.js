@@ -89,7 +89,7 @@ export function validateLoginInputs({ mode, email, password, confirmPassword, tu
   if (mode !== 'reset-password' && !trimmedEmail) {
     return '请输入邮箱地址。';
   }
-  if (mode === 'register' && !turnstileConfigured) {
+  if (mode === 'register' && !turnstileConfigured && !devFallback) {
     return '注册验证尚未配置，请先设置 Turnstile Site Key。';
   }
   if ((mode === 'login' || mode === 'register') && !passwordValue) {

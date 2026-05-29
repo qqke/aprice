@@ -193,6 +193,10 @@ export const prerender = true;
       return '登录前需要完成人机验证。';
     }
 
+    function isTurnstileBypassed() {
+      return isLocalDevFallbackEnabled;
+    }
+
     function loadTurnstileScript() {
       if (window.turnstile) return Promise.resolve(window.turnstile);
       if (turnstileScriptPromise) return turnstileScriptPromise;
@@ -235,13 +239,15 @@ export const prerender = true;
 
     async function renderTurnstileIfNeeded() {
       if (!turnstileField || !turnstileWidget || !requiresTurnstile()) return;
+      if (isTurnstileBypassed()) {
+        turnstileField.hidden = true;
+        turnstileToken = '';
+        turnstileDevFallback = true;
+        return;
+      }
       turnstileField.hidden = false;
       if (!turnstileSiteKey) {
         setTurnstileStatus('Turnstile Site Key 未配置，注册暂不可提交。');
-        return;
-      }
-      if (isLocalDevFallbackEnabled) {
-        enableDevTurnstileFallback();
         return;
       }
       if (turnstileWidgetId !== null) return;
@@ -274,6 +280,12 @@ export const prerender = true;
 
     function syncTurnstilePanel() {
       if (!turnstileField) return;
+      if (isTurnstileBypassed()) {
+        turnstileField.hidden = true;
+        resetTurnstile();
+        turnstileDevFallback = true;
+        return;
+      }
       const shouldShow = requiresTurnstile() && (Boolean(turnstileSiteKey) || mode === 'register');
       turnstileField.hidden = !shouldShow;
       if (!shouldShow) {
