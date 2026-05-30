@@ -1,12 +1,15 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
 const root = process.cwd();
 const schemaSql = await readFile(resolve(root, 'supabase/schema.sql'), 'utf8');
-const migrationsSql = [
-  await readFile(resolve(root, 'supabase/migrations/20260515120000_credit_commercialization.sql'), 'utf8'),
-].join('\n');
+const migrationFiles = (await readdir(resolve(root, 'supabase/migrations')))
+  .filter((file) => file.endsWith('.sql'))
+  .sort();
+const migrationsSql = (await Promise.all(
+  migrationFiles.map((file) => readFile(resolve(root, 'supabase/migrations', file), 'utf8')),
+)).join('\n');
 const combinedSql = `${schemaSql}\n${migrationsSql}`.replace(/\s+/g, ' ').toLowerCase();
 
 function assertContainsSql(fragment, message) {
@@ -73,6 +76,34 @@ for (const functionName of ['consume_credit', 'consume_price_reference', 'record
     match[1],
     /pg_advisory_xact_lock\s*\(\s*hashtextextended\s*\(\s*target_user_id::text\s*,\s*0\s*\)\s*\)/i,
     `${functionName} should serialize credit usage by user`,
+  );
+}
+
+function lastFunctionBody(sql, name) {
+  const pattern = new RegExp(
+    `create\\s+or\\s+replace\\s+function\\s+(?:public\\.)?${name}\\s*\\([\\s\\S]*?\\$\\$([\\s\\S]*?)\\$\\$`,
+    'gi',
+  );
+  const matches = Array.from(sql.matchAll(pattern));
+  return matches.at(-1)?.[1] || '';
+}
+
+for (const source of [
+  ['schema.sql', schemaSql],
+  ['migrations', migrationsSql],
+]) {
+  const [label, sql] = source;
+  const body = lastFunctionBody(sql, 'submit_store_price');
+  assert.ok(body, `${label} should define submit_store_price`);
+  assert.match(
+    body,
+    /case\s+when\s+should_share\s+then\s+'pending'\s+else\s+'private'\s+end/i,
+    `${label} submit_store_price should create public submissions as pending`,
+  );
+  assert.doesNotMatch(
+    body,
+    /try_promote_consensus_price/i,
+    `${label} submit_store_price should leave public submissions pending for admin review`,
   );
 }
 

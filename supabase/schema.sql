@@ -2017,9 +2017,6 @@ begin
     values (auth.uid(), target_product_id, target_store_id, target_price_yen, coalesce((nullif(payload->>'purchased_at', ''))::date, current_date), coalesce(payload->>'note', ''), should_share, case when should_share then 'pending' else 'private' end, coalesce(payload->>'evidence_url', ''))
     returning * into result;
   end if;
-  if should_share and result.review_status = 'pending' then
-    perform public.try_promote_consensus_price(target_product_id, target_store_id, target_price_yen);
-  end if;
   return result;
 end;
 $$;
