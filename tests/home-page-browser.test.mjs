@@ -175,6 +175,43 @@ async function main() {
       assert.ok(failingRequests.some((url) => url.includes('/rest/v1/products')));
       await failingPage.close();
 
+      const guestPricePage = await browser.newPage();
+      await guestPricePage.route('**/rest/v1/**', async (route) => {
+        const requestUrl = route.request().url();
+        const url = new URL(requestUrl);
+        if (url.pathname.endsWith('/products')) {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify([{
+              id: 'guest-product',
+              name: 'Guest Product',
+              brand: 'Guest Brand',
+              pack: '1 pack',
+              barcode: '4900000000002',
+            }]),
+          });
+          return;
+        }
+        if (url.pathname.endsWith('/rpc/fetch_product_prices')) {
+          await route.fulfill({
+            status: 401,
+            contentType: 'application/json',
+            body: JSON.stringify({ code: 'P0001', details: null, hint: null, message: 'login required' }),
+          });
+          return;
+        }
+        await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+      });
+      await guestPricePage.goto(`${baseUrl}/aprice/`, { waitUntil: 'domcontentloaded' });
+      await guestPricePage.locator('#home-search').fill('guest');
+      await guestPricePage.locator('#home-search-button').click();
+      await guestPricePage.waitForFunction(() => String(document.querySelector('#nearby-status')?.textContent || '').includes('登录后可查看附近门店价格'));
+      const guestNearbyText = await guestPricePage.locator('#nearby-panel').textContent();
+      assert.match(guestNearbyText || '', /登录后可查看附近门店价格/);
+      assert.doesNotMatch(guestNearbyText || '', /P0001|login required|\{"code"/);
+      await guestPricePage.close();
+
       const failureBranchesPage = await browser.newPage();
       await failureBranchesPage.addInitScript(() => {
         Object.defineProperty(navigator, 'geolocation', {
