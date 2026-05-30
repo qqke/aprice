@@ -58,6 +58,12 @@ export function friendlyDataError(error) {
   if (raw.includes('login required') || raw.includes('Please sign in first')) {
     return '请先登录后再操作。';
   }
+  if (raw.includes('no_price_tasks_available')) {
+    return '当前暂无可领取任务，请稍后再试。';
+  }
+  if (raw.includes('daily_task_claim_limit_reached')) {
+    return '今天已领取过足够任务了，明天再来吧。';
+  }
   if (raw.startsWith('{') || raw.startsWith('[')) {
     try {
       const parsed = JSON.parse(raw);

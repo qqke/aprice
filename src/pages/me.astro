@@ -844,7 +844,12 @@ const meGateCopy = getPrivatePageGateCopy('me');
         const task = await claimRandomPriceTask();
         renderPriceTask(task);
       } catch (error) {
-        if (priceTaskStatus) priceTaskStatus.textContent = `领取失败：${formatDataError(error)}`;
+        const message = formatDataError(error);
+        if (priceTaskStatus) {
+          priceTaskStatus.textContent = message.includes('暂无可领取任务') || message.includes('已领取过足够任务')
+            ? message
+            : `领取失败：${message}`;
+        }
       } finally {
         claimPriceTaskButton.disabled = false;
       }
