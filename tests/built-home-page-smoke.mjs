@@ -59,11 +59,13 @@ const nodes = {
 };
 
 const fetchLog = [];
+const signedOutAuthModule = 'export async function getSession(){ return null; }';
 globalThis.__APriceConfig = {
   baseUrl: '/aprice/',
   supabaseUrl: 'https://example.supabase.co',
   supabaseAnonKey: 'anon-key',
   turnstileSiteKey: 'test-turnstile-site-key',
+  browserAuthJsUrl: `data:text/javascript;charset=utf-8,${encodeURIComponent(signedOutAuthModule)}`,
 };
 
 globalThis.fetch = async (input) => {

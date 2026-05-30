@@ -164,6 +164,22 @@ const base = import.meta.env.BASE_URL || '/';
       searchProducts,
     } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
 
+    let authModulePromise = null;
+    function loadAuthModule() {
+      authModulePromise ??= import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
+      return authModulePromise;
+    }
+
+    async function getPriceAccessToken() {
+      try {
+        const { getSession } = await loadAuthModule();
+        const session = await getSession();
+        return session?.access_token || '';
+      } catch {
+        return '';
+      }
+    }
+
     const form = document.querySelector('#home-search-form');
     const input = document.querySelector('#home-search');
     const results = document.querySelector('#search-results');
@@ -509,7 +525,8 @@ const base = import.meta.env.BASE_URL || '/';
       if (!product || !nearbyResults || !nearbyStatus) return;
       setNearbyStatus(`${product.name} 价格读取中...`, true);
       try {
-        const prices = await fetchPricesForProduct(product.id, { limit: 80, sinceDays: 45 });
+        const token = await getPriceAccessToken();
+        const prices = await fetchPricesForProduct(product.id, { limit: 80, sinceDays: 45, token });
         if (!prices.length) {
           renderEmptyList(nearbyResults, product.name, '当前还没有价格记录。', '暂无');
           setNearbyStatus(`${product.name} 暂无门店价格。`, true);

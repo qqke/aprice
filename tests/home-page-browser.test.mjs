@@ -4,6 +4,32 @@ import { launchChromiumForTest } from './_playwright-launch.mjs';
 import { makeHomePageResponseForRequest } from './_browser-test-fixtures.mjs';
 import { startStaticServer } from './_browser-test-server.mjs';
 
+function makeSupabaseShimModuleBody({ signedIn = false, accessToken = 'home-access-token' } = {}) {
+  const session = signedIn
+    ? `{ user: { id: "member-1", email: "member@example.com" }, access_token: ${JSON.stringify(accessToken)} }`
+    : 'null';
+  return [
+    'export function createClient(){',
+    '  return {',
+    '    auth: {',
+    `      async getSession(){ return { data: { session: ${session} }, error: null }; },`,
+    '      onAuthStateChange(){ return { data: { subscription: { unsubscribe(){} } } }; },',
+    '    },',
+    '  };',
+    '}',
+  ].join('\n');
+}
+
+async function routeSupabaseSession(page, options = {}) {
+  await page.route('https://esm.sh/@supabase/supabase-js@2.105.4', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/javascript; charset=utf-8',
+      body: makeSupabaseShimModuleBody(options),
+    });
+  });
+}
+
 async function main() {
   const { server, baseUrl } = await startStaticServer();
   const browser = await launchChromiumForTest('home-page');
@@ -16,6 +42,7 @@ async function main() {
     try {
       const page = await browser.newPage();
       const requests = [];
+      await routeSupabaseSession(page);
 
       await page.route('**/rest/v1/**', async (route) => {
         const requestUrl = route.request().url();
@@ -98,17 +125,57 @@ async function main() {
       assert.equal(await page.locator('#nearby-map .home-map__marker').count(), 2);
       assert.match(await page.locator('#nearby-map iframe').getAttribute('src'), /maps\.google\.com\/maps/);
 
-      await page.locator('#nearby-toggle').click();
-      assert.equal(await page.locator('#nearby-toggle').getAttribute('aria-expanded'), 'false');
-      assert.equal(await page.evaluate(() => localStorage.getItem('aprice:nearby-collapsed')), 'true');
-      await page.reload({ waitUntil: 'domcontentloaded' });
-      await page.locator('#home-search').waitFor({ state: 'attached', timeout: 5000 });
-      assert.equal(await page.locator('#nearby-toggle').getAttribute('aria-expanded'), 'false');
+      const signedInPage = await browser.newPage();
+      const signedInRpcHeaders = [];
+      await routeSupabaseSession(signedInPage, { signedIn: true, accessToken: 'home-access-token' });
+      await signedInPage.route('**/rest/v1/**', async (route) => {
+        const request = route.request();
+        const requestUrl = request.url();
+        const url = new URL(requestUrl);
+        if (url.pathname.endsWith('/rpc/fetch_product_prices')) {
+          signedInRpcHeaders.push(request.headers());
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(makeHomePageResponseForRequest(requestUrl, request.postData() || '')),
+        });
+      });
+      await signedInPage.goto(`${baseUrl}/aprice/`, { waitUntil: 'domcontentloaded' });
+      await signedInPage.locator('#home-search').fill('EVE');
+      await signedInPage.locator('#home-search-button').click();
+      await signedInPage.waitForFunction(() => {
+        const text = String(document.querySelector('#nearby-status')?.textContent || '');
+        return /EVE A · 2 条价格/.test(text);
+      });
       assert.equal(
-        await page.evaluate(() => getComputedStyle(document.querySelector('#nearby-panel')).display),
+        signedInRpcHeaders.at(-1)?.authorization,
+        'Bearer home-access-token',
+        'logged-in homepage price RPC should use the current Supabase session token',
+      );
+      assert.doesNotMatch(await signedInPage.locator('#nearby-panel').textContent(), /请先登录|login required|P0001/);
+      await signedInPage.close();
+
+      const persistencePage = await browser.newPage();
+      await routeSupabaseSession(persistencePage);
+      await persistencePage.goto(`${baseUrl}/aprice/`, { waitUntil: 'domcontentloaded' });
+      await persistencePage.locator('#home-search').waitFor({ state: 'attached', timeout: 5000 });
+      await persistencePage.evaluate(() => localStorage.removeItem('aprice:nearby-collapsed'));
+      await persistencePage.reload({ waitUntil: 'domcontentloaded' });
+      await persistencePage.locator('#home-search').waitFor({ state: 'attached', timeout: 5000 });
+      assert.equal(await persistencePage.locator('#nearby-toggle').getAttribute('aria-expanded'), 'true');
+      await persistencePage.locator('#nearby-toggle').click();
+      assert.equal(await persistencePage.locator('#nearby-toggle').getAttribute('aria-expanded'), 'false');
+      assert.equal(await persistencePage.evaluate(() => localStorage.getItem('aprice:nearby-collapsed')), 'true');
+      await persistencePage.reload({ waitUntil: 'domcontentloaded' });
+      await persistencePage.locator('#home-search').waitFor({ state: 'attached', timeout: 5000 });
+      assert.equal(await persistencePage.locator('#nearby-toggle').getAttribute('aria-expanded'), 'false');
+      assert.equal(
+        await persistencePage.evaluate(() => getComputedStyle(document.querySelector('#nearby-panel')).display),
         'none',
         'homepage nearby panel should persist the collapsed state',
       );
+      await persistencePage.close();
 
       await page.setViewportSize({ width: 390, height: 844 });
       const mobileMenuDisplay = await page.evaluate(() => {
@@ -152,6 +219,7 @@ async function main() {
 
       const failingPage = await browser.newPage();
       const failingRequests = [];
+      await routeSupabaseSession(failingPage);
       await failingPage.route('**/rest/v1/**', async (route) => {
         failingRequests.push(route.request().url());
         await route.fulfill({
@@ -176,6 +244,7 @@ async function main() {
       await failingPage.close();
 
       const guestPricePage = await browser.newPage();
+      await routeSupabaseSession(guestPricePage);
       await guestPricePage.route('**/rest/v1/**', async (route) => {
         const requestUrl = route.request().url();
         const url = new URL(requestUrl);
@@ -213,6 +282,7 @@ async function main() {
       await guestPricePage.close();
 
       const failureBranchesPage = await browser.newPage();
+      await routeSupabaseSession(failureBranchesPage);
       await failureBranchesPage.addInitScript(() => {
         Object.defineProperty(navigator, 'geolocation', {
           configurable: true,
