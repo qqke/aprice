@@ -4,6 +4,7 @@ globalThis.__APriceConfig = {
   baseUrl: '/aprice/',
   supabaseUrl: 'https://example.supabase.co',
   supabaseAnonKey: 'anon-key',
+  useServerPriceRpc: false,
   enableTelemetryRpc: true,
 };
 

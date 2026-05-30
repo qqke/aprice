@@ -4,7 +4,6 @@ globalThis.__APriceConfig = {
   baseUrl: '/aprice/',
   supabaseUrl: 'https://example.supabase.co',
   supabaseAnonKey: 'anon-key',
-  useServerPriceRpc: true,
 };
 
 const requests = [];
@@ -80,14 +79,13 @@ assert.equal(rows.length, 1);
 assert.equal(rows[0].store_id, 'welcia-shibuya');
 assert.ok(requests.some((request) => request.url.includes('/rest/v1/rpc/fetch_product_prices')));
 
-globalThis.__APriceConfig = {
-  ...globalThis.__APriceConfig,
-  useServerPriceRpc: false,
-};
 const fallbackRequests = [];
-globalThis.fetch = async (input) => {
+globalThis.fetch = async (input, init = {}) => {
   const url = String(input);
-  fallbackRequests.push(url);
+  fallbackRequests.push({ url, method: init.method || 'GET', body: init.body || '' });
+  if (url.includes('/rest/v1/rpc/fetch_product_prices_page')) {
+    return new Response('rpc unavailable', { status: 503, headers: { 'Content-Type': 'text/plain' } });
+  }
   if (url.includes('/rest/v1/prices')) {
     return new Response(
       JSON.stringify([
@@ -110,9 +108,11 @@ globalThis.fetch = async (input) => {
   return new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } });
 };
 const browserFallback = await import(`../src/lib/browser.js?fallback=${Date.now()}`);
-const fallbackPage = await browserFallback.fetchProductPricesPage('loxonin-s', { limit: 10, sinceDays: 14 });
-assert.equal(fallbackPage.items.length, 1);
-assert.equal(fallbackPage.nextCursor, null);
-assert.ok(fallbackRequests.some((url) => url.includes('/rest/v1/prices')));
+await assert.rejects(
+  () => browserFallback.fetchProductPricesPage('loxonin-s', { limit: 10, sinceDays: 14, token: 'user-token' }),
+  /rpc unavailable/,
+);
+assert.ok(fallbackRequests.some((request) => request.url.includes('/rest/v1/rpc/fetch_product_prices_page')));
+assert.equal(fallbackRequests.some((request) => request.url.includes('/rest/v1/prices')), false);
 
 console.log('browser-price-rpc test passed');

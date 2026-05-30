@@ -387,7 +387,7 @@ export function makePendingProductSubmissions() {
   ];
 }
 
-export function makeHomePageResponseForRequest(requestUrl) {
+export function makeHomePageResponseForRequest(requestUrl, requestBody = '') {
   const url = new URL(requestUrl);
   if (url.pathname.endsWith('/products')) {
     const or = url.searchParams.get('or') || '';
@@ -412,6 +412,32 @@ export function makeHomePageResponseForRequest(requestUrl) {
 
   if (url.pathname.endsWith('/prices')) {
     if (url.searchParams.get('product_id') === 'eq.eve-a') {
+      return makePriceFixtures().map((row, index) => ({
+        ...row,
+        id: `home-price-${index + 1}`,
+        product_id: 'eve-a',
+        products: {
+          id: 'eve-a',
+          name: 'EVE A',
+          barcode: '4987300051234',
+          brand: 'SS Pharmaceuticals',
+          pack: '20 tabs',
+          tone: 'mint',
+        },
+      }));
+    }
+    return [];
+  }
+
+  if (url.pathname.endsWith('/rpc/fetch_product_prices')) {
+    let productId = '';
+    try {
+      const parsed = requestBody ? JSON.parse(requestBody) : {};
+      productId = String(parsed?.payload?.product_id || parsed?.product_id || '');
+    } catch {
+      productId = '';
+    }
+    if (productId === 'eve-a') {
       return makePriceFixtures().map((row, index) => ({
         ...row,
         id: `home-price-${index + 1}`,
@@ -475,6 +501,23 @@ export function makeProductPageResponseForRequest(requestUrl) {
 
   if (url.pathname.endsWith('/prices')) {
     return makePriceFixtures();
+  }
+
+  if (url.pathname.endsWith('/rpc/fetch_product_prices')) {
+    return makePriceFixtures();
+  }
+
+  if (url.pathname.endsWith('/rpc/fetch_product_prices_page')) {
+    return {
+      items: makePriceFixtures(),
+      next_cursor: null,
+      credit: {
+        balance: 10,
+        free_remaining: 4,
+        charged_points: 0,
+        settings: { price_reference_cost: 1 },
+      },
+    };
   }
 
   return [];

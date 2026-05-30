@@ -97,8 +97,9 @@ alter table public.price_tasks enable row level security;
 
 drop policy if exists "prices public read" on public.prices;
 drop policy if exists "prices authenticated read" on public.prices;
-create policy "prices authenticated read" on public.prices
-  for select using (auth.uid() is not null or public.is_admin_user());
+drop policy if exists "prices admin read" on public.prices;
+create policy "prices admin read" on public.prices
+  for select using (public.is_admin_user());
 
 drop policy if exists "app settings public read" on public.app_settings;
 create policy "app settings public read" on public.app_settings for select using (true);
@@ -225,6 +226,8 @@ begin
     return public.credit_balance(target_user_id);
   end if;
 
+  perform pg_advisory_xact_lock(hashtextextended(target_user_id::text, 0));
+
   current_balance := public.credit_balance(target_user_id);
   if current_balance < amount then
     raise exception 'insufficient_credits';
@@ -258,6 +261,8 @@ begin
   if coalesce(target_product_id, '') = '' then
     raise exception 'product_id is required';
   end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(target_user_id::text, 0));
 
   select charged_points
   into charged
@@ -319,6 +324,8 @@ declare
   search_query text := left(coalesce(payload->>'query', ''), 200);
 begin
   perform public.require_authenticated_user();
+
+  perform pg_advisory_xact_lock(hashtextextended(target_user_id::text, 0));
 
   select count(*)::integer
   into used_count
@@ -839,3 +846,20 @@ begin
   return result;
 end;
 $$;
+revoke execute on function public.create_product(jsonb) from public, anon, authenticated;
+revoke execute on function public.credit_balance(uuid) from public, anon, authenticated;
+revoke execute on function public.consume_credit(uuid, integer, text, text, uuid, text) from public, anon, authenticated;
+revoke execute on function public.consume_price_reference(text) from public, anon, authenticated;
+revoke execute on function public.app_setting_int(text, integer) from public, anon, authenticated;
+revoke execute on function public.try_promote_consensus_price(text, text, integer) from public, anon, authenticated;
+
+grant execute on function public.fetch_app_settings() to anon, authenticated;
+grant execute on function public.fetch_credit_summary() to authenticated;
+grant execute on function public.record_product_search(jsonb) to authenticated;
+grant execute on function public.claim_random_price_task(jsonb) to authenticated;
+grant execute on function public.skip_price_task(jsonb) to authenticated;
+grant execute on function public.admin_update_app_setting(jsonb) to authenticated;
+grant execute on function public.admin_adjust_credits(jsonb) to authenticated;
+grant execute on function public.submit_store_price(jsonb) to authenticated;
+grant execute on function public.fetch_product_prices(jsonb) to authenticated;
+grant execute on function public.fetch_product_prices_page(jsonb) to authenticated;

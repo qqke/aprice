@@ -28,7 +28,7 @@ PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 PUBLIC_SITE_URL=https://outlets.stbf.online
 PUBLIC_TURNSTILE_SITE_KEY=your-turnstile-site-key
 ASTRO_BASE_PATH=/
-PUBLIC_USE_SERVER_PRICE_RPC=0
+PUBLIC_USE_SERVER_PRICE_RPC=1
 PUBLIC_ENABLE_TELEMETRY_RPC=0
 ```
 
@@ -59,7 +59,8 @@ PUBLIC_ENABLE_TELEMETRY_RPC=0
 ## Feature Flags & Rollback
 
 - `PUBLIC_USE_SERVER_PRICE_RPC=1`
-  - 启用后：`fetchPricesForProduct` 优先走 `fetch_product_prices` RPC（失败自动回退到 `rest/v1/prices`）。
+  - 默认值。价格详情通过 `fetch_product_prices` / `fetch_product_prices_page` RPC 读取，才能执行积分扣减与免费次数统计。
+  - 商业化环境不要关闭；`prices` 表直读只保留给管理员后台检查。
   - 回滚：改回 `0` 并重新部署。
 - `PUBLIC_ENABLE_TELEMETRY_RPC=1`
   - 启用后：前端事件队列会在页面隐藏时尝试批量提交到 `submit_telemetry_events` RPC。
@@ -85,7 +86,7 @@ PUBLIC_ENABLE_TELEMETRY_RPC=0
   - `items`: 本页价格数组
   - `next_cursor`: 下一页游标（`{ collected_at, id }`）或 `null`
 - 前端封装：`fetchProductPricesPage(productId, { limit, sinceDays, cursor, lat, lng, radiusKm })`
-- 当 `PUBLIC_USE_SERVER_PRICE_RPC=0` 时，自动回退到现有 `fetchPricesForProduct` 行为。
+- 带用户 token 的价格详情请求不会回退到 `rest/v1/prices`，避免绕过积分计费。
 
 ## 上线检查
 

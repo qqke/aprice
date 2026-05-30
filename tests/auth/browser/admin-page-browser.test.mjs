@@ -382,7 +382,7 @@ async function main() {
       assert.equal(await page.locator('#admin-panel-product').evaluate((el) => el.open), false);
       assert.match(telemetrySummaryText || '', /事件看板/);
       assert.match(telemetrySummaryText || '', /事件 0 条/);
-      assert.match(telemetrySummaryText || '', /价格 RPC 未启用/);
+      assert.match(telemetrySummaryText || '', /价格 RPC 已启用/);
       assert.match(productSummaryText || '', /商品 30 条/);
       assert.match(storeSummaryText || '', /门店 30 条/);
       assert.match(priceSummaryText || '', /最近价格 2 条/);

@@ -23,7 +23,7 @@ async function main() {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify(makeHomePageResponseForRequest(requestUrl)),
+          body: JSON.stringify(makeHomePageResponseForRequest(requestUrl, route.request().postData() || '')),
         });
       });
 
@@ -71,7 +71,7 @@ async function main() {
       assert.equal(resultImageSrc, 'https://cdn.example.com/products/loxonin-s.jpg');
       assert.match(requests.join('\n'), /name\.ilike/);
       assert.match(requests.join('\n'), /\/rest\/v1\/products/);
-      assert.match(requests.join('\n'), /\/rest\/v1\/prices/);
+      assert.match(requests.join('\n'), /\/rest\/v1\/rpc\/fetch_product_prices/);
       assert.match(await page.evaluate(() => String(document.querySelector('#nearby-map-status')?.textContent || '')), /当前商品还没有可显示的门店价格坐标|选中商品后在这里显示门店分布|当前商品暂无可用坐标|加载中：等待门店数据/);
       assert.equal(await page.locator('#recent-status').count(), 0, 'homepage should remove recent status module');
       assert.equal(await page.locator('#load-recent-prices').count(), 0, 'homepage should remove recent trigger');
@@ -197,7 +197,7 @@ async function main() {
           });
           return;
         }
-        if (url.pathname.endsWith('/prices') && requestUrl.includes('product_id=eq.xss-product')) {
+        if (url.pathname.endsWith('/rpc/fetch_product_prices') && requestUrl.includes('fetch_product_prices')) {
           await route.fulfill({
             status: 500,
             contentType: 'text/plain; charset=utf-8',

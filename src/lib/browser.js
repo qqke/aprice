@@ -10,7 +10,7 @@ const runtimeConfig = globalThis.__APriceConfig || {};
 const BASE_URL = String(runtimeConfig.baseUrl || '/').trim() || '/';
 const RECENT_VIEWS_KEY = 'aprice:recent-views';
 const TELEMETRY_QUEUE_KEY = 'aprice:telemetry-events';
-const USE_SERVER_PRICE_RPC = Boolean(runtimeConfig.useServerPriceRpc);
+const USE_SERVER_PRICE_RPC = runtimeConfig.useServerPriceRpc !== false;
 
 function distanceKm(lat1, lng1, lat2, lng2) {
   const r = 6371;
@@ -455,19 +455,15 @@ export async function fetchPricesForProduct(productId, options = {}) {
       ? new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000).toISOString()
       : '';
 
-  if (USE_SERVER_PRICE_RPC) {
-    try {
-      return await fetchPricesForProductRpc(productId, {
-        limit,
-        sinceDays,
-        lat: options.lat,
-        lng: options.lng,
-        radiusKm: options.radiusKm,
-        token: options.token,
-      });
-    } catch {
-      // Fall back to direct table query when RPC is not deployed.
-    }
+  if (USE_SERVER_PRICE_RPC || options.token) {
+    return fetchPricesForProductRpc(productId, {
+      limit,
+      sinceDays,
+      lat: options.lat,
+      lng: options.lng,
+      radiusKm: options.radiusKm,
+      token: options.token,
+    });
   }
 
   return restGet('prices', {
@@ -488,20 +484,16 @@ export async function fetchProductPricesPage(productId, options = {}) {
   const limit = Math.max(1, Math.min(Number(options.limit) || 60, 200));
   const sinceDays = Number(options.sinceDays);
 
-  if (USE_SERVER_PRICE_RPC) {
-    try {
-      return await fetchPricesPageRpc(productId, {
-        limit,
-        sinceDays,
-        lat: options.lat,
-        lng: options.lng,
-        radiusKm: options.radiusKm,
-        cursor: options.cursor || null,
-        token: options.token,
-      });
-    } catch {
-      // Fall through to compatibility mode.
-    }
+  if (USE_SERVER_PRICE_RPC || options.token) {
+    return fetchPricesPageRpc(productId, {
+      limit,
+      sinceDays,
+      lat: options.lat,
+      lng: options.lng,
+      radiusKm: options.radiusKm,
+      cursor: options.cursor || null,
+      token: options.token,
+    });
   }
 
   const rows = await fetchPricesForProduct(productId, { limit, sinceDays, lat: options.lat, lng: options.lng, radiusKm: options.radiusKm, token: options.token });

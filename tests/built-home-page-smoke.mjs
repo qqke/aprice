@@ -83,7 +83,7 @@ globalThis.fetch = async (input) => {
       { status: 200, headers: { 'Content-Type': 'application/json' } },
     );
   }
-  if (url.includes('/rest/v1/prices')) {
+  if (url.includes('/rest/v1/rpc/fetch_product_prices')) {
     return new Response(JSON.stringify([]), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }
   return new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } });
@@ -130,6 +130,7 @@ assert.match(nodes['#search-results'].innerHTML, /Loxonin S/);
 assert.match(nodes['#nearby-status'].textContent, /(暂无价格记录|Loxonin S 暂无门店价格。)/);
 assert.match(nodes['#nearby-results'].innerHTML, /当前还没有价格记录/);
 assert.match(fetchLog.join('\n'), /\/rest\/v1\/products/);
-assert.match(fetchLog.join('\n'), /\/rest\/v1\/prices/);
+assert.match(fetchLog.join('\n'), /\/rest\/v1\/rpc\/fetch_product_prices/);
+assert.doesNotMatch(fetchLog.join('\n'), /\/rest\/v1\/prices/);
 
 console.log('built-home smoke test passed');

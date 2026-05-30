@@ -266,7 +266,7 @@ async function main() {
       assert.equal(await page.locator('#personal-store').inputValue(), '');
       assert.equal(await page.locator('#personal-log-form button[type="submit"]').isDisabled(), true);
       assert.equal(await page.locator('#favorite-store-button').isDisabled(), true);
-      assert.match(requests.join('\n'), /\/rest\/v1\/prices/);
+      assert.match(requests.join('\n'), /\/rest\/v1\/rpc\/fetch_product_prices/);
       assert.match(requests.join('\n'), /\/rest\/v1\/stores/);
       assert.match(requests.join('\n'), /limit=11/);
       assert.match(requests.join('\n'), /\/rest\/v1\/user_price_logs/);
@@ -392,7 +392,7 @@ async function main() {
           await route.fulfill({ status: 500, contentType: 'text/plain; charset=utf-8', body: 'forced stores failure' });
           return;
         }
-        if (url.pathname.endsWith('/prices')) {
+        if (url.pathname.endsWith('/rpc/fetch_product_prices_page') || url.pathname.endsWith('/rpc/fetch_product_prices')) {
           await route.fulfill({ status: 500, contentType: 'text/plain; charset=utf-8', body: 'forced prices failure' });
           return;
         }
@@ -430,7 +430,6 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
 
 
 

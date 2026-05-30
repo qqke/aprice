@@ -18,6 +18,7 @@ const tests = [
   'tests/auth/pure/login-page-state.test.mjs',
   'tests/auth/pure/private-page-auth.test.mjs',
   'tests/supabase-rest.test.mjs',
+  'tests/supabase-commercial-security.test.mjs',
   'tests/browser-auth.test.mjs',
   'tests/middleware.test.mjs',
   'tests/browser-runtime.test.mjs',

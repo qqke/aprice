@@ -245,7 +245,7 @@ async function main() {
       assert.equal(await page.locator('#personal-store').inputValue(), '');
       assert.equal(await page.locator('#personal-log-form button[type="submit"]').isDisabled(), true);
       assert.equal(await page.locator('#favorite-store-button').isDisabled(), true);
-      assert.match(requests.join('\n'), /\/rest\/v1\/prices/);
+      assert.match(requests.join('\n'), /\/rest\/v1\/rpc\/fetch_product_prices/);
       assert.match(requests.join('\n'), /\/rest\/v1\/stores/);
       assert.match(requests.join('\n'), /limit=11/);
       assert.match(requests.join('\n'), /\/rest\/v1\/user_price_logs/);
@@ -354,7 +354,6 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
 
 
 
