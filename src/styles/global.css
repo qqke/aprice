@@ -2219,6 +2219,61 @@ body.home-page .home-hero__inner > *:nth-child(7) {
   animation-delay: 200ms;
 }
 
+body.home-page .home-v2 .home-search__hints > * {
+  animation: rise-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+body.home-page .home-v2 .home-search__hints > *:nth-child(1) {
+  animation-delay: 40ms;
+}
+
+body.home-page .home-v2 .home-search__hints > *:nth-child(2) {
+  animation-delay: 70ms;
+}
+
+body.home-page .home-v2 .home-search__hints > *:nth-child(3) {
+  animation-delay: 100ms;
+}
+
+body.home-page .home-v2 .home-search__hints > *:nth-child(4) {
+  animation-delay: 130ms;
+}
+
+body.home-page .home-v2 .home-results .list__item,
+body.home-page .home-v2 .home-results .notice {
+  animation: rise-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+body.home-page .home-v2 .home-results .list__item:nth-child(1),
+body.home-page .home-v2 .home-results .notice:nth-child(1) {
+  animation-delay: 30ms;
+}
+
+body.home-page .home-v2 .home-results .list__item:nth-child(2),
+body.home-page .home-v2 .home-results .notice:nth-child(2) {
+  animation-delay: 70ms;
+}
+
+body.home-page .home-v2 .home-results .list__item:nth-child(3),
+body.home-page .home-v2 .home-results .notice:nth-child(3) {
+  animation-delay: 110ms;
+}
+
+body.home-page .home-v2 .home-results .list__item:nth-child(4),
+body.home-page .home-v2 .home-results .notice:nth-child(4) {
+  animation-delay: 150ms;
+}
+
+body.home-page .home-v2 .home-results .list__item:nth-child(5),
+body.home-page .home-v2 .home-results .notice:nth-child(5) {
+  animation-delay: 190ms;
+}
+
+body.home-page .home-v2 .home-results .list__item:nth-child(6),
+body.home-page .home-v2 .home-results .notice:nth-child(6) {
+  animation-delay: 230ms;
+}
+
 body.home-page .home-brand {
   background: rgba(42, 109, 245, 0.08);
   border-color: rgba(42, 109, 245, 0.16);
@@ -4363,10 +4418,38 @@ body.product-page .section__header h2,
 body.product-page .section__header h3 {
   text-wrap: balance;
 }
+body.login-page .section--first-workspace > .shell > .section__header:first-of-type {
+  animation: rise-in 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+body.login-page .section--first-workspace > .shell > .section__header:first-of-type > div > * {
+  animation: rise-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+body.login-page .section--first-workspace > .shell > .section__header:first-of-type > div > *:nth-child(1) {
+  animation-delay: 20ms;
+}
+
+body.login-page .section--first-workspace > .shell > .section__header:first-of-type > div > *:nth-child(2) {
+  animation-delay: 60ms;
+}
+
+body.login-page .section--first-workspace > .shell > .section__header:first-of-type > div > *:nth-child(3) {
+  animation-delay: 100ms;
+}
+
 body.login-page .tile,
 body.login-page .notice,
 body.login-page .list__item {
-  animation: none;
+  animation: rise-in 460ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+body.login-page .tile:nth-of-type(1) {
+  animation-delay: 40ms;
+}
+
+body.login-page .tile:nth-of-type(2) {
+  animation-delay: 90ms;
 }
 
 body.login-page .product-title,
