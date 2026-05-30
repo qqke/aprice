@@ -125,6 +125,21 @@ async function main() {
       assert.equal(await page.locator('#nearby-map .home-map__marker').count(), 2);
       assert.match(await page.locator('#nearby-map iframe').getAttribute('src'), /maps\.google\.com\/maps/);
 
+      const selectedDetailHref = await page.locator('#selected-product-action').getAttribute('href');
+      assert.match(selectedDetailHref || '', /\/aprice\/product\/eve-a\//);
+      await page.locator('#selected-product-action').click();
+      await page.waitForURL(/\/aprice\/product\/eve-a\//);
+      await page.goBack({ waitUntil: 'domcontentloaded' });
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.locator('#home-search').waitFor({ state: 'attached', timeout: 5000 });
+      await page.waitForFunction(() => {
+        const inputValue = String(document.querySelector('#home-search')?.value || '');
+        const statusText = String(document.querySelector('#nearby-status')?.textContent || '');
+        return inputValue === 'EVE' && /EVE A · 2 条价格/.test(statusText);
+      });
+      assert.match(await page.locator('#search-results').textContent(), /EVE A/);
+      assert.equal(await page.locator('#nearby-map .home-map__marker').count(), 2);
+
       const signedInPage = await browser.newPage();
       const signedInRpcHeaders = [];
       await routeSupabaseSession(signedInPage, { signedIn: true, accessToken: 'home-access-token' });

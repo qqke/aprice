@@ -193,7 +193,10 @@ const base = import.meta.env.BASE_URL || '/';
     const nearbyToggle = document.querySelector('#nearby-toggle');
     const nearbyPanel = document.querySelector('#nearby-panel');
 
+    const HOME_STATE_KEY = 'aprice:home-state:v1';
     let activeProduct = null;
+    let searchResults = [];
+    let focusedResultIndex = -1;
 
     // Expand/Collapse Nearby comparison panel persistence
     try {
@@ -220,8 +223,59 @@ const base = import.meta.env.BASE_URL || '/';
         try { localStorage.setItem('aprice:nearby-collapsed', 'true'); } catch {}
       }
     });
-    let searchResults = [];
-    let focusedResultIndex = -1;
+    function normalizeProductSnapshot(product) {
+      if (!product || typeof product !== 'object') return null;
+      return {
+        id: String(product.id || ''),
+        name: String(product.name || ''),
+        brand: String(product.brand || ''),
+        pack: String(product.pack || ''),
+        barcode: String(product.barcode || ''),
+        image_url: String(product.image_url || ''),
+        category: String(product.category || ''),
+        tone: String(product.tone || ''),
+      };
+    }
+
+    function saveHomeState() {
+      if (typeof window === 'undefined' || !window.sessionStorage) return;
+      const query = String(input?.value || '').trim();
+      const product = normalizeProductSnapshot(activeProduct);
+      const items = searchResults.map(normalizeProductSnapshot).filter((item) => item?.id).slice(0, 20);
+      if (!query && !product && !items.length) {
+        try { window.sessionStorage.removeItem(HOME_STATE_KEY); } catch {}
+        return;
+      }
+      try {
+        window.sessionStorage.setItem(HOME_STATE_KEY, JSON.stringify({
+          query,
+          activeProductId: product?.id || '',
+          activeProduct: product,
+          searchResults: items,
+          savedAt: Date.now(),
+        }));
+      } catch {}
+    }
+
+    function readHomeState() {
+      if (typeof window === 'undefined' || !window.sessionStorage) return null;
+      try {
+        const parsed = JSON.parse(window.sessionStorage.getItem(HOME_STATE_KEY) || 'null');
+        if (!parsed || typeof parsed !== 'object') return null;
+        const items = Array.isArray(parsed.searchResults)
+          ? parsed.searchResults.map(normalizeProductSnapshot).filter((item) => item?.id)
+          : [];
+        const activeProductSnapshot = normalizeProductSnapshot(parsed.activeProduct);
+        return {
+          query: String(parsed.query || '').trim(),
+          activeProductId: String(parsed.activeProductId || activeProductSnapshot?.id || ''),
+          activeProduct: activeProductSnapshot,
+          searchResults: items,
+        };
+      } catch {
+        return null;
+      }
+    }
 
     function setNoticeTone(node, tone = 'neutral') {
       if (!node?.classList) return;
@@ -394,6 +448,7 @@ const base = import.meta.env.BASE_URL || '/';
       searchResults = [];
       focusedResultIndex = -1;
       if (input) input.value = '';
+      try { window.sessionStorage?.removeItem(HOME_STATE_KEY); } catch {}
       syncSelectedProductCard();
       renderSearchIdleState();
       clearNearbyState();
@@ -460,6 +515,7 @@ const base = import.meta.env.BASE_URL || '/';
       focusedResultIndex = getVisibleResults().findIndex((item) => item.id === product.id);
       syncSelectedProductCard();
       renderSearchResults(searchResults);
+      saveHomeState();
       await renderNearbyForProduct(product);
     }
 
@@ -681,14 +737,17 @@ const base = import.meta.env.BASE_URL || '/';
             renderSearchResults(items);
             status.textContent = `找到 ${items.length} 条匹配结果。先选中一个商品，再查看附近价格。`;
             clearNearbyState();
+            saveHomeState();
           } else {
             focusedResultIndex = 0;
             renderSearchResults(items);
             status.textContent = `找到 ${items.length} 条匹配结果。当前商品已保留，可继续切换。`;
+            saveHomeState();
           }
         } else {
           status.textContent = `没有找到“${query}”，可以换个关键词。`;
           clearNearbyState();
+          saveHomeState();
         }
       } catch (error) {
         status.textContent = `搜索失败：${error.message}`;
@@ -764,7 +823,37 @@ const base = import.meta.env.BASE_URL || '/';
       status.textContent = '搜索框已聚焦，可以直接输入。';
     });
 
+    async function restoreHomeState() {
+      const saved = readHomeState();
+      if (!saved || (!saved.query && !saved.searchResults.length && !saved.activeProduct)) return false;
+      if (input) input.value = saved.query;
+
+      if (saved.searchResults.length) {
+        const restoredItems = saved.searchResults.slice();
+        const restoredProduct = restoredItems.find((item) => item.id === saved.activeProductId)
+          || saved.activeProduct
+          || null;
+        renderSearchResults(restoredItems);
+        if (restoredProduct?.id) {
+          status.textContent = `已恢复 ${restoredProduct.name || '上次选择的商品'}，正在显示附近价格。`;
+          await selectProduct(restoredProduct);
+        } else {
+          status.textContent = `已恢复 ${restoredItems.length} 条匹配结果。先选中一个商品，再查看附近价格。`;
+          clearNearbyState();
+        }
+        return true;
+      }
+
+      if (saved.query) {
+        await runSearch(saved.query);
+        return true;
+      }
+      return false;
+    }
+
     syncSelectedProductCard();
-    renderNearbyMapIdleState();
+    if (!(await restoreHomeState())) {
+      renderNearbyMapIdleState();
+    }
   </script>
 </BaseLayout>
