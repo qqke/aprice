@@ -186,6 +186,10 @@ let pricePageLoading = false;
 let highlightedNearbyStoreId = '';
 let latestCredit = null;
 
+function hasPriceReferenceCredit(credit) {
+  return credit && Object.prototype.hasOwnProperty.call(credit, 'free_remaining');
+}
+
 async function syncAuthGate() {
   const user = await getCurrentUser();
   syncPrivatePageGate({ gateEl: authGate, loginLinkEl: authGateLink, loginUrl, visible: !user });
@@ -236,6 +240,10 @@ function formatCreditStatus(credit = latestCredit) {
     return;
   }
   const balance = Number(credit.balance || 0);
+  if (credit.admin_exempt) {
+    creditStatus.textContent = `积分 ${balance} · 管理员模式 · 本次不计费 · 免费参考不计数`;
+    return;
+  }
   const freeRemaining = Number(credit.free_remaining ?? credit.daily_free_price_references ?? 0);
   const charged = Number(credit.charged_points || 0);
   const cost = Number(credit.settings?.price_reference_cost ?? credit.price_reference_cost ?? 1);
@@ -639,7 +647,10 @@ async function refreshPersonalPriceState({ preserveSelection = true } = {}) {
 
   personalPriceLogs = await fetchPersonalLogs(user.id);
   try {
-    latestCredit = await fetchCreditSummary();
+    const summaryCredit = await fetchCreditSummary();
+    if (!hasPriceReferenceCredit(latestCredit)) {
+      latestCredit = summaryCredit;
+    }
     formatCreditStatus(latestCredit);
   } catch {
     formatCreditStatus(null);

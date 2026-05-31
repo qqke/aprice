@@ -39,6 +39,7 @@ async function main() {
       const restCalls = [];
       const favoriteRows = [];
       let failNextSubmitStorePrice = false;
+      let delayedCreditSummary = true;
       const productRuntimeBody = await readFile(new URL('../../../src/lib/product-page-runtime.js', import.meta.url), 'utf8');
 
       page.on('pageerror', (error) => pageErrors.push(error.message));
@@ -84,6 +85,24 @@ async function main() {
         const url = new URL(requestUrl);
         requests.push(requestUrl);
         restCalls.push({ method: request.method(), url: requestUrl, body: request.postData() || '' });
+
+        if (url.pathname.endsWith('/rpc/fetch_credit_summary')) {
+          if (delayedCreditSummary) {
+            delayedCreditSummary = false;
+            await new Promise((resolve) => setTimeout(resolve, 150));
+          }
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              balance: 0,
+              daily_free_price_references: 5,
+              references_today: 0,
+              price_reference_cost: 1,
+            }),
+          });
+          return;
+        }
 
         if (url.pathname.endsWith('/rpc/submit_store_price')) {
           if (request.method() === 'POST') {
@@ -241,6 +260,7 @@ async function main() {
       const personalStatusText = await page.locator('#personal-status').textContent();
       const nearbyMapStatusText = await page.locator('#nearby-map-status').textContent();
       const pickerMapStatusText = await page.locator('#store-picker-map-status').textContent();
+      const creditStatusText = await page.locator('#product-credit-status').textContent();
 
       assert.match(heroTitle || '', /\S/);
       assert.notEqual(heroSub, null);
@@ -262,6 +282,7 @@ async function main() {
       assert.match(storePickerText || '', /Welcia Shibuya/);
       assert.match(storeStatusText || '', /当前位置优先排序|点击门店即可回填你的最新价/);
       assert.match(personalStatusText || '', /已同步 3 条个人价格记录/);
+      assert.match(creditStatusText || '', /今日免费参考剩余 4 次/);
       assert.equal(await page.locator('#personal-selected-store-label').textContent(), '未选择门店');
       assert.equal(await page.locator('#personal-store').inputValue(), '');
       assert.equal(await page.locator('#personal-log-form button[type="submit"]').isDisabled(), true);
@@ -365,6 +386,71 @@ async function main() {
       );
       assert.equal(restCalls.some((call) => call.method === 'POST' && call.url.includes('/rest/v1/user_price_logs')), false);
 
+      const adminCreditPage = await browser.newPage();
+      await adminCreditPage.route('https://esm.sh/**', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/javascript; charset=utf-8',
+          body: makeEsmShimModuleBody(),
+        });
+      });
+      await adminCreditPage.route('**/product-page-runtime.js', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'text/javascript; charset=utf-8',
+          body: productRuntimeBody,
+        });
+      });
+      await adminCreditPage.route('**/rest/v1/**', async (route) => {
+        const requestUrl = route.request().url();
+        const url = new URL(requestUrl);
+        if (url.pathname.endsWith('/rpc/fetch_credit_summary')) {
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              balance: 0,
+              daily_free_price_references: 5,
+              references_today: 0,
+              price_reference_cost: 1,
+            }),
+          });
+          return;
+        }
+        if (url.pathname.endsWith('/rpc/fetch_product_prices_page')) {
+          const pageResponse = makeProductPageResponseForRequest(requestUrl);
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              ...pageResponse,
+              credit: {
+                balance: 0,
+                free_remaining: 5,
+                charged_points: 0,
+                admin_exempt: true,
+                settings: { price_reference_cost: 1 },
+              },
+            }),
+          });
+          return;
+        }
+        if (url.pathname.endsWith('/user_price_logs')) {
+          await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+          return;
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(makeProductPageResponseForRequest(requestUrl)),
+        });
+      });
+      await adminCreditPage.goto(productUrl, { waitUntil: 'domcontentloaded' });
+      await adminCreditPage.locator('#product-page').waitFor({ state: 'attached', timeout: 10000 });
+      await adminCreditPage.waitForFunction(() => String(document.querySelector('#product-credit-status')?.textContent || '').includes('管理员模式'));
+      assert.match(await adminCreditPage.locator('#product-credit-status').textContent(), /管理员模式 · 本次不计费/);
+      await adminCreditPage.close();
+
       const failurePage = await browser.newPage();
       const failureErrors = [];
       failurePage.on('pageerror', (error) => failureErrors.push(error.message));
@@ -430,8 +516,6 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
-
 
 
 

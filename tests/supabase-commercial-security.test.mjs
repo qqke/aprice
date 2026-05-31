@@ -107,4 +107,24 @@ for (const source of [
   );
 }
 
+for (const source of [
+  ['schema.sql', schemaSql],
+  ['migrations', migrationsSql],
+]) {
+  const [label, sql] = source;
+  const body = lastFunctionBody(sql, 'consume_price_reference');
+  assert.ok(body, `${label} should define consume_price_reference`);
+  assert.match(
+    body,
+    /if\s+public\.is_admin_user\(\)\s+then[\s\S]*'admin_exempt'\s*,\s*true[\s\S]*return\s+jsonb_build_object/i,
+    `${label} consume_price_reference should return an admin_exempt credit payload for admins`,
+  );
+  const adminBranch = body.match(/if\s+public\.is_admin_user\(\)\s+then([\s\S]*?)end\s+if;/i)?.[1] || '';
+  assert.doesNotMatch(
+    adminBranch,
+    /insert\s+into\s+public\.price_reference_logs|consume_credit/i,
+    `${label} admin price references should not write usage logs or consume credits`,
+  );
+}
+
 console.log('supabase commercial security test passed');

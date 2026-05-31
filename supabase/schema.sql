@@ -622,6 +622,16 @@ begin
     raise exception 'product_id is required';
   end if;
   perform pg_advisory_xact_lock(hashtextextended(target_user_id::text, 0));
+  if public.is_admin_user() then
+    return jsonb_build_object(
+      'balance', public.credit_balance(target_user_id),
+      'free_remaining', greatest(0, free_limit - (select count(*)::integer from public.price_reference_logs where user_id = target_user_id and reference_date = current_date)),
+      'charged_points', 0,
+      'already_referenced', false,
+      'admin_exempt', true,
+      'settings', public.fetch_app_settings()
+    );
+  end if;
   select charged_points into charged
   from public.price_reference_logs
   where user_id = target_user_id and reference_date = current_date and product_id = target_product_id;
