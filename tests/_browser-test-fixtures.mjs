@@ -417,6 +417,19 @@ export function makeHomePageResponseForRequest(requestUrl, requestBody = '') {
         image_url: 'https://cdn.example.com/products/4902135671697.jpg',
       }];
     }
+    if (or.toLowerCase().includes('story')) {
+      return [{
+        id: '4902135671598',
+        name: 'NSファーファ ファーファ ストーリー そらのお散歩 詰替 4500ml',
+        brand: 'NSファーファ・ジャパン株式会社',
+        pack: '4500ml',
+        barcode: '4902135671598',
+        category: '日用品',
+        tone: 'sunset',
+        description: 'Mixed recent and historical price fixture',
+        image_url: 'https://cdn.example.com/products/4902135671598.jpg',
+      }];
+    }
     if (or.includes('name.ilike') || or.includes('brand.ilike') || or.includes('category.ilike')) {
       return [makeCatalogProductResponse()];
     }
@@ -498,6 +511,68 @@ export function makeHomePageResponseForRequest(requestUrl, requestBody = '') {
           tone: 'sunset',
         },
       }];
+    }
+    if (productId === '4902135671598') {
+      return [
+        {
+          id: 'home-price-story-recent',
+          product_id: '4902135671598',
+          store_id: 'sundrug-sapporo',
+          price_yen: 2000,
+          is_member_price: false,
+          source: 'manual',
+          collected_at: '2026-05-20T08:00:00.000Z',
+          note: 'Recent manual price',
+          stores: {
+            id: 'sundrug-sapporo',
+            name: 'BiVi新さっぽろ店【札幌・空知エリア】-サンドラッグ',
+            chain_name: 'サンドラッグ',
+            address: '北海道札幌市厚別区',
+            city: '札幌市厚別区',
+            pref: '北海道',
+            lat: 43.038,
+            lng: 141.472,
+            hours: '月-日 09:00-21:00',
+          },
+          products: {
+            id: '4902135671598',
+            name: 'NSファーファ ファーファ ストーリー そらのお散歩 詰替 4500ml',
+            barcode: '4902135671598',
+            brand: 'NSファーファ・ジャパン株式会社',
+            pack: '4500ml',
+            tone: 'sunset',
+          },
+        },
+        {
+          id: 'home-price-story-historical',
+          product_id: '4902135671598',
+          store_id: 'sundrug-00000',
+          price_yen: 2189,
+          is_member_price: false,
+          source: 'crawler',
+          collected_at: '2026-04-13T11:31:13.973Z',
+          note: 'Sundrug online crawl',
+          stores: {
+            id: 'sundrug-00000',
+            name: 'サンドラッグ 札幌历史店',
+            chain_name: 'サンドラッグ',
+            address: '北海道札幌市中央区',
+            city: '札幌市中央区',
+            pref: '北海道',
+            lat: 43.061,
+            lng: 141.354,
+            hours: '10:00-21:00',
+          },
+          products: {
+            id: '4902135671598',
+            name: 'NSファーファ ファーファ ストーリー そらのお散歩 詰替 4500ml',
+            barcode: '4902135671598',
+            brand: 'NSファーファ・ジャパン株式会社',
+            pack: '4500ml',
+            tone: 'sunset',
+          },
+        },
+      ];
     }
     return [];
   }

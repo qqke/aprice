@@ -115,7 +115,7 @@ async function main() {
       await page.locator('#home-search').fill('EVE');
       await page.waitForFunction(() => {
         const text = String(document.querySelector('#nearby-status')?.textContent || '');
-        return /EVE A · 2 条价格/.test(text);
+        return /EVE A 暂无近期价格，显示历史门店价格 · 2 条/.test(text);
       });
       await page.waitForFunction(() => document.querySelectorAll('#nearby-map .home-map__marker').length >= 2, null, { timeout: 10000 });
       const nearbyMapText = await page.locator('#nearby-map').textContent();
@@ -135,7 +135,7 @@ async function main() {
       await page.waitForFunction(() => {
         const inputValue = String(document.querySelector('#home-search')?.value || '');
         const statusText = String(document.querySelector('#nearby-status')?.textContent || '');
-        return inputValue === 'EVE' && /EVE A · 2 条价格/.test(statusText);
+        return inputValue === 'EVE' && /EVE A 暂无近期价格，显示历史门店价格 · 2 条/.test(statusText);
       });
       assert.match(await page.locator('#search-results').textContent(), /EVE A/);
       assert.equal(await page.locator('#nearby-map .home-map__marker').count(), 2);
@@ -150,6 +150,17 @@ async function main() {
       assert.match(await page.locator('#nearby-results').textContent(), /￥880/);
       assert.equal(await page.locator('#nearby-map .home-map__marker').count(), 1);
       assert.doesNotMatch(await page.locator('#nearby-panel').textContent(), /无坐标：地图待补充|暂无门店价格/);
+
+      await page.locator('#home-search').fill('STORY');
+      await page.locator('#home-search-button').click();
+      await page.waitForFunction(() => {
+        const text = String(document.querySelector('#nearby-status')?.textContent || '');
+        return /包含历史门店价格 · 2 条/.test(text);
+      });
+      assert.match(await page.locator('#nearby-results').textContent(), /BiVi新さっぽろ店/);
+      assert.match(await page.locator('#nearby-results').textContent(), /サンドラッグ 札幌历史店/);
+      assert.equal(await page.locator('#nearby-map .home-map__marker').count(), 2);
+      assert.match(await page.locator('#nearby-map-status').textContent(), /已显示 2 家门店/);
 
       const signedInPage = await browser.newPage();
       const signedInRpcHeaders = [];
@@ -172,7 +183,7 @@ async function main() {
       await signedInPage.locator('#home-search-button').click();
       await signedInPage.waitForFunction(() => {
         const text = String(document.querySelector('#nearby-status')?.textContent || '');
-        return /EVE A · 2 条价格/.test(text);
+        return /EVE A 暂无近期价格，显示历史门店价格 · 2 条/.test(text);
       });
       assert.equal(
         signedInRpcHeaders.at(-1)?.authorization,
