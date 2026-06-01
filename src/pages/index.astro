@@ -582,11 +582,16 @@ const base = import.meta.env.BASE_URL || '/';
       setNearbyStatus(`${product.name} 价格读取中...`, true);
       try {
         const token = await getPriceAccessToken();
-        const prices = await fetchPricesForProduct(product.id, { limit: 80, sinceDays: 45, token });
+        let prices = await fetchPricesForProduct(product.id, { limit: 80, sinceDays: 45, token });
+        let isHistoricalFallback = false;
+        if (!prices.length) {
+          prices = await fetchPricesForProduct(product.id, { limit: 80, token });
+          isHistoricalFallback = prices.length > 0;
+        }
         if (!prices.length) {
           renderEmptyList(nearbyResults, product.name, '当前还没有价格记录。', '暂无');
           setNearbyStatus(`${product.name} 暂无门店价格。`, true);
-          renderNearbyMapIdleState('无坐标：地图待补充', '当前商品暂无可用坐标，可先使用下方外部地图链接。');
+          renderNearbyMapIdleState('暂无门店价格', '当前商品还没有可显示的门店价格坐标。');
           return;
         }
 
@@ -700,7 +705,12 @@ const base = import.meta.env.BASE_URL || '/';
           </a>
         `).join('');
 
-        setNearbyStatus(`${product.name} · ${prices.length} 条价格`, true);
+        setNearbyStatus(
+          isHistoricalFallback
+            ? `${product.name} 暂无近期价格，显示历史门店价格 · ${prices.length} 条`
+            : `${product.name} · ${prices.length} 条价格`,
+          true,
+        );
       } catch (error) {
         if (isLoginRequiredError(error)) {
           renderEmptyList(nearbyResults, '登录后可查看附近门店价格', '登录后会回到当前商品，继续查看附近价格与地图。', '登录', 'warning');

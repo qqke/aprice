@@ -404,6 +404,19 @@ export function makeHomePageResponseForRequest(requestUrl, requestBody = '') {
         image_url: 'https://cdn.example.com/products/eve-a.jpg',
       }];
     }
+    if (or.toLowerCase().includes('farfa')) {
+      return [{
+        id: '4902135671697',
+        name: 'NSファーファ ファインフレグランス ジュルネ詰替 840ml',
+        brand: 'NSファーファ・ジャパン株式会社',
+        pack: '840ml',
+        barcode: '4902135671697',
+        category: '日用品',
+        tone: 'sunset',
+        description: 'Historical price fallback fixture',
+        image_url: 'https://cdn.example.com/products/4902135671697.jpg',
+      }];
+    }
     if (or.includes('name.ilike') || or.includes('brand.ilike') || or.includes('category.ilike')) {
       return [makeCatalogProductResponse()];
     }
@@ -431,9 +444,11 @@ export function makeHomePageResponseForRequest(requestUrl, requestBody = '') {
 
   if (url.pathname.endsWith('/rpc/fetch_product_prices')) {
     let productId = '';
+    let sinceDays = null;
     try {
       const parsed = requestBody ? JSON.parse(requestBody) : {};
       productId = String(parsed?.payload?.product_id || parsed?.product_id || '');
+      sinceDays = Number(parsed?.payload?.since_days ?? parsed?.since_days);
     } catch {
       productId = '';
     }
@@ -451,6 +466,38 @@ export function makeHomePageResponseForRequest(requestUrl, requestBody = '') {
           tone: 'mint',
         },
       }));
+    }
+    if (productId === '4902135671697') {
+      if (Number.isFinite(sinceDays) && sinceDays > 0) return [];
+      return [{
+        id: 'home-price-farfa-old',
+        product_id: '4902135671697',
+        store_id: 'sundrug-00000',
+        price_yen: 880,
+        is_member_price: false,
+        source: 'crawler',
+        collected_at: '2026-04-13T11:31:13.973Z',
+        note: 'Sundrug online crawl',
+        stores: {
+          id: 'sundrug-00000',
+          name: 'サンドラッグ テスト店',
+          chain_name: 'サンドラッグ',
+          address: 'Tokyo, Chiyoda',
+          city: 'Tokyo',
+          pref: 'Tokyo',
+          lat: 35.681,
+          lng: 139.767,
+          hours: '10:00-21:00',
+        },
+        products: {
+          id: '4902135671697',
+          name: 'NSファーファ ファインフレグランス ジュルネ詰替 840ml',
+          barcode: '4902135671697',
+          brand: 'NSファーファ・ジャパン株式会社',
+          pack: '840ml',
+          tone: 'sunset',
+        },
+      }];
     }
     return [];
   }

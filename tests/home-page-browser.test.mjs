@@ -140,6 +140,17 @@ async function main() {
       assert.match(await page.locator('#search-results').textContent(), /EVE A/);
       assert.equal(await page.locator('#nearby-map .home-map__marker').count(), 2);
 
+      await page.locator('#home-search').fill('FARFA');
+      await page.locator('#home-search-button').click();
+      await page.waitForFunction(() => {
+        const text = String(document.querySelector('#nearby-status')?.textContent || '');
+        return /暂无近期价格，显示历史门店价格/.test(text);
+      });
+      assert.match(await page.locator('#nearby-results').textContent(), /サンドラッグ テスト店/);
+      assert.match(await page.locator('#nearby-results').textContent(), /￥880/);
+      assert.equal(await page.locator('#nearby-map .home-map__marker').count(), 1);
+      assert.doesNotMatch(await page.locator('#nearby-panel').textContent(), /无坐标：地图待补充|暂无门店价格/);
+
       const signedInPage = await browser.newPage();
       const signedInRpcHeaders = [];
       await routeSupabaseSession(signedInPage, { signedIn: true, accessToken: 'home-access-token' });
