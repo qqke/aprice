@@ -216,6 +216,17 @@ const browserMapModel = browser.buildStoreMapModel([
 assert.equal(browserMapModel.points.length, 1);
 assert.equal(browserMapModel.missingCount, 1);
 assert.equal(browserMapModel.points[0].isFeatured, true);
+const browserOverlappingMapModel = browser.buildStoreMapModel([
+  { id: 'same-a', name: 'Same A', lat: 35.649, lng: 139.722 },
+  { id: 'same-b', name: 'Same B', lat: 35.649, lng: 139.722 },
+]);
+assert.ok(
+  Math.hypot(
+    browserOverlappingMapModel.points[0].x - browserOverlappingMapModel.points[1].x,
+    browserOverlappingMapModel.points[0].y - browserOverlappingMapModel.points[1].y,
+  ) >= 9,
+  'browser map markers at the same coordinate should be separated',
+);
 
 assert.equal(browser.productToneClass('mint'), 'tone-mint');
 assert.equal(browser.productToneClass('unknown-tone'), 'tone-sunset');

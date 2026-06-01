@@ -146,8 +146,9 @@ async function main() {
         const text = String(document.querySelector('#nearby-status')?.textContent || '');
         return /暂无近期价格，显示历史门店价格/.test(text);
       });
-      assert.match(await page.locator('#nearby-results').textContent(), /サンドラッグ テスト店/);
-      assert.match(await page.locator('#nearby-results').textContent(), /￥880/);
+      const farfaNearbyText = await page.locator('#nearby-results').textContent();
+      assert.match(farfaNearbyText, /サンドラッグ テスト店/);
+      assert.equal((farfaNearbyText.match(/￥880/g) || []).length, 1);
       assert.equal(await page.locator('#nearby-map .home-map__marker').count(), 1);
       assert.doesNotMatch(await page.locator('#nearby-panel').textContent(), /无坐标：地图待补充|暂无门店价格/);
 

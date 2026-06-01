@@ -25,6 +25,62 @@ export function buildGoogleMapEmbedUrl(store, { zoom = 15 } = {}) {
   return `https://maps.google.com/maps?q=${encodeURIComponent(query || name || address || 'store')}&z=${encodeURIComponent(Number(zoom) || 15)}&output=embed`;
 }
 
+function clampMapPercent(value, min = 4, max = 96) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function separateCloseMapPoints(points, { clusterGap = 9.5 } = {}) {
+  if (points.length < 2) return points;
+
+  const visited = new Set();
+  const clusters = [];
+  for (let index = 0; index < points.length; index += 1) {
+    if (visited.has(index)) continue;
+    const cluster = [];
+    const queue = [index];
+    visited.add(index);
+    while (queue.length) {
+      const current = queue.shift();
+      cluster.push(current);
+      for (let candidate = 0; candidate < points.length; candidate += 1) {
+        if (visited.has(candidate)) continue;
+        const distance = Math.hypot(points[current].x - points[candidate].x, points[current].y - points[candidate].y);
+        if (distance < clusterGap) {
+          visited.add(candidate);
+          queue.push(candidate);
+        }
+      }
+    }
+    clusters.push(cluster);
+  }
+
+  const adjusted = points.map((point) => ({ ...point }));
+  for (const cluster of clusters) {
+    if (cluster.length < 2) continue;
+    const columns = Math.ceil(Math.sqrt(cluster.length));
+    const rows = Math.ceil(cluster.length / columns);
+    const halfWidth = ((columns - 1) * clusterGap) / 2;
+    const halfHeight = ((rows - 1) * clusterGap) / 2;
+    const centerX = cluster.reduce((sum, index) => sum + points[index].x, 0) / cluster.length;
+    const centerY = cluster.reduce((sum, index) => sum + points[index].y, 0) / cluster.length;
+    const baseX = clampMapPercent(centerX, 4 + halfWidth, 96 - halfWidth);
+    const baseY = clampMapPercent(centerY, 4 + halfHeight, 96 - halfHeight);
+
+    cluster.forEach((pointIndex, offsetIndex) => {
+      const column = offsetIndex % columns;
+      const row = Math.floor(offsetIndex / columns);
+      adjusted[pointIndex].rawX = points[pointIndex].x;
+      adjusted[pointIndex].rawY = points[pointIndex].y;
+      adjusted[pointIndex].x = clampMapPercent(baseX + (column - (columns - 1) / 2) * clusterGap);
+      adjusted[pointIndex].y = clampMapPercent(baseY + (row - (rows - 1) / 2) * clusterGap);
+      adjusted[pointIndex].isDisplaced = true;
+      adjusted[pointIndex].clusterSize = cluster.length;
+    });
+  }
+
+  return adjusted;
+}
+
 export function buildStoreMapModel(stores = [], { selectedStoreId = '', featuredStoreIds = [], highlightedStoreId = '', maxDensePoints = 24 } = {}) {
   const featuredIdSet = new Set((featuredStoreIds || []).filter(Boolean).map((id) => String(id)));
   const normalized = (stores || []).map((store, index) => {
@@ -79,14 +135,14 @@ export function buildStoreMapModel(stores = [], { selectedStoreId = '', featured
 
   const latSpan = maxLat - minLat || 0.02;
   const lngSpan = maxLng - minLng || 0.02;
-  const points = withCoordinates.map((store) => ({
+  const points = separateCloseMapPoints(withCoordinates.map((store) => ({
     ...store,
     x: ((store.lng - minLng) / lngSpan) * 100,
     y: (1 - (store.lat - minLat) / latSpan) * 100,
     isSelected: String(store.id) === String(selectedStoreId || ''),
     isFeatured: featuredIdSet.has(String(store.id)),
     isHighlighted: String(store.id) === String(highlightedStoreId || ''),
-  }));
+  })));
 
   return {
     points,
