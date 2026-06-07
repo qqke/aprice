@@ -7852,8 +7852,8 @@ body.admin-page .admin-toolbar,
   }
 
   body.scan-page .scan-frame {
-    aspect-ratio: 3 / 4;
-    max-height: 58vh;
+    aspect-ratio: 4 / 3;
+    max-height: 38vh;
   }
 
   body.scan-page .pillrow {
@@ -8757,7 +8757,8 @@ body.scan-page .hero-banner__inner {
 }
 
 body.scan-page .scan-frame {
-  min-height: 360px;
+  min-height: 260px;
+  max-height: min(40vh, 320px);
   border-radius: 24px;
   border-color: rgba(13, 27, 47, 0.2);
   background:
@@ -9074,8 +9075,8 @@ body.error-page .headline {
 
   body.scan-page .scan-frame {
     min-height: 0;
-    aspect-ratio: 3 / 4;
-    max-height: 58vh;
+    aspect-ratio: 4 / 3;
+    max-height: 38vh;
     border-radius: 18px;
   }
 

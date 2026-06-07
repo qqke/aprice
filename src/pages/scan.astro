@@ -322,6 +322,7 @@ export const prerender = true;
           hideMissingPanel();
           renderProduct(product);
           setScanStatus(`识别成功：${product.name}`, 'success');
+          window.location.assign(resolveBase(`product/${product.id}/?selectNearestStore=1#product-personal-record`));
           return product;
         }
 

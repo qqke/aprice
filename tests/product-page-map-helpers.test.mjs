@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-import { buildExternalMapUrl, buildGoogleMapEmbedUrl, buildStoreMapModel } from '../src/lib/product-page-runtime.js';
+import { buildExternalMapUrl, buildGoogleMapEmbedUrl, buildStoreMapModel, findNearestStore } from '../src/lib/product-page-runtime.js';
 
 function pointDistance(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
@@ -62,6 +62,14 @@ const emptyModel = buildStoreMapModel([
 ]);
 assert.equal(emptyModel.points.length, 0);
 assert.equal(emptyModel.missingCount, 1);
+
+const nearestStore = findNearestStore([
+  { id: 'far', name: 'Far Store', lat: 35.661, lng: 139.698 },
+  { id: 'near', name: 'Near Store', lat: 35.648, lng: 139.722 },
+  { id: 'missing', name: 'Missing Store' },
+], { lat: 35.6485, lng: 139.7215 });
+assert.equal(nearestStore?.id, 'near');
+assert.equal(findNearestStore([{ id: 'missing', name: 'Missing Store' }], { lat: 35.6485, lng: 139.7215 }), null);
 
 assert.match(
   buildExternalMapUrl({ id: 'coord-store', name: 'Coord Store', lat: 35.648, lng: 139.722 }),

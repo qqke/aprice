@@ -154,6 +154,31 @@ export function buildStoreMapModel(stores = [], { selectedStoreId = '', featured
   };
 }
 
+export function distanceKm(lat1, lng1, lat2, lng2) {
+  const r = 6371;
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * r * Math.asin(Math.sqrt(a));
+}
+
+export function findNearestStore(stores = [], location = null) {
+  if (!location || !Number.isFinite(Number(location.lat)) || !Number.isFinite(Number(location.lng))) {
+    return null;
+  }
+
+  return (stores || [])
+    .filter((store) => Number.isFinite(Number(store?.lat)) && Number.isFinite(Number(store?.lng)))
+    .map((store) => ({
+      ...store,
+      distance_km: distanceKm(Number(location.lat), Number(location.lng), Number(store.lat), Number(store.lng)),
+    }))
+    .sort((a, b) => a.distance_km - b.distance_km || String(a.name || '').localeCompare(String(b.name || ''), 'ja-JP'))[0] || null;
+}
+
 export async function initProductPage({ loginUrl }) {
 
 const { escapeAttribute, escapeHtml, recordRecentView, resolveBase, fetchNearbyPrices, fetchProductPricesPage, fetchStoresPage, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
@@ -168,6 +193,8 @@ const productBrand = page?.dataset.productBrand || '';
 const productPack = page?.dataset.productPack || '';
 const productBarcode = page?.dataset.productBarcode || '';
 const productTone = page?.dataset.productTone || 'sunset';
+const initialPageUrl = new URL(window.location.href);
+let shouldAutoSelectNearestStore = initialPageUrl.searchParams.get('selectNearestStore') === '1';
 
 recordRecentView({
   id: productId,
@@ -255,17 +282,6 @@ async function syncAuthGate() {
 function toTime(value) {
   const time = new Date(value || 0).getTime();
   return Number.isFinite(time) ? time : 0;
-}
-
-function distanceKm(lat1, lng1, lat2, lng2) {
-  const r = 6371;
-  const toRad = (deg) => (deg * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return 2 * r * Math.asin(Math.sqrt(a));
 }
 
 function storeDistance(storeItem) {
@@ -599,6 +615,23 @@ function applySelectedStorePrice(storeId, { focus = false } = {}) {
   }
 }
 
+function autoSelectNearestStore({ focus = false } = {}) {
+  if (!shouldAutoSelectNearestStore || selectedStoreId || storeSearchTerm) {
+    return false;
+  }
+
+  const nearestStore = findNearestStore(storeRows, storeLocation);
+  if (!nearestStore) {
+    return false;
+  }
+
+  selectedStoreSnapshot = nearestStore;
+  shouldAutoSelectNearestStore = false;
+  applySelectedStorePrice(nearestStore.id, { focus });
+  document.querySelector('#product-personal-record')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  return true;
+}
+
 function queueStorePickerFocus(storeId) {
   if (!storeList || !storeId) return;
   requestAnimationFrame(() => {
@@ -729,6 +762,13 @@ async function syncStoreLocation({ announce = false } = {}) {
   try {
     const location = await geolocate();
     storeLocation = location;
+    const autoSelected = autoSelectNearestStore({ focus: true });
+    if (autoSelected) {
+      if (geoStatus) {
+        geoStatus.textContent = `已按当前位置排序，并默认选择最近门店：${getSelectedStore()?.name || '最近门店'}。`;
+      }
+      return location;
+    }
     renderStorePicker();
     if (announce && geoStatus) {
       geoStatus.textContent = `门店已按当前位置排序，定位点：${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}。`;

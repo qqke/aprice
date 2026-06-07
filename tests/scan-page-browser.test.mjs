@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { launchChromiumForTest } from './_playwright-launch.mjs';
 import { makeProductDetailsResponse } from './_browser-test-fixtures.mjs';
 import { startStaticServer } from './_browser-test-server.mjs';
-import { waitForHidden, waitForRequestMatch } from './_browser-test-wait.mjs';
+import { waitForRequestMatch } from './_browser-test-wait.mjs';
 
 function makeSupabaseShimModuleBody() {
   return [
@@ -31,6 +31,7 @@ async function main() {
 
     try {
       const page = await browser.newPage();
+      await page.setViewportSize({ width: 390, height: 844 });
       const pageErrors = [];
       const requests = [];
 
@@ -109,6 +110,8 @@ async function main() {
       await page.locator('#barcode-input').waitFor({ state: 'attached', timeout: 10000 });
       await page.locator('#barcode-search').waitFor({ state: 'attached', timeout: 10000 });
       assert.equal(await page.locator('#camera[aria-label="相机扫码预览"][role="img"]').count(), 1);
+      const scanFrameBox = await page.locator('.scan-frame').boundingBox();
+      assert.ok(scanFrameBox && scanFrameBox.height <= 340, `mobile scan frame should stay compact, got ${scanFrameBox?.height}`);
       assert.equal(await page.locator('.scan-frame .scan-camera-actions #stop-scan').count(), 1);
       assert.equal(await page.locator('.scan-frame .scan-camera-actions #snap-scan').count(), 1);
       assert.equal(
@@ -128,15 +131,11 @@ async function main() {
       await page.locator('#barcode-input').fill('0019014614042');
       await page.locator('#barcode-search').click();
       await waitForRequestMatch(requests, (call) => call.url.includes('/rest/v1/products') && call.url.includes('barcode=eq.0019014614042'));
-      await page.waitForFunction(() => String(document.querySelector('#scan-result-list')?.textContent || '').includes('アイムス 11歳以上用 毎日の健康ケア チキン 小粒 5kg'));
-      await waitForHidden(page, '#missing-product-panel');
-
-      assert.equal(page.url(), scanUrl);
-      assert.equal(await page.locator('#barcode-input').inputValue(), '0019014614042');
-      assert.match(await page.locator('#scan-result-list').textContent(), /アイムス 11歳以上用 毎日の健康ケア チキン 小粒 5kg/);
-      assert.equal(await page.locator('#scan-result-list a').getAttribute('href'), '/aprice/product/0019014614042/');
-      assert.equal(await page.locator('#scan-result-list .product-thumb--scan').getAttribute('src'), 'https://cdn.example.com/products/0019014614042.jpg');
-      assert.equal(await page.locator('#scan-status').evaluate((element) => element.classList.contains('notice--success')), true);
+      await page.waitForURL('**/aprice/product/0019014614042/?selectNearestStore=1#product-personal-record', { timeout: 10000 });
+      const foundProductUrl = new URL(page.url());
+      assert.equal(foundProductUrl.pathname, '/aprice/product/0019014614042/');
+      assert.equal(foundProductUrl.searchParams.get('selectNearestStore'), '1');
+      assert.equal(foundProductUrl.hash, '#product-personal-record');
       await page.close();
 
       const foundPage = await browser.newPage();
@@ -460,9 +459,8 @@ async function main() {
       await xssPage.goto(scanUrl, { waitUntil: 'domcontentloaded' });
       await xssPage.locator('#barcode-input').fill('4900000000002');
       await xssPage.locator('#barcode-search').click();
-      await xssPage.waitForFunction(() => String(document.querySelector('#scan-result-list')?.textContent || '').includes('Scan XSS'));
+      await xssPage.waitForURL('**/aprice/product/4900000000002/?selectNearestStore=1#product-personal-record', { timeout: 10000 });
       assert.equal(await xssPage.evaluate(() => window.__scanXss === true), false);
-      assert.equal(await xssPage.locator('#scan-result-list script, #scan-result-list img[onerror]').count(), 0);
       await xssPage.close();
 
       assert.equal(pageErrors.filter((message) => !message.includes('Failed to load resource')).length, 0, `page errors: ${pageErrors.join(' | ')}`);

@@ -5,6 +5,7 @@ const tests = [
   'tests/auth/browser/admin-page-browser.test.mjs',
   'tests/auth/browser/admin-page-resilient-load-browser.test.mjs',
   'tests/scan-page-browser.test.mjs',
+  'tests/auth/browser/product-scan-entry-browser.test.mjs',
   'tests/auth/browser/product-runtime-entry-browser.test.mjs',
   'tests/auth/browser/product-page-browser.test.mjs',
   'tests/home-page-browser.test.mjs',
