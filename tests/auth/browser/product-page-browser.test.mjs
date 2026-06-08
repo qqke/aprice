@@ -246,6 +246,8 @@ async function main() {
       await page.waitForFunction(() => document.querySelectorAll('#personal-store-map .store-map__marker').length >= 2, null, { timeout: 10000 });
       assert.match(await page.locator('#nearby-store-map iframe').getAttribute('src'), /maps\.google\.com\/maps/);
       assert.match(await page.locator('#personal-store-map iframe').getAttribute('src'), /maps\.google\.com\/maps/);
+      assert.equal(await page.locator('#nearby-store-map .store-map__list-item').count() > 0, true);
+      assert.equal(await page.locator('#personal-store-map .store-map__list-item').count(), 0);
       const heroTitle = await page.locator('.product-title').textContent();
       const heroSub = await page.locator('.product-sub').textContent();
       const authGateHref = new URL(await page.locator('#product-login-link').getAttribute('href'), baseUrl);

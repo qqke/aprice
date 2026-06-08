@@ -434,6 +434,8 @@ function renderStoreMap(target, statusEl, stores, options = {}) {
     `;
   }).join('');
 
+  const shouldShowList = options.showList !== false;
+
   target.innerHTML = `
     <div class="store-map__canvas-wrap">
       <div class="store-map__canvas${model.dense ? ' is-dense' : ''}${model.allSameSpot ? ' is-single-spot' : ''}" role="img" aria-label="${escapeAttribute(options.ariaLabel || '门店位置地图')}">
@@ -452,11 +454,13 @@ function renderStoreMap(target, statusEl, stores, options = {}) {
       </div>
       ${renderStoreMapLegend(options.legend || {})}
     </div>
-    <div class="store-map__list">
-      ${listItems}
-      ${model.missingCount ? `<small class="store-map__footnote">${model.missingCount} 家门店缺少坐标，未显示在图上。</small>` : ''}
-      ${model.allSameSpot ? '<small class="store-map__footnote">多家门店坐标重叠，地图已自动放大显示。</small>' : ''}
-    </div>
+    ${shouldShowList ? `
+      <div class="store-map__list">
+        ${listItems}
+        ${model.missingCount ? `<small class="store-map__footnote">${model.missingCount} 家门店缺少坐标，未显示在图上。</small>` : ''}
+        ${model.allSameSpot ? '<small class="store-map__footnote">多家门店坐标重叠，地图已自动放大显示。</small>' : ''}
+      </div>
+    ` : ''}
   `;
 
   if (statusEl) {
@@ -490,6 +494,7 @@ function renderPersonalStoreMap() {
     },
     mapMode: 'picker',
     featuredStoreIds: Array.from(personalPriceIndex.keys()),
+    showList: false,
   });
 }
 

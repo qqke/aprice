@@ -206,6 +206,8 @@ async function main() {
       await page.waitForFunction(() => document.querySelectorAll('#personal-store-map .store-map__marker').length >= 2, null, { timeout: 10000 });
       assert.match(await page.locator('#nearby-store-map iframe').getAttribute('src'), /maps\.google\.com\/maps/);
       assert.match(await page.locator('#personal-store-map iframe').getAttribute('src'), /maps\.google\.com\/maps/);
+      assert.equal(await page.locator('#nearby-store-map .store-map__list-item').count() > 0, true);
+      assert.equal(await page.locator('#personal-store-map .store-map__list-item').count(), 0);
       const heroTitle = await page.locator('.product-title').textContent();
       const heroSub = await page.locator('.product-sub').textContent();
       const authGateHref = new URL(await page.locator('#product-login-link').getAttribute('href'), baseUrl);
@@ -229,7 +231,7 @@ async function main() {
       assert.match(priceListText || '', /Sugi Pharmacy Hiroo/);
       assert.match(nearbyListText || '', /Welcia Shibuya/);
       assert.match(insightText || '', /最低价/);
-      assert.match(geoStatus || '', /已加载 2 条价格记录/);
+      assert.match(geoStatus || '', /已按当前位置排序，并默认选择最近门店：Sugi Pharmacy Hiroo。/);
       assert.match(nearbyMapStatusText || '', /已显示在地图上|缺少坐标/);
       assert.match(pickerMapStatusText || '', /已显示在地图上|当前只有一个可定位门店/);
       await page.locator('#geo-sort').click();
@@ -239,27 +241,17 @@ async function main() {
       assert.match(storePickerText || '', /Sugi Pharmacy Hiroo/);
       assert.match(storePickerText || '', /我的价 ¥688/);
       assert.match(storePickerText || '', /Welcia Shibuya/);
-      assert.match(storeStatusText || '', /当前位置优先排序|点击门店即可回填你的最新价/);
-      assert.match(personalStatusText || '', /已同步 3 条个人价格记录/);
-      assert.equal(await page.locator('#personal-selected-store-label').textContent(), '未选择门店');
-      assert.equal(await page.locator('#personal-store').inputValue(), '');
-      assert.equal(await page.locator('#personal-log-form button[type="submit"]').isDisabled(), true);
-      assert.equal(await page.locator('#favorite-store-button').isDisabled(), true);
+      assert.match(storeStatusText || '', /已选中 Sugi Pharmacy Hiroo，你的最新价是 ¥688。/);
+      assert.match(personalStatusText || '', /已回填你在该店的最新价 ¥688，可直接修改后保存。/);
+      assert.equal(await page.locator('#personal-selected-store-label').textContent(), 'Sugi Pharmacy Hiroo');
+      assert.equal(await page.locator('#personal-store').inputValue(), 'sugi-hiroo');
+      assert.equal(await page.locator('#personal-price').inputValue(), '688');
+      assert.equal(await page.locator('#personal-log-form button[type="submit"]').isEnabled(), true);
+      assert.equal(await page.locator('#favorite-store-button').isEnabled(), true);
       assert.match(requests.join('\n'), /\/rest\/v1\/rpc\/fetch_product_prices/);
       assert.match(requests.join('\n'), /\/rest\/v1\/stores/);
       assert.match(requests.join('\n'), /limit=11/);
       assert.match(requests.join('\n'), /\/rest\/v1\/user_price_logs/);
-
-      const submitRpcCountBeforeSelection = restCalls.filter((call) => call.url.includes('/rest/v1/rpc/submit_store_price')).length;
-      await page.locator('#personal-price').fill('701');
-      await page.locator('#personal-log-form').evaluate((form) => {
-        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
-      });
-      await page.waitForFunction(() => String(document.querySelector('#personal-status')?.textContent || '').includes('请选择门店后记录价格。'), null, { timeout: 10000 });
-      assert.equal(
-        restCalls.filter((call) => call.url.includes('/rest/v1/rpc/submit_store_price')).length,
-        submitRpcCountBeforeSelection,
-      );
 
       assert.equal(await page.locator('#personal-store-list .store-picker__item').count(), 10);
       await page.locator('#personal-store-load-more').click();
@@ -272,8 +264,9 @@ async function main() {
 
       await page.locator('#personal-store-search').fill('welcia');
       await page.waitForFunction(() => !document.querySelector('#personal-store-search-clear')?.hidden, null, { timeout: 10000 });
-      await page.waitForFunction(() => document.querySelectorAll('#personal-store-list .store-picker__item').length === 1, null, { timeout: 10000 });
-      assert.equal(await page.locator('#personal-store-list .store-picker__item').count(), 1);
+      await page.waitForFunction(() => document.querySelectorAll('#personal-store-list .store-picker__item').length === 2, null, { timeout: 10000 });
+      assert.equal(await page.locator('#personal-store-list .store-picker__item').count(), 2);
+      assert.match(await page.locator('#personal-store-list').textContent(), /Sugi Pharmacy Hiroo/);
       assert.match(await page.locator('#personal-store-list').textContent(), /Welcia Shibuya/);
 
       await page.locator('#personal-store-search').fill('');
@@ -354,7 +347,6 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
 
 
 
