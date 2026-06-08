@@ -246,6 +246,8 @@ async function main() {
       assert.equal(await signedPage.locator('#me-panel-favorites').evaluate((element) => element.open), false);
       assert.equal(await signedPage.locator('#me-panel-recent').evaluate((element) => element.open), false);
       assert.equal(await signedPage.locator('#log-status').evaluate((element) => element.classList.contains('notice--success')), true);
+      const creditsPanelBox = await signedPage.locator('#me-panel-credits').boundingBox();
+      assert.ok(creditsPanelBox?.width > 300, `expected credits panel to be readable, got ${creditsPanelBox?.width}`);
 
       assert.equal(await signedPage.locator('#log-product').isEnabled(), true);
       assert.equal(await signedPage.locator('#log-store').isEnabled(), true);
