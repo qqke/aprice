@@ -194,7 +194,7 @@ const productPack = page?.dataset.productPack || '';
 const productBarcode = page?.dataset.productBarcode || '';
 const productTone = page?.dataset.productTone || 'sunset';
 const initialPageUrl = new URL(window.location.href);
-let shouldAutoSelectNearestStore = initialPageUrl.searchParams.get('selectNearestStore') === '1';
+let shouldAutoSelectNearestStore = initialPageUrl.searchParams.get('selectNearestStore') !== '0';
 
 recordRecentView({
   id: productId,
@@ -615,7 +615,7 @@ function applySelectedStorePrice(storeId, { focus = false } = {}) {
   }
 }
 
-function autoSelectNearestStore({ focus = false } = {}) {
+function autoSelectNearestStore({ focus = false, scroll = false } = {}) {
   if (!shouldAutoSelectNearestStore || selectedStoreId || storeSearchTerm) {
     return false;
   }
@@ -628,7 +628,9 @@ function autoSelectNearestStore({ focus = false } = {}) {
   selectedStoreSnapshot = nearestStore;
   shouldAutoSelectNearestStore = false;
   applySelectedStorePrice(nearestStore.id, { focus });
-  document.querySelector('#product-personal-record')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  if (scroll) {
+    document.querySelector('#product-personal-record')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
   return true;
 }
 
@@ -762,7 +764,7 @@ async function syncStoreLocation({ announce = false } = {}) {
   try {
     const location = await geolocate();
     storeLocation = location;
-    const autoSelected = autoSelectNearestStore({ focus: true });
+    const autoSelected = autoSelectNearestStore({ focus: announce, scroll: announce });
     if (autoSelected) {
       if (geoStatus) {
         geoStatus.textContent = `已按当前位置排序，并默认选择最近门店：${getSelectedStore()?.name || '最近门店'}。`;
