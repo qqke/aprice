@@ -403,6 +403,7 @@ async function main() {
       });
       await adminCreditPage.route('**/rest/v1/**', async (route) => {
         const requestUrl = route.request().url();
+        const request = route.request();
         const url = new URL(requestUrl);
         if (url.pathname.endsWith('/rpc/fetch_credit_summary')) {
           await route.fulfill({
@@ -439,6 +440,33 @@ async function main() {
           await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
           return;
         }
+        if (url.pathname.endsWith('/rpc/submit_store_price')) {
+          const bodyJson = request.postDataJSON?.() || JSON.parse(request.postData() || '{}');
+          const body = bodyJson.payload || bodyJson;
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify([{
+              id: 'admin-approved-log',
+              user_id: 'admin-1',
+              product_id: body.product_id,
+              store_id: body.store_id,
+              price_yen: body.price_yen,
+              purchased_at: body.purchased_at,
+              note: body.note || '',
+              share_to_public: Boolean(body.share_to_public),
+              review_status: body.share_to_public ? 'approved' : 'private',
+              evidence_url: body.evidence_url || '',
+              confidence_score: 100,
+              review_note: '',
+              reviewed_at: '2026-04-05T09:00:00.000Z',
+              promoted_price_id: null,
+              created_at: '2026-04-05T09:00:00.000Z',
+              updated_at: '2026-04-05T09:00:00.000Z',
+            }]),
+          });
+          return;
+        }
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -449,6 +477,11 @@ async function main() {
       await adminCreditPage.locator('#product-page').waitFor({ state: 'attached', timeout: 10000 });
       await adminCreditPage.waitForFunction(() => String(document.querySelector('#product-credit-status')?.textContent || '').includes('管理员模式'));
       assert.match(await adminCreditPage.locator('#product-credit-status').textContent(), /管理员模式 · 本次不计费/);
+      await adminCreditPage.locator('#personal-store-list .store-picker__item').first().click();
+      await adminCreditPage.waitForFunction(() => Boolean(document.querySelector('#personal-store')?.value), null, { timeout: 10000 });
+      await adminCreditPage.locator('#personal-price').fill('699');
+      await adminCreditPage.locator('#personal-log-form button[type="submit"]').click();
+      await adminCreditPage.waitForFunction(() => /已提交 [¥￥]699，已直接进入公共比价。/.test(String(document.querySelector('#personal-status')?.textContent || '')), null, { timeout: 10000 });
       await adminCreditPage.close();
 
       const failurePage = await browser.newPage();
@@ -516,6 +549,3 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
-
-

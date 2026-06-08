@@ -97,13 +97,23 @@ for (const source of [
   assert.ok(body, `${label} should define submit_store_price`);
   assert.match(
     body,
-    /case\s+when\s+should_share\s+then\s+'pending'\s+else\s+'private'\s+end/i,
-    `${label} submit_store_price should create public submissions as pending`,
+    /submitter_is_admin\s*:=\s*should_share\s+and\s+public\.is_admin_user\(\)/i,
+    `${label} submit_store_price should detect admin public submissions`,
+  );
+  assert.match(
+    body,
+    /case\s+when\s+submitter_is_admin\s+then\s+'approved'\s+when\s+should_share\s+then\s+'pending'\s+else\s+'private'\s+end/i,
+    `${label} submit_store_price should auto-approve admin public submissions and keep member submissions pending`,
   );
   assert.doesNotMatch(
     body,
     /try_promote_consensus_price/i,
     `${label} submit_store_price should leave public submissions pending for admin review`,
+  );
+  assert.match(
+    body,
+    /insert\s+into\s+public\.prices/i,
+    `${label} submit_store_price should promote admin-approved submissions into public prices`,
   );
 }
 

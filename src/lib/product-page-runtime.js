@@ -1375,7 +1375,7 @@ form?.addEventListener('submit', async (event) => {
       return;
     }
     const shouldShare = sharePublic instanceof HTMLInputElement ? sharePublic.checked : false;
-    await submitStorePrice({
+    const savedPrice = await submitStorePrice({
       product_id: productId,
       store_id: store?.value || selectedStoreId || null,
       price_yen: priceValidation.value,
@@ -1388,8 +1388,11 @@ form?.addEventListener('submit', async (event) => {
     note.value = '';
     if (evidenceUrl) evidenceUrl.value = '';
     await refreshPersonalPriceState({ preserveSelection: true });
-    status.textContent = shouldShare
-      ? `已提交 ${formatYen(priceValidation.value)}，审核后会进入公共比价。`
+    const savedEntry = Array.isArray(savedPrice) ? savedPrice[0] : savedPrice;
+    status.textContent = shouldShare && savedEntry?.review_status === 'approved'
+      ? `已提交 ${formatYen(priceValidation.value)}，已直接进入公共比价。`
+      : shouldShare
+        ? getPrivatePageStatusCopy('product', 'sharedLogSuccess', { price: formatYen(priceValidation.value) })
       : getPrivatePageStatusCopy('product', 'logSuccess', { price: formatYen(priceValidation.value) });
   } catch (error) {
     status.textContent = getPrivatePageStatusCopy('product', 'logFailure', { message: formatDataError(error) });
