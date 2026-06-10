@@ -9836,6 +9836,11 @@ body.me-page .me-panel__body .feed {
     padding: 12px;
   }
 
+  body.me-page #me-panel-credits,
+  body.me-page #me-panel-logs {
+    grid-column: 1 / -1;
+  }
+
   body.me-page .me-panel__body {
     padding: 0 12px 12px;
   }

@@ -248,6 +248,13 @@ async function main() {
       assert.equal(await signedPage.locator('#log-status').evaluate((element) => element.classList.contains('notice--success')), true);
       const creditsPanelBox = await signedPage.locator('#me-panel-credits').boundingBox();
       assert.ok(creditsPanelBox?.width > 300, `expected credits panel to be readable, got ${creditsPanelBox?.width}`);
+      await signedPage.setViewportSize({ width: 390, height: 844 });
+      const mobileCreditsPanelBox = await signedPage.locator('#me-panel-credits').boundingBox();
+      const mobileQuickRecordBox = await signedPage.locator('body.me-page .tile--wide').first().boundingBox();
+      assert.ok(mobileCreditsPanelBox?.width > 320, `expected mobile credits panel to be full width, got ${mobileCreditsPanelBox?.width}`);
+      assert.ok(Math.abs((mobileCreditsPanelBox?.x || 0) - (mobileQuickRecordBox?.x || 0)) < 4, `expected mobile panels to align, got credits x ${mobileCreditsPanelBox?.x} and quick x ${mobileQuickRecordBox?.x}`);
+      assert.ok((mobileCreditsPanelBox?.y || 0) > (mobileQuickRecordBox?.y || 0), `expected mobile credits panel below quick record, got credits y ${mobileCreditsPanelBox?.y} and quick y ${mobileQuickRecordBox?.y}`);
+      await signedPage.setViewportSize({ width: 1280, height: 720 });
 
       assert.equal(await signedPage.locator('#log-product').isEnabled(), true);
       assert.equal(await signedPage.locator('#log-store').isEnabled(), true);
