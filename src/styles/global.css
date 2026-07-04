@@ -9570,31 +9570,31 @@ body.me-page #me-panel-logs .me-panel__title strong {
 }
 
 body.product-page .personal-record-layout {
-  grid-template-columns: minmax(0, 1.06fr) minmax(320px, 0.94fr);
-  gap: clamp(14px, 2vw, 22px);
+  grid-template-columns: minmax(300px, 0.82fr) minmax(0, 1.18fr);
+  gap: 12px;
 }
 
 body.product-page .personal-store-panel {
   display: grid;
-  gap: 12px;
+  gap: 8px;
 }
 
 body.product-page .personal-log-form {
-  top: 104px;
-  gap: 14px;
-  padding: 18px;
+  top: 88px;
+  gap: 10px;
+  padding: 14px;
   border-color: rgba(45, 103, 235, 0.2);
-  border-radius: 26px;
+  border-radius: 20px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(244, 249, 255, 0.92)),
     #ffffff;
-  box-shadow: 0 22px 48px rgba(42, 79, 135, 0.14);
+  box-shadow: 0 16px 34px rgba(42, 79, 135, 0.12);
 }
 
 body.product-page .personal-log-form__selected {
-  padding: 14px 16px;
+  padding: 12px;
   border: 1px solid rgba(45, 103, 235, 0.16);
-  border-radius: 18px;
+  border-radius: 16px;
   background:
     radial-gradient(280px 160px at 100% 0%, rgba(45, 103, 235, 0.12), transparent 72%),
     rgba(45, 103, 235, 0.06);
@@ -9608,17 +9608,17 @@ body.product-page .personal-log-form__selected span {
 
 body.product-page .personal-log-form__selected strong {
   color: var(--ref-ink);
-  font-size: 1.12rem;
+  font-size: 1.02rem;
 }
 
 body.product-page .personal-log-form__action {
   grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
+  gap: 8px;
 }
 
 body.product-page #personal-price {
-  min-height: 58px;
-  font-size: 1.22rem;
+  min-height: 54px;
+  font-size: 1.2rem;
   font-weight: 850;
 }
 
@@ -9628,13 +9628,13 @@ body.product-page #personal-price::placeholder {
 }
 
 body.product-page .personal-log-form__action .button {
-  min-height: 54px;
-  border-radius: 18px;
+  min-height: 50px;
+  border-radius: 16px;
   font-size: 1rem;
 }
 
 body.product-page .personal-log-form__secondary {
-  gap: 10px;
+  gap: 8px;
 }
 
 body.product-page .personal-log-form__secondary .field--inline {
@@ -9649,7 +9649,33 @@ body.product-page .store-search {
 }
 
 body.product-page .store-search__input {
-  min-height: 50px;
+  min-height: 46px;
+}
+
+body.product-page #personal-store-list {
+  max-height: min(52vh, 520px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+}
+
+body.product-page .store-picker__item {
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 58px;
+  padding: 10px 12px;
+  border-radius: 16px;
+}
+
+body.product-page .store-picker__item .feed__meta {
+  gap: 3px;
+}
+
+body.product-page .store-map-card {
+  padding: 10px;
+}
+
+body.product-page #personal-store-map .store-map__canvas {
+  min-height: 210px;
 }
 
 body.product-page .store-picker__item.is-active,
@@ -9771,11 +9797,6 @@ body.me-page .me-panel__body .feed {
 
   body.product-page .personal-log-form {
     position: static;
-    order: 1;
-  }
-
-  body.product-page .personal-store-panel {
-    order: 2;
   }
 }
 
@@ -9791,8 +9812,8 @@ body.me-page .me-panel__body .feed {
   }
 
   body.product-page .personal-log-form {
-    padding: 14px;
-    border-radius: 22px;
+    padding: 12px;
+    border-radius: 18px;
   }
 
   body.product-page .personal-log-form__selected {
@@ -9803,6 +9824,14 @@ body.me-page .me-panel__body .feed {
   body.product-page #personal-price,
   body.product-page .personal-log-form__action .button {
     min-height: 50px;
+  }
+
+  body.product-page #personal-store-list {
+    max-height: 38vh;
+  }
+
+  body.product-page #personal-store-map .store-map__canvas {
+    min-height: 160px;
   }
 
   body.product-page .product-secondary-actions {

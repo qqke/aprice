@@ -190,6 +190,32 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
               <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button>
             </div>
             <div class="personal-record-layout">
+              <form class="form personal-log-form" id="personal-log-form">
+                <input id="personal-store" type="hidden" value="" />
+                <div class="personal-log-form__selected">
+                  <span>当前门店</span>
+                  <strong id="personal-selected-store-label">未选择门店</strong>
+                </div>
+                <div class="personal-log-form__action">
+                  <label class="field">
+                    <input id="personal-price" name="personal-price" type="number" inputmode="numeric" placeholder="输入价格（円）" />
+                  </label>
+                  <button class="button" type="submit" disabled>保存价格</button>
+                </div>
+                <div class="personal-log-form__secondary">
+                  <label class="field">
+                    <input id="personal-note" name="personal-note" placeholder="备注" />
+                  </label>
+                  <label class="field">
+                    <input id="personal-evidence-url" name="personal-evidence-url" type="url" placeholder="价签或小票图片链接（可选）" />
+                  </label>
+                  <label class="field field--inline">
+                    <input id="personal-share-public" type="checkbox" checked />
+                    <span>参与公共比价（提交后由管理员审核）</span>
+                  </label>
+                </div>
+                <div class="notice notice--compact" id="personal-status">{productLogPrompt}</div>
+              </form>
               <div class="personal-store-panel">
                 <div class="store-search">
                   <label class="field store-search__input">
@@ -212,32 +238,6 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
                 </div>
                 <button class="button button--ghost store-search__load-more" id="personal-store-load-more" type="button" hidden>加载更多</button>
               </div>
-              <form class="form personal-log-form" id="personal-log-form">
-                <input id="personal-store" type="hidden" value="" />
-                <div class="personal-log-form__selected">
-                  <span>当前门店</span>
-                  <strong id="personal-selected-store-label">未选择门店</strong>
-                </div>
-                <div class="personal-log-form__action">
-                  <label class="field">
-                    <input id="personal-price" name="personal-price" type="number" inputmode="numeric" placeholder="你的购买价" />
-                  </label>
-                  <button class="button" type="submit" disabled>提交店头价格</button>
-                </div>
-                <div class="personal-log-form__secondary">
-                  <label class="field">
-                    <input id="personal-note" name="personal-note" placeholder="备注" />
-                  </label>
-                  <label class="field">
-                    <input id="personal-evidence-url" name="personal-evidence-url" type="url" placeholder="价签或小票图片链接（可选）" />
-                  </label>
-                  <label class="field field--inline">
-                    <input id="personal-share-public" type="checkbox" checked />
-                    <span>参与公共比价（提交后由管理员审核）</span>
-                  </label>
-                </div>
-                <div class="notice notice--compact" id="personal-status">{productLogPrompt}</div>
-              </form>
             </div>
           </section>
         </div>

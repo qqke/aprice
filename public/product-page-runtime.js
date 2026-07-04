@@ -1409,5 +1409,5 @@ form?.addEventListener('submit', async (event) => {
 await syncAuthGate();
 await syncFavoriteStates();
 await Promise.all([loadStores({ reset: true }), loadPrices(), refreshPersonalPriceState()]);
-void syncStoreLocation();
+void syncStoreLocation({ announce: initialPageUrl.searchParams.get('selectNearestStore') === '1' });
   }
