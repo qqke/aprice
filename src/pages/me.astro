@@ -32,7 +32,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
       </div>
 
       <div class="grid">
-        <section class="tile tile--wide">
+        <section class="tile tile--wide" id="me-quick-log-panel" hidden>
           <div class="section__header section__header--tight">
             <div>
               <h3>快速记录</h3>
@@ -204,6 +204,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
 
     const loginLink = document.querySelector('#me-login-link');
     const authGate = document.querySelector('#me-auth-gate');
+    const quickLogPanel = document.querySelector('#me-quick-log-panel');
     const logsEl = document.querySelector('#my-logs');
     const recentViewsEl = document.querySelector('#recent-views');
     const recentPanelSummary = document.querySelector('#recent-panel-summary');
@@ -416,6 +417,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
 
     function renderLoggedOutState() {
       syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
+      if (quickLogPanel) quickLogPanel.hidden = true;
       logsEl.innerHTML = `
         <div class="list__item">
           <div>
@@ -588,6 +590,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
       }
 
       syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: false });
+      if (quickLogPanel) quickLogPanel.hidden = false;
       setStatus(getPrivatePageStatusCopy('me', 'loading'));
       setControlsDisabled(false);
       setSecurityControlsDisabled(false);

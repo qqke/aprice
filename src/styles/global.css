@@ -9874,3 +9874,144 @@ body.me-page .me-panel__body .feed {
     padding: 0 12px 12px;
   }
 }
+
+/* Mobile audit fixes: keep utility flows above fixed bottom nav. */
+@media (max-width: 720px) {
+  :root {
+    --mobile-footer-space: 104px;
+  }
+
+  .page,
+  body.home-page .page,
+  body:is(.scan-page, .me-page, .login-page, .admin-page, .product-page, .error-page) .page {
+    padding-bottom: calc(var(--mobile-footer-space) + env(safe-area-inset-bottom) + 28px);
+  }
+
+  .footer {
+    padding: 0 8px max(8px, env(safe-area-inset-bottom));
+  }
+
+  .footer__inner {
+    padding: 8px 10px;
+    border-radius: 18px;
+  }
+
+  .footer__links {
+    gap: 6px;
+  }
+
+  .footer__links a {
+    min-height: 44px;
+    padding: 8px 10px;
+    border-radius: 16px;
+  }
+
+  body:is(.login-page, .me-page, .scan-page) .section {
+    padding-top: 8px;
+  }
+
+  body:is(.login-page, .me-page, .scan-page) .section--first-workspace > .shell > .section__header:first-of-type,
+  body.scan-page .hero-banner {
+    margin-bottom: 8px;
+    border-radius: 20px;
+  }
+
+  body:is(.login-page, .me-page, .scan-page) .product-title {
+    font-size: clamp(1.75rem, 8.6vw, 2.25rem);
+    line-height: 1;
+  }
+
+  body:is(.login-page, .me-page, .scan-page) .product-sub,
+  body:is(.login-page, .me-page, .scan-page) .section__header p {
+    font-size: 0.92rem;
+    line-height: 1.35;
+  }
+
+  body.login-page .auth-form {
+    gap: 8px;
+  }
+
+  body.login-page .turnstile-field {
+    padding: 8px;
+  }
+
+  body.login-page .auth-form__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  body.login-page .auth-form__actions > .button:first-child {
+    grid-column: 1 / -1;
+  }
+
+  body.login-page .auth-form__actions > .button:not(:first-child) {
+    min-height: 40px;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  body.login-page .auth-form__footer .button {
+    min-height: 42px;
+  }
+
+  body.me-page #me-auth-gate {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  body.me-page #me-auth-gate .button {
+    width: 100%;
+  }
+
+  body.me-page #me-quick-log-panel[hidden] {
+    display: none !important;
+  }
+
+  body.scan-page .scan-layout {
+    display: flex;
+    flex-direction: column;
+  }
+
+  body.scan-page .scan-manual-panel {
+    order: -1;
+  }
+
+  body.scan-page .scan-frame {
+    max-height: min(26vh, 200px);
+  }
+}
+
+@media (max-width: 720px) {
+  body:is(.login-page, .scan-page, .me-page) .page {
+    padding-bottom: 14px;
+  }
+
+  body:is(.login-page, .scan-page, .me-page) .footer {
+    position: static;
+    margin-top: 12px;
+  }
+
+  body.scan-page .hero-banner {
+    display: none;
+  }
+
+  body:is(.login-page, .scan-page, .me-page) .product-title {
+    font-size: clamp(1.55rem, 7.2vw, 2rem);
+  }
+
+  body.login-page .grid,
+  body.scan-page .grid,
+  body.me-page .grid {
+    gap: 10px;
+  }
+
+  body.login-page .auth-form__footer {
+    gap: 0;
+  }
+
+  body.scan-page .scan-frame {
+    max-height: min(24vh, 190px);
+  }
+}

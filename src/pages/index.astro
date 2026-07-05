@@ -297,6 +297,12 @@ const base = import.meta.env.BASE_URL || '/';
       return '历史采样';
     }
 
+    function isRecentPriceSample(value) {
+      const timestamp = Date.parse(value || '');
+      if (!Number.isFinite(timestamp)) return false;
+      return Math.max(0, Math.floor((Date.now() - timestamp) / (24 * 60 * 60 * 1000))) <= 45;
+    }
+
     function productHref(productId) {
       return resolveBase(productId ? `product/${productId}/` : '');
     }
@@ -586,10 +592,8 @@ const base = import.meta.env.BASE_URL || '/';
       try {
         const token = await getPriceAccessToken();
         const prices = await fetchPricesForProduct(product.id, { limit: 80, token });
-        const recentCutoff = Date.now() - 45 * 24 * 60 * 60 * 1000;
-        const priceAges = prices.map((row) => Date.parse(row?.collected_at || '')).filter(Number.isFinite);
-        const hasRecentPrices = priceAges.some((timestamp) => timestamp >= recentCutoff);
-        const hasHistoricalPrices = priceAges.some((timestamp) => timestamp < recentCutoff);
+        const hasRecentPrices = prices.some((row) => isRecentPriceSample(row?.collected_at));
+        const hasHistoricalPrices = prices.some((row) => !isRecentPriceSample(row?.collected_at));
         if (!prices.length) {
           renderEmptyList(nearbyResults, product.name, '当前还没有价格记录。', '暂无');
           setNearbyStatus(`${product.name} 暂无门店价格。`, true);
