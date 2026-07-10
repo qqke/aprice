@@ -10102,4 +10102,24 @@ body.me-page.me-logged-out .grid {
     z-index: 25;
     margin-top: 0;
   }
+
+  /* Search results are a compact media list, not stacked product posters. */
+  body.home-page .home-v2 .home-result__main {
+    grid-template-columns: 72px minmax(0, 1fr);
+    align-items: start;
+    gap: 12px;
+  }
+
+  body.home-page .home-v2 .home-result__media,
+  body.home-page .home-v2 .product-thumb--home {
+    width: 72px;
+    min-width: 72px;
+    height: 72px;
+    min-height: 72px;
+  }
+
+  body.home-page .home-v2 .product-thumb--home {
+    border-radius: 12px;
+    object-fit: contain;
+  }
 }
