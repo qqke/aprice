@@ -416,6 +416,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
     }
 
     function renderLoggedOutState() {
+      document.body.classList.add('me-logged-out');
       syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
       if (quickLogPanel) quickLogPanel.hidden = true;
       logsEl.innerHTML = `
@@ -590,6 +591,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
       }
 
       syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: false });
+      document.body.classList.remove('me-logged-out');
       if (quickLogPanel) quickLogPanel.hidden = false;
       setStatus(getPrivatePageStatusCopy('me', 'loading'));
       setControlsDisabled(false);

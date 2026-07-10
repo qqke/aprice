@@ -115,6 +115,7 @@ export const prerender = true;
     const startButton = document.querySelector('#start-scan');
     const stopButton = document.querySelector('#stop-scan');
     const snapButton = document.querySelector('#snap-scan');
+    const scanCameraActions = document.querySelector('.scan-camera-actions');
     const input = document.querySelector('#barcode-input');
     const searchButton = document.querySelector('#barcode-search');
     const status = document.querySelector('#scan-status');
@@ -166,6 +167,7 @@ export const prerender = true;
 
     function syncCameraControls() {
       const isActive = Boolean(stream);
+      if (scanCameraActions) scanCameraActions.hidden = !isActive;
       if (startButton) {
         startButton.hidden = isActive;
       }

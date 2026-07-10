@@ -10,6 +10,7 @@ const testState = {
   signOutError: null,
   signInError: null,
   signUpResult: null,
+  missingSubmitProductRpc: false,
 };
 
 globalThis.__APriceConfig = {
@@ -95,6 +96,9 @@ const patchedSource = source
     async function restRpc(name, body, options = {}) {
       const state = globalThis.__browserAuthTestState;
       state.restCalls.push({ type: 'rpc', name, body, options });
+      if (state.missingSubmitProductRpc && name === 'submit_product_submission') {
+        throw new Error('Could not find the function public.submit_product_submission(payload) in the schema cache');
+      }
       return [{ ok: true }];
     }`,
   )
@@ -213,6 +217,19 @@ assert.ok(testState.restCalls.some((call) =>
   call.body.payload.image_url === 'https://cdn.example.com/products/submitted-product.jpg' &&
   call.options.token === 'session-token'
 ));
+
+testState.missingSubmitProductRpc = true;
+await auth.submitProductSubmission({ barcode: '4900000000002', name: 'Fallback Product', brand: 'Fallback Brand' });
+assert.ok(testState.restCalls.some((call) =>
+  call.type === 'insert' &&
+  call.path === 'product_submissions' &&
+  call.body.user_id === 'member-1' &&
+  call.body.barcode === '4900000000002' &&
+  call.body.name === 'Fallback Product' &&
+  call.body.brand === 'Fallback Brand' &&
+  call.options.token === 'session-token'
+));
+testState.missingSubmitProductRpc = false;
 
 await auth.adminReviewPriceSubmission({ id: 'pending-1', action: 'approve', confidence_score: 80 });
 await auth.adminReviewProductSubmission({ id: 'product-pending-1', action: 'approve' });

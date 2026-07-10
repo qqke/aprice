@@ -495,12 +495,30 @@ export async function submitProductSubmission(payload) {
   if (!barcode.ok) throw new Error(barcode.message);
   if (!imageUrl.ok) throw new Error(imageUrl.message);
   if (!String(payload?.name || '').trim()) throw new Error('请填写商品名称。');
-  const result = await restRpc('submit_product_submission', asPayloadArg({
+  const normalizedPayload = {
     ...payload,
     id: payload?.id || barcode.value,
     barcode: barcode.value,
     image_url: imageUrl.value,
-  }), { token: session.access_token });
+  };
+  let result;
+  try {
+    result = await restRpc('submit_product_submission', asPayloadArg(normalizedPayload), { token: session.access_token });
+  } catch (error) {
+    const message = String(error?.message || '');
+    if (!message.includes('submit_product_submission') || !message.includes('schema cache')) throw error;
+    result = await restInsert('product_submissions', {
+      user_id: session.user.id,
+      barcode: normalizedPayload.barcode,
+      name: String(normalizedPayload.name || '').trim(),
+      brand: normalizedPayload.brand || '',
+      pack: normalizedPayload.pack || '',
+      category: normalizedPayload.category || '',
+      tone: normalizedPayload.tone || 'sunset',
+      description: normalizedPayload.description || '',
+      image_url: normalizedPayload.image_url || '',
+    }, { token: session.access_token });
+  }
   trackEvent('submit_product', { barcode: barcode.ok ? barcode.value : '', source: 'submit_product_submission' });
   return result;
 }
