@@ -9816,6 +9816,22 @@ body.me-page .me-panel__body .feed {
     border-radius: 18px;
   }
 
+  body.product-page #product-personal-record {
+    scroll-margin-top: 76px;
+  }
+
+  body.product-page .personal-store-panel {
+    gap: 8px;
+  }
+
+  body.product-page .personal-store-panel .store-map-card {
+    display: none;
+  }
+
+  body.product-page #personal-store-list {
+    max-height: 28vh;
+  }
+
   body.product-page .personal-log-form__selected {
     padding: 12px;
     border-radius: 16px;

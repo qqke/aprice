@@ -632,9 +632,13 @@ function autoSelectNearestStore({ focus = false, scroll = false } = {}) {
 
   selectedStoreSnapshot = nearestStore;
   shouldAutoSelectNearestStore = false;
-  applySelectedStorePrice(nearestStore.id, { focus });
+  applySelectedStorePrice(nearestStore.id, { focus: false });
   if (scroll) {
-    document.querySelector('#product-personal-record')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    const recordSection = document.querySelector('#product-personal-record');
+    recordSection?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    requestAnimationFrame(() => price?.focus({ preventScroll: true }));
+  } else if (focus) {
+    price?.focus({ preventScroll: true });
   }
   return true;
 }
