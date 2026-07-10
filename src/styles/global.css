@@ -9975,11 +9975,11 @@ body.me-page .me-panel__body .feed {
   }
 
   body.scan-page .scan-manual-panel {
-    order: -1;
+    order: 0;
   }
 
   body.scan-page .scan-frame {
-    max-height: min(26vh, 200px);
+    max-height: min(42vh, 320px);
   }
 }
 
@@ -10012,7 +10012,7 @@ body.me-page .me-panel__body .feed {
   }
 
   body.scan-page .scan-frame {
-    max-height: min(24vh, 190px);
+    max-height: min(42vh, 320px);
   }
 }
 
@@ -10038,7 +10038,68 @@ body.me-page .me-panel__body .feed {
     color: var(--taste-accent-strong, var(--accent));
   }
 
-  body.me-page.me-logged-out .grid {
+body.me-page.me-logged-out .grid {
     display: none;
+  }
+}
+
+/* Mobile app shell: keep search and scan on one thumb-friendly row. */
+.home-search__button-icon {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  body.home-page .home-v2 .home-search__field {
+    grid-template-columns: auto minmax(0, 1fr) var(--ui-touch-target) var(--ui-touch-target);
+  }
+
+  body.home-page .home-v2 .home-search__button {
+    grid-column: auto;
+    width: var(--ui-touch-target);
+    min-width: var(--ui-touch-target);
+    padding: 0;
+  }
+
+  body.home-page .home-v2 .home-search__button-text {
+    display: none;
+  }
+
+  body.home-page .home-v2 .home-search__button-icon {
+    display: block;
+    width: 20px;
+    height: 20px;
+  }
+
+  body.home-page .home-v2 .home-feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body.home-page .home-v2 .home-feature-card--decision,
+  body.home-page .home-v2 .home-feature-card--profile {
+    display: none;
+  }
+
+  body.home-page .home-v2 .home-feature-card--scan {
+    min-height: 72px;
+    padding: 10px 14px;
+  }
+
+  body.home-page .home-v2 .home-feature-card--scan .home-feature-card__icon {
+    width: 48px;
+    min-width: 48px;
+    height: 48px;
+  }
+
+  body:is(.login-page, .scan-page, .me-page) .page {
+    padding-bottom: calc(var(--mobile-footer-space) + env(safe-area-inset-bottom) + 20px);
+  }
+
+  body:is(.login-page, .scan-page, .me-page) .footer {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 25;
+    margin-top: 0;
   }
 }

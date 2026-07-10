@@ -26,6 +26,7 @@ const base = import.meta.env.BASE_URL || '/';
               inputmode="search"
               autocomplete="off"
               spellcheck="false"
+              enterkeyhint="search"
               placeholder="搜索商品名、品牌或 JAN 码"
               aria-controls="search-results"
               aria-describedby="search-status"
@@ -38,7 +39,13 @@ const base = import.meta.env.BASE_URL || '/';
               </svg>
               <span class="sr-only">扫码查价</span>
             </a>
-            <button class="button home-search__button" id="home-search-button" type="submit">搜索</button>
+            <button class="button home-search__button" id="home-search-button" type="submit" aria-label="搜索">
+              <span class="home-search__button-text">搜索</span>
+              <svg class="home-search__button-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8" />
+                <path d="M16 16l4 4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" />
+              </svg>
+            </button>
           </label>
         </form>
         <p class="home-meta">快捷键 <code>Ctrl+K</code> 或 <code>/</code> 可直达搜索框。</p>
@@ -792,7 +799,7 @@ const base = import.meta.env.BASE_URL || '/';
       clearTimeout(debounceTimer);
       const value = input.value.trim();
       if (value.length >= 2) {
-        debounceTimer = setTimeout(() => runSearch(value), 300);
+        debounceTimer = setTimeout(() => runSearch(value), 220);
       }
     });
 

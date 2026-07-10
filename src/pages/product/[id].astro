@@ -198,7 +198,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
                 </div>
                 <div class="personal-log-form__action">
                   <label class="field">
-                    <input id="personal-price" name="personal-price" type="number" inputmode="numeric" placeholder="输入价格（円）" />
+                    <input id="personal-price" name="personal-price" type="number" inputmode="numeric" min="1" step="1" enterkeyhint="done" placeholder="输入价格（円）" />
                   </label>
                   <button class="button" type="submit" disabled>保存价格</button>
                 </div>
@@ -219,7 +219,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
               <div class="personal-store-panel">
                 <div class="store-search">
                   <label class="field store-search__input">
-                    <input id="personal-store-search" name="personal-store-search" type="search" inputmode="search" placeholder="搜索店名或连锁名" autocomplete="off" spellcheck="false" aria-label="搜索门店" />
+                    <input id="personal-store-search" name="personal-store-search" type="search" inputmode="search" enterkeyhint="search" placeholder="搜索店名或连锁名" autocomplete="off" spellcheck="false" aria-label="搜索门店" />
                   </label>
                   <button class="button button--ghost store-search__clear" id="personal-store-search-clear" type="button" hidden>清空</button>
                 </div>

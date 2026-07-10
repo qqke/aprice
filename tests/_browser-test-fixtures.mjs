@@ -1,3 +1,5 @@
+const isoDaysAgo = (days) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
 export function makeCatalogProductResponse() {
   return {
     id: 'loxonin-s',
@@ -521,7 +523,7 @@ export function makeHomePageResponseForRequest(requestUrl, requestBody = '') {
           price_yen: 2000,
           is_member_price: false,
           source: 'manual',
-          collected_at: '2026-05-20T08:00:00.000Z',
+          collected_at: isoDaysAgo(3),
           note: 'Recent manual price',
           stores: {
             id: 'sundrug-sapporo',
@@ -550,7 +552,7 @@ export function makeHomePageResponseForRequest(requestUrl, requestBody = '') {
           price_yen: 2189,
           is_member_price: false,
           source: 'crawler',
-          collected_at: '2026-04-13T11:31:13.973Z',
+          collected_at: isoDaysAgo(88),
           note: 'Sundrug online crawl',
           stores: {
             id: 'sundrug-00000',
