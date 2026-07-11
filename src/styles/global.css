@@ -10231,3 +10231,13 @@ body.me-page.me-logged-out .grid {
   body:is(.scan-page, .me-page) .footer__links a { min-height: 48px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none !important; color: #475467; }
   body:is(.scan-page, .me-page) .footer__links a[aria-current='page'] { color: #1463f3; }
 }
+
+/* Desktop headings should lead the page, not overpower the controls. */
+@media (min-width: 721px) {
+  body.home-page:not(.home-has-activity) .home-section--deferred,
+  body.home-page:not(.home-has-activity) .home-section--last { display: none; }
+  body.home-page .home-v2 .home-title { font-size: clamp(2.4rem, 4.5vw, 4.2rem); }
+  body:is(.me-page, .admin-page, .scan-page) .product-title { font-size: clamp(1.9rem, 3.2vw, 3.1rem); }
+  body.product-page .product-title { font-size: clamp(1.9rem, 3.2vw, 3.4rem); }
+  body.error-page .headline { font-size: clamp(1.9rem, 3.2vw, 3rem); }
+}
