@@ -253,6 +253,14 @@ export function escapeAttribute(value = '') {
   return escapeHtml(value).replace(/`/g, '&#96;');
 }
 
+export function setNoticeTone(node, tone = 'neutral') {
+  if (!node?.classList) return;
+  node.classList.remove('notice--success', 'notice--error', 'notice--warning');
+  if (tone === 'success' || tone === 'error' || tone === 'warning') {
+    node.classList.add(`notice--${tone}`);
+  }
+}
+
 export async function searchProducts(term = '') {
   const q = term.trim();
   if (!q) return fetchAllProducts();

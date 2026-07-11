@@ -196,7 +196,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
   </section>
 
   <script type="module" is:inline define:vars={{ loginUrl }}>
-    const { clearRecentViews, escapeAttribute, escapeHtml, fetchProductsPage, fetchRecentViews, fetchStoresPage, formatDateTime, formatYen, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
+    const { clearRecentViews, escapeAttribute, escapeHtml, fetchProductsPage, fetchRecentViews, fetchStoresPage, formatDateTime, formatYen, resolveBase, setNoticeTone } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
     const { changePassword, claimRandomPriceTask, fetchCreditLedger, fetchCreditSummary, fetchFavorites, fetchPersonalLogs, formatDataError, getCurrentUser, recordProductSearch, savePersonalLog, skipPriceTask, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
     const { validatePositiveYen } = await import(window.__APriceConfig?.formValidationJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'form-validation.js');
@@ -255,14 +255,6 @@ const meGateCopy = getPrivatePageGateCopy('me');
     let productPager = { rows: [], offset: 0, hasMore: false, term: '' };
     let storePager = { rows: [], offset: 0, hasMore: false, term: '' };
     let currentPriceTask = null;
-
-    function setNoticeTone(node, tone = 'neutral') {
-      if (!node?.classList) return;
-      node.classList.remove('notice--success', 'notice--error', 'notice--warning');
-      if (tone === 'success' || tone === 'error' || tone === 'warning') {
-        node.classList.add(`notice--${tone}`);
-      }
-    }
 
     function setStatus(message, tone = 'neutral') {
       if (!status) return;

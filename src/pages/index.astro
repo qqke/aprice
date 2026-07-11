@@ -157,6 +157,7 @@ const base = import.meta.env.BASE_URL || '/';
       fetchPricesForProduct,
       escapeAttribute,
       escapeHtml,
+      setNoticeTone,
       buildExternalMapUrl,
       buildGoogleMapEmbedUrl,
       buildStoreMapModel,
@@ -283,14 +284,6 @@ const base = import.meta.env.BASE_URL || '/';
         };
       } catch {
         return null;
-      }
-    }
-
-    function setNoticeTone(node, tone = 'neutral') {
-      if (!node?.classList) return;
-      node.classList.remove('notice--success', 'notice--error', 'notice--warning');
-      if (tone === 'success' || tone === 'error' || tone === 'warning') {
-        node.classList.add(`notice--${tone}`);
       }
     }
 

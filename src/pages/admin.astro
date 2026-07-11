@@ -336,7 +336,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
   </section>
 
   <script type="module" is:inline define:vars={{ loginUrl }}>
-    const { fetchProductsPage, fetchRecentPrices, fetchStoresPage } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
+    const { escapeHtml, fetchProductsPage, fetchRecentPrices, fetchStoresPage } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
     const { adminAdjustCredits, adminDeletePrice, adminDeleteProduct, adminDeleteStore, adminFetchTelemetryRecent, adminFetchTelemetrySummary, adminReviewPriceSubmission, adminReviewProductSubmission, adminUpdateAppSetting, adminUpsertPrice, adminUpsertStore, createProduct, fetchAppSettings, fetchCurrentProfile, fetchPendingPriceSubmissions, fetchProductSubmissions, formatDataError, getCurrentUser, getSession, signOut } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { applyPrivatePageGateCopy, getPrivatePageGateCopy, getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
     const { validateCoordinate, validateJanCode, validateOptionalHttpUrl, validatePositiveYen } = await import(window.__APriceConfig?.formValidationJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'form-validation.js');
@@ -495,15 +495,6 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
 
     function optionHtml(items) {
       return items.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join('');
-    }
-
-    function escapeHtml(value = '') {
-      return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
     }
 
     function formatAdminDate(value) {

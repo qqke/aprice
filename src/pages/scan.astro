@@ -105,7 +105,7 @@ export const prerender = true;
   </section>
 
   <script type="module" is:inline>
-    const { escapeAttribute, escapeHtml, fetchJancodeProductDraft, fetchProductByBarcode, resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
+    const { escapeAttribute, escapeHtml, fetchJancodeProductDraft, fetchProductByBarcode, resolveBase, setNoticeTone } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
     const { getCurrentUser, submitProductSubmission } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
     const { buildPrivatePageLoginUrl } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
     const { friendlyDataError, validateJanCode, validateOptionalHttpUrl } = await import(window.__APriceConfig?.formValidationJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'form-validation.js');
@@ -144,14 +144,6 @@ export const prerender = true;
     let lookupToken = 0;
     let canAddProduct = false;
     let loginUrl = '';
-
-    function setNoticeTone(node, tone = 'neutral') {
-      if (!node?.classList) return;
-      node.classList.remove('notice--success', 'notice--error', 'notice--warning');
-      if (tone === 'success' || tone === 'error' || tone === 'warning') {
-        node.classList.add(`notice--${tone}`);
-      }
-    }
 
     function setScanStatus(message, tone = 'neutral') {
       if (!status) return;

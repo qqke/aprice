@@ -93,7 +93,7 @@ export const prerender = true;
   </section>
 
   <script type="module" is:inline>
-    const { resolveBase } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
+    const { resolveBase, setNoticeTone } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
     const { normalizeInternalRedirectTarget } = await import(window.__APriceConfig?.authRedirectJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'auth-redirect.js');
     const loginStateUrl = window.__APriceConfig?.loginPageStateJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'login-page-state.js';
     const {
@@ -163,14 +163,6 @@ export const prerender = true;
     let turnstileToken = '';
     let turnstileDevFallback = false;
     const isLocalDevFallbackEnabled = Boolean(window.__APriceConfig?.turnstileDevFallback);
-
-    function setNoticeTone(node, tone = 'neutral') {
-      if (!node?.classList) return;
-      node.classList.remove('notice--success', 'notice--error', 'notice--warning');
-      if (tone === 'success' || tone === 'error' || tone === 'warning') {
-        node.classList.add(`notice--${tone}`);
-      }
-    }
 
     function setStatus(message, tone = 'neutral') {
       if (!status) return;
