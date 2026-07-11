@@ -10236,6 +10236,7 @@ body.me-page.me-logged-out .grid {
 @media (min-width: 721px) {
   body.home-page:not(.home-has-activity) .home-section--deferred,
   body.home-page:not(.home-has-activity) .home-section--last { display: none; }
+  body.home-page .home-v2 .home-hero { min-height: min(430px, calc(100dvh - 180px)); padding-block: clamp(30px, 4vw, 52px); }
   body.home-page .home-v2 .home-title { font-size: clamp(2.4rem, 4.5vw, 4.2rem); }
   body:is(.me-page, .admin-page, .scan-page) .product-title { font-size: clamp(1.9rem, 3.2vw, 3.1rem); }
   body.product-page .product-title { font-size: clamp(1.9rem, 3.2vw, 3.4rem); }
