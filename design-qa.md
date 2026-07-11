@@ -29,3 +29,23 @@
 - P3: add bespoke bottom-navigation icons only if an existing icon asset set is approved; the current text navigation preserves the established route semantics.
 
 final result: passed
+
+## Scan and account follow-up
+
+- Source visual truth: the selected scanner-first mobile direction above.
+- Implementation screenshots: `C:\work\aprice\artifacts\scan-mobile-redesign.png` and `C:\work\aprice\artifacts\me-mobile-redesign.png`
+- Viewport: 390 × 844
+- State: logged out; scan page initial camera state and account gate state.
+
+**Findings**
+
+- No actionable P0/P1/P2 differences. The scan page makes the camera preview and start action primary, while manual JAN entry remains immediately below.
+- No actionable P0/P1/P2 differences. The account page keeps the existing auth gate but gives it a focused, single-action presentation.
+- Expected deviation: account-specific data panels remain hidden until login, as required by the existing auth behavior.
+
+**Interaction evidence**
+
+- `node tests/scan-page-browser.test.mjs` passed.
+- `node tests/me-page-browser.test.mjs` passed.
+
+final result: passed
