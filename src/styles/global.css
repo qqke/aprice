@@ -10139,3 +10139,42 @@ body.me-page.me-logged-out .grid {
     object-fit: contain;
   }
 }
+
+/* Keep the scanner-first composition last: prior shared responsive rules are desktop-first. */
+@media (max-width: 720px) {
+  body.home-page,
+  body.home-page .page { background: #fbf8f1; }
+  body.home-page .page { padding-top: 0; padding-bottom: calc(var(--mobile-footer-space) + env(safe-area-inset-bottom) + 12px); }
+  body.home-page .topbar { padding-top: env(safe-area-inset-top); background: #fff; }
+  body.home-page .topbar__inner { width: 100%; min-height: 68px; padding: 12px 20px; border: 0; border-radius: 0; background: #fff; box-shadow: 0 1px 0 rgba(8, 24, 68, 0.08); }
+  body.home-page .brand__tag,
+  body.home-page .nav-toggle,
+  body.home-page .nav,
+  body.home-page .mobile-nav { display: none !important; }
+  body.home-page .session-chip { min-height: auto; padding: 0; border: 0; background: transparent; box-shadow: none; color: #111827; font-weight: 650; }
+  body.home-page .home-v2 .home-hero { min-height: 0; padding: 46px 24px 22px; border-radius: 0; background: #fbf8f1 url('/images/home-scan-hero.png') center 53% / 100% auto no-repeat; }
+  body.home-page .home-v2 .home-hero__inner { gap: 0; }
+  body.home-page .home-v2 .home-hero__badge { display: none; }
+  body.home-page .home-v2 .home-title { max-width: 320px; font-size: clamp(2.15rem, 11vw, 2.8rem); line-height: 1.12; letter-spacing: -0.055em; }
+  body.home-page .home-hero__intro { margin: 12px 0 28px; color: #667085; font-size: 1rem; }
+  body.home-page .home-scan-primary { display: grid; place-content: center; justify-self: center; width: 184px; height: 184px; margin: 12px 0 54px; border: 8px solid #fff; border-radius: 50%; background: #1463f3; box-shadow: 0 16px 32px rgba(20, 99, 243, 0.24); color: #fff; text-align: center; text-decoration: none; }
+  body.home-page .home-scan-primary svg { width: 66px; height: 66px; margin: 0 auto 10px; }
+  body.home-page .home-scan-primary span { font-size: 1.12rem; font-weight: 750; }
+  body.home-page .home-v2 .home-search__field { display: grid; grid-template-columns: auto minmax(0, 1fr); min-height: 62px; padding: 0 16px; border: 1px solid #adb5c4; border-radius: 17px; background: rgba(255, 255, 255, 0.94); box-shadow: none; }
+  body.home-page .home-search__scan,
+  body.home-page .home-search__button { display: none; }
+  body.home-page .home-search__icon { color: #475467; }
+  body.home-page .home-search__field input { font-size: 1rem; }
+  body.home-page .home-utility-links { display: grid; grid-template-columns: 1fr 1fr; margin: 22px 14px 0; }
+  body.home-page .home-utility-links a { min-height: 42px; color: #475467; font-size: 0.98rem; font-weight: 650; line-height: 42px; text-align: center; text-decoration: none; }
+  body.home-page .home-utility-links a + a { border-left: 1px solid #d0d5dd; }
+  body.home-page .home-v2 .home-section--deferred,
+  body.home-page .home-v2 .home-section--last { display: none; }
+  body.home-page .footer { position: fixed; right: 0; bottom: 0; left: 0; z-index: 25; margin: 0; padding: 0; background: #fff; box-shadow: 0 -1px 0 rgba(8, 24, 68, 0.09); }
+  body.home-page .footer__inner { width: 100%; padding: 8px 20px max(8px, env(safe-area-inset-bottom)); border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+  body.home-page .footer__brand,
+  body.home-page .footer__meta { display: none; }
+  body.home-page .footer__links { gap: 4px; }
+  body.home-page .footer__links a { min-height: 48px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none !important; color: #475467; }
+  body.home-page .footer__links a[aria-current='page'] { color: #1463f3; }
+}

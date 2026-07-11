@@ -9,8 +9,16 @@ const base = import.meta.env.BASE_URL || '/';
   <div class="home-v2">
     <section class="home-hero">
       <div class="shell home-hero__inner">
-        <div class="home-hero__badge">搜比价 · 日常药店比价</div>
-        <h1 class="home-title">先搜再比价</h1>
+        <div class="home-hero__badge">日本药店比价</div>
+        <h1 class="home-title">扫一下，知道值不值。</h1>
+        <p class="home-hero__intro">在店扫码，快速比价，省钱不吃亏。</p>
+        <a class="home-scan-primary" href={`${base}scan/`} aria-label="打开扫码查价">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7.5 8.5h2m5 0h2m-10 7h11m-13-8.25L6 5.75h12l1.5 1.5v9.5a1.5 1.5 0 0 1-1.5 1.5h-12a1.5 1.5 0 0 1-1.5-1.5z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" />
+            <circle cx="12" cy="12" r="2.75" fill="none" stroke="currentColor" stroke-width="1.7" />
+          </svg>
+          <span>点击扫码</span>
+        </a>
         <form class="home-search" id="home-search-form">
           <label class="field home-search__field" for="home-search">
             <span class="home-search__icon" aria-hidden="true">
@@ -48,6 +56,10 @@ const base = import.meta.env.BASE_URL || '/';
             </button>
           </label>
         </form>
+        <div class="home-utility-links" aria-label="常用操作">
+          <a href="#home-search">手动搜索</a>
+          <a href={`${base}me/`}>我的价格记录</a>
+        </div>
         <p class="home-meta">快捷键 <code>Ctrl+K</code> 或 <code>/</code> 可直达搜索框。</p>
       </div>
     </section>
