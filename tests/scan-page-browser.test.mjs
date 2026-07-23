@@ -120,6 +120,13 @@ async function main() {
         'scan auxiliary camera controls should sit on the camera overlay',
       );
       await page.waitForFunction(() => String(document.querySelector('#scan-status')?.textContent || '').includes('相机'));
+      await page.setViewportSize({ width: 720, height: 900 });
+      const mobilePanelWidths = await page.locator('.scan-layout').evaluate((element) => ({
+        layout: element.getBoundingClientRect().width,
+        panels: [...element.children].map((child) => child.getBoundingClientRect().width),
+      }));
+      assert.ok(mobilePanelWidths.panels.every((width) => width >= mobilePanelWidths.layout - 30), 'wide mobile scan panels should fill the layout');
+      await page.setViewportSize({ width: 390, height: 844 });
       const productRequestCountBeforeEmptySearch = requests.filter((call) => call.url.includes('/rest/v1/products')).length;
       await page.locator('#barcode-search').click();
       await page.locator('#barcode-input').press('Enter');

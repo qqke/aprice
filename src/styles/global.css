@@ -10196,7 +10196,7 @@ body.me-page.me-logged-out .grid {
   body.scan-page .hero-banner__inner { padding: 34px 24px 22px; }
   body.scan-page .product-title { max-width: 300px; font-size: clamp(2rem, 10.5vw, 2.55rem); line-height: 1.12; letter-spacing: -0.055em; }
   body.scan-page .product-sub { max-width: 300px; margin-top: 10px; color: #667085; font-size: 0.96rem; }
-  body.scan-page .scan-layout { display: flex; flex-direction: column; gap: 14px; padding: 0 14px; }
+  body.scan-page .scan-layout { display: flex; flex-direction: column; align-items: stretch; gap: 14px; padding: 0 14px; }
   body.scan-page .scan-layout > section:first-child { order: 0; padding: 12px; border: 0; border-radius: 22px; background: #081e47; box-shadow: none; }
   body.scan-page .scan-manual-panel { order: 1; padding: 18px; border: 0; border-radius: 20px; background: #fff; box-shadow: none; }
   body.scan-page .scan-manual-panel .section__header { display: block; margin-bottom: 12px; }
