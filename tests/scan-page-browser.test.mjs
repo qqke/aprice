@@ -110,8 +110,8 @@ async function main() {
       await page.locator('#barcode-input').waitFor({ state: 'attached', timeout: 10000 });
       await page.locator('#barcode-search').waitFor({ state: 'attached', timeout: 10000 });
       assert.equal(await page.locator('#camera[aria-label="相机扫码预览"][role="img"]').count(), 1);
-      const scanFrameBox = await page.locator('.scan-frame').boundingBox();
-      assert.ok(scanFrameBox && scanFrameBox.height <= 340, `mobile scan frame should stay compact, got ${scanFrameBox?.height}`);
+      assert.equal(await page.locator('.scan-frame').isVisible(), false);
+      assert.equal(await page.locator('#start-scan').isVisible(), true);
       assert.equal(await page.locator('.scan-frame .scan-camera-actions #stop-scan').count(), 1);
       assert.equal(await page.locator('.scan-frame .scan-camera-actions #snap-scan').count(), 1);
       assert.equal(

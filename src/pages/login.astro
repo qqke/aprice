@@ -19,7 +19,7 @@ export const prerender = true;
         <section class="tile tile--wide tile--flow">
           <div class="section__header section__header--tight">
             <div>
-              <h3 id="auth-panel-title">登录账号</h3>
+              <h2 id="auth-panel-title">登录账号</h2>
               <p id="auth-panel-description">输入邮箱和密码继续。</p>
             </div>
             <span class="pill" id="auth-panel-pill">登录</span>
@@ -37,6 +37,7 @@ export const prerender = true;
             <div class="pillrow login-state__actions">
               <a class="button" id="signed-in-action" href={resolveBase('me/')}>打开个人页</a>
               <button class="button button--ghost" type="button" id="switch-account-button">切换账号</button>
+              <button class="button button--ghost" id="logout-button" type="button" hidden>退出登录</button>
             </div>
           </div>
 
@@ -73,10 +74,10 @@ export const prerender = true;
           </div>
         </section>
 
-        <section class="tile tile--flow">
+        <section class="tile tile--flow" id="session-panel">
           <div class="section__header section__header--tight">
             <div>
-              <h3>账号状态</h3>
+              <h2>账号状态</h2>
               <p>登录状态与角色。</p>
             </div>
           </div>
@@ -84,9 +85,6 @@ export const prerender = true;
           <div class="list" id="session-state" role="status" aria-live="polite" aria-atomic="true">
             <div class="notice notice--compact">未登录，登录后可保存价格与收藏。</div>
           </div>
-
-          <div class="divider"></div>
-          <button class="button button--ghost" id="logout-button" type="button" hidden>退出登录</button>
         </section>
       </div>
     </div>
@@ -136,6 +134,7 @@ export const prerender = true;
     const status = document.querySelector('#auth-status');
     const hint = document.querySelector('#auth-hint');
     const sessionState = document.querySelector('#session-state');
+    const sessionPanel = document.querySelector('#session-panel');
     const logoutButton = document.querySelector('#logout-button');
     const modeToggle = document.querySelector('#mode-toggle');
     const forgotToggle = document.querySelector('#forgot-toggle');
@@ -337,6 +336,7 @@ export const prerender = true;
       const showForm = !currentSession || mode === 'reset-password';
       if (authFormShell) authFormShell.hidden = !showForm;
       if (signedInState) signedInState.hidden = showForm || !currentSession;
+      if (sessionPanel) sessionPanel.hidden = Boolean(currentSession && mode !== 'reset-password');
       if (logoutButton) logoutButton.hidden = !currentSession;
     }
 
@@ -344,6 +344,7 @@ export const prerender = true;
       if (mode !== 'login') return;
       if (authFormShell) authFormShell.hidden = true;
       if (signedInState) signedInState.hidden = false;
+      if (sessionPanel) sessionPanel.hidden = true;
       if (sessionState) {
         sessionState.innerHTML = `
           <div class="list__item">

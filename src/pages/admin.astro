@@ -40,10 +40,10 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
 
       <div class="notice notice--warning" id="admin-status">检查登录状态与权限。</div>
 
-      <section class="tile tile--flow admin-access-panel">
+      <section class="tile tile--flow admin-access-panel" id="admin-access-panel">
         <div class="section__header section__header--tight">
           <div>
-            <h3>当前权限</h3>
+            <h2>当前权限</h2>
             <p>确认账号级别后加载后台数据。</p>
           </div>
         </div>
@@ -55,7 +55,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         </div>
       </section>
 
-      <div class="pillrow" aria-label="管理区导航">
+      <div class="pillrow admin-section-nav" aria-label="管理区导航">
         <a class="button button--ghost" href="#admin-panel-price">价格</a>
         <a class="button button--ghost" href="#admin-panel-product">商品</a>
         <a class="button button--ghost" href="#admin-panel-store">门店</a>
@@ -348,6 +348,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
     const loginLink = document.querySelector('#admin-login-link');
     const switchLink = document.querySelector('#admin-switch-link');
     const accessState = document.querySelector('#admin-access');
+    const accessPanel = document.querySelector('#admin-access-panel');
     const logoutButton = document.querySelector('#admin-logout');
     const switchAccountLink = document.querySelector('#admin-switch-account');
     const productForm = document.querySelector('#product-form');
@@ -786,6 +787,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
       try {
         const [user, profile] = await Promise.all([getCurrentUser(), fetchCurrentProfile()]);
         if (!user) {
+          if (accessPanel) accessPanel.hidden = false;
           if (logoutButton) logoutButton.hidden = true;
           const copy = getPrivatePageGateCopy('admin', 'guest');
           syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
@@ -805,6 +807,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
           return false;
         }
         if (profile?.role !== 'admin') {
+          if (accessPanel) accessPanel.hidden = false;
           if (logoutButton) logoutButton.hidden = true;
           const copy = getPrivatePageGateCopy('admin', 'forbidden');
           syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
@@ -855,6 +858,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
           telemetryRecentResult = { items: [] };
         }
         syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: false });
+        if (accessPanel) accessPanel.hidden = true;
         if (logoutButton) logoutButton.hidden = false;
         products = Array.isArray(productPage?.rows) ? productPage.rows : [];
         productOffset = Number(productPage?.nextOffset || products.length);
@@ -891,6 +895,7 @@ const adminGuestCopy = getPrivatePageGateCopy('admin', 'guest');
         }
         return true;
       } catch (error) {
+        if (accessPanel) accessPanel.hidden = false;
         if (logoutButton) logoutButton.hidden = true;
         syncPrivatePageGate({ gateEl: authGate, loginLinkEl: loginLink, loginUrl, visible: true });
         applyPrivatePageGateCopy({ titleEl: gateTitle, descriptionEl: gateDescription, primaryButtonEl: loginLink, secondaryButtonEl: switchLink }, getPrivatePageGateCopy('admin', 'guest'));

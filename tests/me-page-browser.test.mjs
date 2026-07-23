@@ -241,7 +241,7 @@ async function main() {
       await waitForHidden(signedPage, '#me-auth-gate');
       await signedPage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('已同步 1 条价格记录和 2 条收藏。'));
       assert.equal(await signedPage.locator('#me-panel-logs').evaluate((element) => element.open), true);
-      assert.equal(await signedPage.locator('#me-panel-credits').evaluate((element) => element.open), true);
+      assert.equal(await signedPage.locator('#me-panel-credits').evaluate((element) => element.open), false);
       assert.equal(await signedPage.locator('#me-panel-security').evaluate((element) => element.open), false);
       assert.equal(await signedPage.locator('#me-panel-favorites').evaluate((element) => element.open), false);
       assert.equal(await signedPage.locator('#me-panel-recent').evaluate((element) => element.open), false);
@@ -253,11 +253,13 @@ async function main() {
       const mobileQuickRecordBox = await signedPage.locator('body.me-page .tile--wide').first().boundingBox();
       assert.ok(mobileCreditsPanelBox?.width > 320, `expected mobile credits panel to be full width, got ${mobileCreditsPanelBox?.width}`);
       assert.ok(Math.abs((mobileCreditsPanelBox?.x || 0) - (mobileQuickRecordBox?.x || 0)) < 4, `expected mobile panels to align, got credits x ${mobileCreditsPanelBox?.x} and quick x ${mobileQuickRecordBox?.x}`);
-      assert.ok((mobileCreditsPanelBox?.y || 0) > (mobileQuickRecordBox?.y || 0), `expected mobile credits panel below quick record, got credits y ${mobileCreditsPanelBox?.y} and quick y ${mobileQuickRecordBox?.y}`);
+      assert.ok((mobileCreditsPanelBox?.y || 0) < (mobileQuickRecordBox?.y || 0), `expected mobile credits panel above quick record, got credits y ${mobileCreditsPanelBox?.y} and quick y ${mobileQuickRecordBox?.y}`);
       await signedPage.setViewportSize({ width: 1280, height: 720 });
 
       assert.equal(await signedPage.locator('#log-product').isEnabled(), true);
       assert.equal(await signedPage.locator('#log-store').isEnabled(), true);
+      assert.equal(await signedPage.locator('#log-product').inputValue(), '');
+      assert.equal(await signedPage.locator('#log-store').inputValue(), '');
       assert.match(await signedPage.locator('#my-logs').textContent(), /Loxonin S/);
       assert.match(await signedPage.locator('#my-logs').textContent(), /[¥￥]698/);
       assert.match(await signedPage.locator('#my-favorites').textContent(), /Loxonin S/);

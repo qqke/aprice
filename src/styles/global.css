@@ -10242,3 +10242,26 @@ body.me-page.me-logged-out .grid {
   body.product-page .product-title { font-size: clamp(1.9rem, 3.2vw, 3.4rem); }
   body.error-page .headline { font-size: clamp(1.9rem, 3.2vw, 3rem); }
 }
+
+/* Mobile utility overrides; desktop composition intentionally remains unchanged. */
+@media (max-width: 720px) {
+  body.me-page #me-panel-credits { order: -3; }
+  body.me-page #me-quick-log-panel { order: -2; }
+  body.me-page .me-log-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.me-page .me-log-actions > :first-child { grid-column: 1 / -1; }
+
+  body.scan-page .scan-frame:not(.scan-frame--active) { display: none; }
+  body.scan-page .scan-manual-panel .section__header h2 { margin: 0; font-size: 1.1rem; }
+  body.scan-page .scan-layout > section:first-child { padding: 14px; }
+
+  body.admin-page .section--first-workspace > .shell > .section__header { align-items: flex-start; gap: 12px; }
+  body.admin-page .section--first-workspace > .shell > .section__header .product-title { font-size: clamp(2rem, 10vw, 2.55rem); line-height: 1.12; letter-spacing: -0.055em; }
+  body.admin-page .section--first-workspace > .shell > .section__header .product-sub { display: none; }
+  body.admin-page .admin-section-nav {
+    position: static;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+  }
+  body.admin-page .admin-section-nav .button { width: 100%; justify-content: center; }
+}

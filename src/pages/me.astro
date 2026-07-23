@@ -35,7 +35,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
         <section class="tile tile--wide" id="me-quick-log-panel" hidden>
           <div class="section__header section__header--tight">
             <div>
-              <h3>快速记录</h3>
+              <h2>快速记录</h2>
               <p>把刚看到的价格立即入库。</p>
             </div>
           </div>
@@ -75,7 +75,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
           </form>
         </section>
 
-        <details class="tile tile--wide me-panel" id="me-panel-credits" open>
+        <details class="tile tile--wide me-panel" id="me-panel-credits">
           <summary class="me-panel__summary">
             <span class="me-panel__chevron" aria-hidden="true"></span>
             <span class="me-panel__title">
@@ -506,8 +506,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
         : [];
       const placeholder = productSearchInput?.value?.trim() ? '暂无匹配商品' : '请选择商品';
       productInput.innerHTML = [`<option value="">${placeholder}</option>`, ...options].join('');
-      const fallbackValue = productPager.rows[0]?.id || '';
-      productInput.value = productPager.rows.some((item) => item.id === currentValue) ? currentValue : fallbackValue;
+      productInput.value = productPager.rows.some((item) => item.id === currentValue) ? currentValue : '';
       products = productPager.rows.slice();
       if (loadMoreProductsButton) {
         loadMoreProductsButton.hidden = !productPager.hasMore;
@@ -523,8 +522,7 @@ const meGateCopy = getPrivatePageGateCopy('me');
         : [];
       const placeholder = storeSearchInput?.value?.trim() ? '暂无匹配门店' : '请选择门店';
       storeInput.innerHTML = [`<option value="">${placeholder}</option>`, ...options].join('');
-      const fallbackValue = storePager.rows[0]?.id || '';
-      storeInput.value = storePager.rows.some((item) => item.id === currentValue) ? currentValue : fallbackValue;
+      storeInput.value = storePager.rows.some((item) => item.id === currentValue) ? currentValue : '';
       stores = storePager.rows.slice();
       if (loadMoreStoresButton) {
         loadMoreStoresButton.hidden = !storePager.hasMore;
