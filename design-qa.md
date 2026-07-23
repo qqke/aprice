@@ -30,6 +30,44 @@
 
 final result: passed
 
+## Blueprint receipt scan redesign
+
+- Source visual truth: `C:\Users\GIGAp\.codex\generated_images\019f7daa-a631-78a0-b730-008b2e07edb1\call_EPU41ynokVeEyebLBXf01HkW.png`
+- Implementation screenshot: `C:\work\aprice\artifacts\design-exploration-2026-07-23\implementation-blueprint-mobile-pass-3.png`
+- Comparison image: `C:\work\aprice\artifacts\design-exploration-2026-07-23\comparison-pass-3.png`
+- Viewport: 390 × 844 requested; in-app content capture measured 375 × 812 because browser chrome consumed 15 × 32 pixels.
+- Density normalization: source 853 × 1844 resized to 390 × 844; implementation padded to 390 × 844 without scaling.
+- State: logged out, initial scanner state, camera not yet granted.
+- Full-view comparison: source and implementation were normalized and combined side by side in `comparison-pass-3.png`.
+- Focused comparison: not needed; headline, scanner viewport, JAN input, result heading, and bottom navigation remain legible in the combined full-view comparison.
+
+**Comparison history**
+
+- Pass 1: P1 density mismatch. The implementation showed only the hero and scanner above the fold; manual JAN entry and results were pushed below it.
+- Fix: reduced hero type scale and spacing, changed the scanner to a 1.45:1 receipt proportion, removed inherited panel padding, and compressed the manual-entry rhythm.
+- Pass 3: the scanner, manual entry, results heading, and active bottom navigation are visible in the first viewport with no horizontal overflow.
+
+**Required fidelity surfaces**
+
+- Fonts and typography: heavy cobalt Chinese headline, compact receipt metadata, and restrained utility copy reproduce the source hierarchy with system CJK fallbacks.
+- Spacing and layout rhythm: full-width scanner, thin receipt rules, dense form controls, and fixed navigation match the source composition.
+- Colors and visual tokens: warm paper, cobalt ink, deep-blue scanner, and chartreuse action are consistent and accessible.
+- Image quality and asset fidelity: generated 960 × 720 WebP barcode artwork is used only before camera activation; the real video replaces it after permission is granted.
+- Copy and content: existing functional copy, routes, form fields, and result behavior are preserved.
+
+**Interaction evidence**
+
+- Empty JAN submission displayed `请输入条码。`.
+- Browser console warnings/errors: none.
+- Camera permission was not accepted during visual QA; existing automated scanner regression remains the functional check for camera controls.
+
+**Follow-up polish**
+
+- P3: the source mock includes a decorative pharmacy stamp and crop marks. They were omitted to avoid non-functional UI decoration and custom CSS art.
+- P3: the mock shows a sample product result; the implementation correctly keeps the real empty state until a barcode resolves.
+
+final result: passed
+
 ## Scan and account follow-up
 
 - Source visual truth: the selected scanner-first mobile direction above.

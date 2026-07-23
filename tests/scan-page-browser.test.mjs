@@ -110,7 +110,8 @@ async function main() {
       await page.locator('#barcode-input').waitFor({ state: 'attached', timeout: 10000 });
       await page.locator('#barcode-search').waitFor({ state: 'attached', timeout: 10000 });
       assert.equal(await page.locator('#camera[aria-label="相机扫码预览"][role="img"]').count(), 1);
-      assert.equal(await page.locator('.scan-frame').isVisible(), false);
+      assert.equal(await page.locator('.scan-frame').isVisible(), true);
+      assert.equal(await page.locator('.scan-placeholder-art').isVisible(), true);
       assert.equal(await page.locator('#start-scan').isVisible(), true);
       assert.equal(await page.locator('.scan-frame .scan-camera-actions #stop-scan').count(), 1);
       assert.equal(await page.locator('.scan-frame .scan-camera-actions #snap-scan').count(), 1);
@@ -125,7 +126,7 @@ async function main() {
         layout: element.getBoundingClientRect().width,
         panels: [...element.children].map((child) => child.getBoundingClientRect().width),
       }));
-      assert.ok(mobilePanelWidths.panels.every((width) => width >= mobilePanelWidths.layout - 30), 'wide mobile scan panels should fill the layout');
+      assert.ok(mobilePanelWidths.panels.every((width) => width >= mobilePanelWidths.layout * 0.9), 'wide mobile scan panels should fill the layout');
       await page.setViewportSize({ width: 390, height: 844 });
       const productRequestCountBeforeEmptySearch = requests.filter((call) => call.url.includes('/rest/v1/products')).length;
       await page.locator('#barcode-search').click();

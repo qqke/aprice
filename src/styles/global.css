@@ -1713,6 +1713,31 @@ textarea:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+
+@media (min-width: 721px) {
+  body.scan-page .scan-edition-line,
+  body.scan-page .scan-frame__label { display: none; }
+
+  body.scan-page .scan-placeholder-art {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 180ms ease;
+  }
+
+  body.scan-page .scan-frame--active .scan-placeholder-art { opacity: 0; }
+
+  body.scan-page .scan-frame .scan-start-actions {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    left: 16px;
+    z-index: 6;
+    margin: 0;
+  }
+}
 @media (max-width: 960px) {
   .hero__grid,
   .grid {
@@ -10250,7 +10275,7 @@ body.me-page.me-logged-out .grid {
   body.me-page .me-log-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   body.me-page .me-log-actions > :first-child { grid-column: 1 / -1; }
 
-  body.scan-page .scan-frame:not(.scan-frame--active) { display: none; }
+  body.scan-page .scan-frame:not(.scan-frame--active) { display: block; }
   body.scan-page .scan-manual-panel .section__header h2 { margin: 0; font-size: 1.1rem; }
   body.scan-page .scan-layout > section:first-child { padding: 14px; }
 
@@ -10264,4 +10289,249 @@ body.me-page.me-logged-out .grid {
     overflow: visible;
   }
   body.admin-page .admin-section-nav .button { width: 100%; justify-content: center; }
+}
+
+@keyframes scan-receipt-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Blueprint receipt direction for the mobile scanner. */
+@media (max-width: 720px) {
+  body.scan-page {
+    --scan-paper: #f7f2e8;
+    --scan-ink: #073b86;
+    --scan-dark: #032c67;
+    --scan-accent: #dfff2f;
+    background: var(--scan-paper);
+    color: var(--scan-ink);
+  }
+
+  body.scan-page .page,
+  body.scan-page .hero-banner,
+  body.scan-page .scan-manual-panel,
+  body.scan-page .scan-layout + .section > .tile {
+    background: var(--scan-paper);
+  }
+
+  body.scan-page .topbar__inner {
+    border-bottom: 2px solid var(--scan-ink);
+    box-shadow: none;
+  }
+
+  body.scan-page .scan-hero .hero-banner__inner {
+    padding: 12px 20px 10px;
+    animation: scan-receipt-enter 320ms ease-out both;
+  }
+
+  body.scan-page .scan-edition-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--scan-ink);
+    color: var(--scan-ink);
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+  }
+
+  body.scan-page .product-title {
+    max-width: 350px;
+    color: var(--scan-ink);
+    font-size: clamp(2rem, 10.3vw, 2.45rem);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.075em;
+  }
+
+  body.scan-page .product-sub {
+    max-width: 340px;
+    margin-top: 8px;
+    color: rgba(7, 59, 134, 0.82);
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+
+  body.scan-page .scan-layout {
+    gap: 10px;
+    padding: 0 16px;
+  }
+
+  body.scan-page .scan-layout > .scan-primary-panel {
+    width: 100%;
+    padding: 0 !important;
+    border: 0;
+    background: transparent;
+    animation: scan-receipt-enter 360ms 70ms ease-out both;
+  }
+
+  body.scan-page .scan-primary-panel > .stack {
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  body.scan-page .scan-frame,
+  body.scan-page .scan-frame:not(.scan-frame--active) {
+    display: block;
+    min-height: 0;
+    aspect-ratio: 1.45 / 1;
+    overflow: hidden;
+    border: 2px solid var(--scan-ink);
+    border-radius: 0;
+    background: var(--scan-dark);
+    box-shadow: 5px 5px 0 var(--scan-ink);
+  }
+
+  body.scan-page .scan-frame__label {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    left: 12px;
+    z-index: 5;
+    display: flex;
+    justify-content: space-between;
+    color: #fff;
+    font-size: 0.64rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+  }
+
+  body.scan-page .scan-placeholder-art,
+  body.scan-page .scan-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 180ms ease;
+  }
+
+  body.scan-page .scan-placeholder-art { opacity: 0.7; }
+  body.scan-page .scan-video { opacity: 0; }
+  body.scan-page .scan-frame--active .scan-placeholder-art { opacity: 0; }
+  body.scan-page .scan-frame--active .scan-video { opacity: 1; }
+
+  body.scan-page .scan-beam {
+    z-index: 4;
+    height: 3px;
+    background: var(--scan-accent);
+    box-shadow: 0 0 16px rgba(223, 255, 47, 0.8);
+  }
+
+  body.scan-page .scan-start-actions {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    z-index: 6;
+    margin: 0;
+  }
+
+  body.scan-page .scan-start-actions .button {
+    min-height: 48px;
+    border: 2px solid var(--scan-dark);
+    border-radius: 0;
+    background: var(--scan-accent);
+    box-shadow: 4px 4px 0 #fff;
+    color: var(--scan-dark);
+    font-size: 0.92rem;
+    font-weight: 900;
+  }
+
+  body.scan-page .scan-primary-panel > .stack > .notice {
+    margin: 2px 0 0;
+    padding: 2px;
+    border: 0;
+    background: transparent;
+    color: rgba(7, 59, 134, 0.78);
+    font-size: 0.62rem;
+    line-height: 1.2;
+  }
+
+  body.scan-page .scan-manual-panel {
+    padding: 8px 0;
+    border: 0;
+    border-top: 1px solid var(--scan-ink);
+    border-bottom: 1px solid var(--scan-ink);
+    border-radius: 0;
+    box-shadow: none;
+    animation: scan-receipt-enter 360ms 120ms ease-out both;
+  }
+
+  body.scan-page .scan-manual-panel .section__header h2,
+  body.scan-page .scan-layout + .section h2 {
+    color: var(--scan-ink);
+    font-size: 1rem;
+    font-weight: 900;
+  }
+
+  body.scan-page .scan-manual-panel .section__header p,
+  body.scan-page .scan-layout + .section .section__header p {
+    color: rgba(7, 59, 134, 0.72);
+    font-size: 0.68rem;
+  }
+
+  body.scan-page .scan-manual-panel .section__header { margin-bottom: 4px; }
+  body.scan-page .scan-manual-panel .form { gap: 5px; }
+
+  body.scan-page #barcode-input {
+    min-height: 42px;
+    border: 2px solid var(--scan-ink);
+    border-radius: 0;
+    background: rgba(255, 255, 255, 0.5);
+    color: var(--scan-ink);
+  }
+
+  body.scan-page #barcode-search {
+    min-height: 40px;
+    border: 2px solid var(--scan-ink);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    color: var(--scan-ink);
+    font-weight: 900;
+  }
+
+  body.scan-page #scan-status {
+    padding: 2px 0 0;
+    border: 0;
+    background: transparent;
+    color: rgba(7, 59, 134, 0.72);
+    font-size: 0.62rem;
+    line-height: 1.2;
+  }
+
+  body.scan-page .scan-layout + .section {
+    padding-top: 14px;
+  }
+
+  body.scan-page .scan-layout + .section > .section__header { margin-bottom: 8px; }
+
+  body.scan-page .scan-layout + .section > .tile {
+    padding: 10px;
+    border: 1px solid var(--scan-ink);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  body.scan-page .footer {
+    border-top: 2px solid var(--scan-ink);
+    background: var(--scan-paper);
+    box-shadow: none;
+  }
+
+  body.scan-page .footer__links a[aria-current='page'] {
+    background: var(--scan-ink);
+    color: #fff;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.scan-page .scan-hero .hero-banner__inner,
+  body.scan-page .scan-primary-panel,
+  body.scan-page .scan-manual-panel {
+    animation: none;
+  }
 }

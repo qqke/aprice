@@ -2,12 +2,17 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 
 export const prerender = true;
+const base = import.meta.env.BASE_URL || '/';
 ---
 <BaseLayout title="扫码查价 - 搜比价" description="使用相机扫描 JAN 条码，或者手动输入编号进行商品搜索。" bodyClass="scan-page">
   <section class="section">
     <div class="shell">
-      <div class="hero-banner">
+      <div class="hero-banner scan-hero">
         <div class="hero-banner__inner">
+          <div class="scan-edition-line" aria-hidden="true">
+            <span>BLUEPRINT RECEIPT</span>
+            <span>日本药妆比价工具</span>
+          </div>
           <h1 class="product-title">扫码或输入条码，快速找到商品。</h1>
           <p class="product-sub">
             优先自动识别 JAN 码；识别失败时可手动输入。登录后可直接补录新商品。
@@ -16,9 +21,14 @@ export const prerender = true;
       </div>
 
       <div class="grid scan-layout">
-        <section class="tile tile--wide">
+        <section class="tile tile--wide scan-primary-panel">
           <div class="stack">
             <div class="scan-frame">
+              <div class="scan-frame__label" aria-hidden="true">
+                <span>相机识别 JAN 码</span>
+                <span>SCAN 01</span>
+              </div>
+              <img class="scan-placeholder-art" src={`${base}images/scan-blueprint-barcode.webp`} alt="" aria-hidden="true" />
               <video id="camera" class="scan-video" playsinline muted aria-label="相机扫码预览" role="img"></video>
               <canvas id="capture" hidden></canvas>
               <div class="scan-beam"></div>
@@ -26,9 +36,9 @@ export const prerender = true;
                 <button class="button button--ghost" id="stop-scan" type="button">停止</button>
                 <button class="button button--ghost" id="snap-scan" type="button">识别当前帧</button>
               </div>
-            </div>
-            <div class="pillrow scan-start-actions">
-              <button class="button" id="start-scan" type="button">启动相机扫描</button>
+              <div class="pillrow scan-start-actions">
+                <button class="button" id="start-scan" type="button">启动相机扫描</button>
+              </div>
             </div>
             <div class="notice notice--compact">点击后启动后置相机（需 HTTPS）。</div>
           </div>
