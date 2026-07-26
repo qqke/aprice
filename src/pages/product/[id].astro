@@ -19,6 +19,7 @@ export const prerender = false;
 
 const productId = String(Astro.params.id || '').trim();
 let productRows: Product[] = [];
+let productLoadFailed = false;
 if (productId) {
   try {
     productRows = (await restGet('products', {
@@ -30,12 +31,14 @@ if (productId) {
     })) as Product[];
   } catch {
     productRows = [];
+    productLoadFailed = true;
   }
 }
+const productExists = Boolean(productRows?.[0]);
 const product = productRows?.[0] ?? {
   id: productId,
   barcode: productId,
-  name: '商品不存在',
+  name: productLoadFailed ? '商品暂时无法加载' : '商品不存在',
   brand: '',
   pack: '',
   category: '',
@@ -43,8 +46,8 @@ const product = productRows?.[0] ?? {
   description: '',
 };
 
-if (!productRows?.[0]) {
-  Astro.response.status = 404;
+if (!productExists) {
+  Astro.response.status = productLoadFailed ? 503 : 404;
 }
 
 const base = import.meta.env.BASE_URL || '/';
@@ -57,7 +60,7 @@ const productGateCopy = getPrivatePageGateCopy('product');
 const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
 ---
 <BaseLayout title={`${product.name} - 搜比价`} description={`${product.name} 的门店价格、附近比价和个人记录。`} bodyClass="product-page">
-  <section class="section section--first-workspace" id="product-page" data-product-id={product.id} data-product-name={product.name} data-product-brand={product.brand} data-product-pack={product.pack} data-product-barcode={product.barcode} data-product-tone={product.tone}>
+  <section class="section section--first-workspace" id="product-page" data-product-id={product.id} data-product-name={product.name} data-product-brand={product.brand} data-product-pack={product.pack} data-product-barcode={product.barcode} data-product-tone={product.tone} hidden={!productExists}>
     <div class="shell">
       <div class={`product-hero tone-${product.tone || 'sunset'}`} >
         <div class="product-hero__overlay" >
@@ -265,8 +268,28 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
     </div>
   </section>
 
-    <script type="module" is:inline define:vars={{ loginUrl }}>
-    const { initProductPage } = await import(window.__APriceConfig?.productPageRuntimeJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'product-page-runtime.js');
-    await initProductPage({ loginUrl });
+  {!productExists && (
+    <section class="section section--first-workspace" id="product-unavailable">
+      <div class="shell">
+        <div class="tile tile--wide stack">
+          <span class={`notice ${productLoadFailed ? 'notice--warning' : 'notice--compact'}`}>
+            {productLoadFailed ? '商品服务暂时不可用，请稍后重试。' : `没有找到编号为 ${productId || '空'} 的商品。`}
+          </span>
+          <h1 class="product-title">{productLoadFailed ? '暂时无法加载商品' : '没有找到这个商品'}</h1>
+          <p class="product-sub">{productLoadFailed ? '网络恢复后可以重新加载当前页面。' : '商品可能已下架，也可能是链接或条码有误。'}</p>
+          <div class="pillrow">
+            <a class="button" href={productLoadFailed ? Astro.url.pathname : base}>{productLoadFailed ? '重新加载' : '返回搜索'}</a>
+            {!productLoadFailed && <a class="button button--ghost" href={`${base}scan/`}>重新扫码</a>}
+          </div>
+        </div>
+      </div>
+    </section>
+  )}
+
+  <script type="module" is:inline define:vars={{ loginUrl, productExists }}>
+    if (productExists) {
+      const { initProductPage } = await import(window.__APriceConfig?.productPageRuntimeJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'product-page-runtime.js');
+      await initProductPage({ loginUrl });
+    }
   </script>
 </BaseLayout>

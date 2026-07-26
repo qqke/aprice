@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 
 const globalCss = await readFile('src/styles/global.css', 'utf8');
 const scanPage = await readFile('src/pages/scan.astro', 'utf8');
+const productPage = await readFile('src/pages/product/[id].astro', 'utf8');
 
 const tooSmallFontSizes = [];
 globalCss.split(/\r?\n/).forEach((line, index) => {
@@ -25,5 +26,11 @@ assert.equal(
   false,
   'scan page should not expose implementation terms like BarcodeDetector in user-facing copy',
 );
+
+assert.match(globalCss, /home-page:not\(\.home-has-selection\) \.home-section--nearby-deferred/);
+assert.match(globalCss, /home-v2 \.home-search__button \{ display: inline-flex/);
+assert.match(globalCss, /me-page\.me-logged-out \.grid/);
+assert.match(productPage, /hidden=\{!productExists\}/);
+assert.match(productPage, /if \(productExists\)/);
 
 console.log('ui plan source test passed');

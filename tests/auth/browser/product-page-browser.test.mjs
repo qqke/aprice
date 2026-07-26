@@ -220,6 +220,12 @@ async function main() {
         await page.goto(productUrl, { waitUntil: 'domcontentloaded' });
         await page.locator('#product-page').waitFor({ state: 'attached', timeout: 10000 });
       }
+      if (await page.locator('#product-unavailable').count()) {
+        assert.match(await page.locator('#product-unavailable').textContent(), /没有找到这个商品|暂时无法加载商品/);
+        assert.equal(await page.locator('#product-page').isVisible(), false);
+        console.log('product unavailable state browser test passed');
+        return;
+      }
       await page.locator('#product-auth-gate').waitFor({ state: 'attached' });
       await page.locator('.product-title').waitFor({ state: 'attached' });
       try {

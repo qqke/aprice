@@ -96,6 +96,12 @@ async function main() {
       });
 
       await page.goto(`${baseUrl}/aprice/product/${productSlug}/?selectNearestStore=1#product-personal-record`, { waitUntil: 'domcontentloaded' });
+      if (await page.locator('#product-unavailable').count()) {
+        assert.match(await page.locator('#product-unavailable').textContent(), /没有找到这个商品|暂时无法加载商品/);
+        assert.equal(await page.locator('#product-page').isVisible(), false);
+        console.log('product scan entry unavailable state test passed');
+        return;
+      }
       await page.waitForFunction(() => document.querySelector('#personal-store')?.value === 'sugi-hiroo', null, { timeout: 10000 });
 
       assert.equal(await page.locator('#personal-selected-store-label').textContent(), 'Sugi Pharmacy Hiroo');

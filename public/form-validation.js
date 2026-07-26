@@ -43,6 +43,9 @@ export function validateCoordinate(value, { label, min, max }) {
 export function friendlyDataError(error) {
   const raw = String(error?.message || error || '').trim();
   if (!raw) return '请求失败，请稍后再试。';
+  if (/failed to fetch|networkerror|network request failed|load failed|offline/i.test(raw)) {
+    return '网络连接失败，请检查网络后重试。';
+  }
   if (raw.includes('price_yen is required') || raw.includes('violates check constraint') || raw.includes('invalid input syntax')) {
     return '价格或数字格式不正确，请检查后再保存。';
   }

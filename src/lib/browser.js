@@ -4,7 +4,9 @@ import {
   restGet,
   restRpc,
 } from './supabase-rest.js';
-import { cleanJanCode } from './form-validation.js';
+import { cleanJanCode, friendlyDataError } from './form-validation.js';
+
+export { friendlyDataError };
 
 const runtimeConfig = globalThis.__APriceConfig || {};
 const BASE_URL = String(runtimeConfig.baseUrl || '/').trim() || '/';

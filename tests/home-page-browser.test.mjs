@@ -202,11 +202,13 @@ async function main() {
       await persistencePage.reload({ waitUntil: 'domcontentloaded' });
       await persistencePage.locator('#home-search').waitFor({ state: 'attached', timeout: 5000 });
       assert.equal(await persistencePage.locator('#nearby-toggle').getAttribute('aria-expanded'), 'true');
+      await persistencePage.evaluate(() => document.body.classList.add('home-has-activity', 'home-has-selection'));
       await persistencePage.locator('#nearby-toggle').click();
       assert.equal(await persistencePage.locator('#nearby-toggle').getAttribute('aria-expanded'), 'false');
       assert.equal(await persistencePage.evaluate(() => localStorage.getItem('aprice:nearby-collapsed')), 'true');
       await persistencePage.reload({ waitUntil: 'domcontentloaded' });
       await persistencePage.locator('#home-search').waitFor({ state: 'attached', timeout: 5000 });
+      await persistencePage.evaluate(() => document.body.classList.add('home-has-activity', 'home-has-selection'));
       assert.equal(await persistencePage.locator('#nearby-toggle').getAttribute('aria-expanded'), 'false');
       assert.equal(
         await persistencePage.evaluate(() => getComputedStyle(document.querySelector('#nearby-panel')).display),
