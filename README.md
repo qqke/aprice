@@ -27,6 +27,7 @@ PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 PUBLIC_SITE_URL=https://outlets.stbf.online
 PUBLIC_TURNSTILE_SITE_KEY=your-turnstile-site-key
+PUBLIC_DISABLE_TURNSTILE=0
 ASTRO_BASE_PATH=/
 PUBLIC_USE_SERVER_PRICE_RPC=1
 PUBLIC_ENABLE_TELEMETRY_RPC=0
@@ -42,6 +43,7 @@ PUBLIC_ENABLE_TELEMETRY_RPC=0
 4. 把站点地址加入邮件回调允许列表
 5. 在 Supabase Auth Bot and Abuse Protection 中启用 Turnstile，并填入 Cloudflare Turnstile Secret key
 6. 设置 `PUBLIC_TURNSTILE_SITE_KEY`，登录、注册和找回密码会把 Turnstile token 传给 Supabase Auth
+   - 临时关闭时，先在 Supabase 关闭 CAPTCHA，再把 GitHub Actions Variable `PUBLIC_DISABLE_TURNSTILE` 设为 `1`
 7. 在 Supabase Auth Password Security 中启用要求当前密码改密
 8. 登录和找回密码邮件会回到登录页，并保留原页面回跳参数
 9. 需要后台写权限时，把对应用户的 `profiles.role` 设为 `admin`
@@ -93,7 +95,7 @@ PUBLIC_ENABLE_TELEMETRY_RPC=0
 - Supabase migrations 已全部执行，尤其是 `product_submissions`、价格审核和 telemetry RPC。
 - 至少一个维护账号在 `profiles.role` 中设置为 `admin`。
 - GitHub Secrets 已配置 `PUBLIC_SUPABASE_URL`、`PUBLIC_SUPABASE_ANON_KEY`、`PUBLIC_SITE_URL`、`PUBLIC_TURNSTILE_SITE_KEY`。
-- GitHub Variables 或 Secrets 已确认 `PUBLIC_USE_SERVER_PRICE_RPC`、`PUBLIC_ENABLE_TELEMETRY_RPC` 的开关值。
+- GitHub Variables 已确认 `PUBLIC_DISABLE_TURNSTILE`，Variables 或 Secrets 已确认 `PUBLIC_USE_SERVER_PRICE_RPC`、`PUBLIC_ENABLE_TELEMETRY_RPC` 的开关值。
 - 发布前本地运行 `npm run check`、`npm test`、`npm run build`；线上冒烟可运行 `npm run verify:live:suite` 或 `npm run verify:live:add-product`。
 - 如果价格流为空，先确认 `prices` 有当前商品记录，再看管理页“运行配置”里的 RPC/遥测状态。
 

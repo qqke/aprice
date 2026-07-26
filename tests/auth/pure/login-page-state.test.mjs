@@ -36,6 +36,7 @@ assert.equal(validateLoginInputs({ mode: 'register', email: 'name@example.com', 
 assert.equal(validateLoginInputs({ mode: 'register', email: 'name@example.com', password: 'password123', confirmPassword: 'password123', turnstileConfigured: false }), '注册验证尚未配置，请先设置 Turnstile Site Key。');
 assert.equal(validateLoginInputs({ mode: 'register', email: 'name@example.com', password: 'password123', confirmPassword: 'password123' }), '请先完成人机验证。');
 assert.equal(validateLoginInputs({ mode: 'register', email: 'name@example.com', password: 'password123', confirmPassword: 'password123', captchaToken: 'turnstile-token' }), '');
+assert.equal(validateLoginInputs({ mode: 'register', email: 'name@example.com', password: 'password123', confirmPassword: 'password123', devFallback: true }), '');
 assert.equal(validateLoginInputs({ mode: 'request-reset', email: 'name@example.com', password: '' }), '请先完成人机验证。');
 assert.equal(validateLoginInputs({ mode: 'request-reset', email: 'name@example.com', password: '', captchaToken: 'turnstile-token' }), '');
 assert.equal(validateLoginInputs({ mode: 'request-reset', email: 'name@example.com', password: '', turnstileConfigured: false }), '');
