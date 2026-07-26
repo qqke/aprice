@@ -75,6 +75,9 @@ function isCurrentNavItem(item: { href: string; activePath?: string }) {
       html[data-auth-pending='signed-in'] #session-state {
         visibility: hidden;
       }
+      html[data-auth-pending='signed-in'] :is(#me-auth-gate, #admin-auth-gate, #product-auth-gate) {
+        display: none;
+      }
     </style>
   </head>
   <body class={bodyClass}>

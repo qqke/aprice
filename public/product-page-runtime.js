@@ -618,6 +618,9 @@ function applySelectedStorePrice(storeId, { focus = false } = {}) {
       ? `已回填你在该店的最新价 ¥${personalPrice.price_yen}，可直接修改后保存。`
       : '这家门店还没有你的个人价，输入后就能保存。';
   }
+  if (focus && window.matchMedia('(max-width: 720px)').matches) {
+    requestAnimationFrame(() => form?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+  }
 }
 
 function autoSelectNearestStore({ focus = false, scroll = false } = {}) {

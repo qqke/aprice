@@ -73,7 +73,7 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
             <span class="pill product-hero__barcode">JAN {product.barcode}</span>
             {product.brand && <span class="pill product-hero__brand" title={product.brand}>{product.brand}</span>}
           </div>
-          <h1 class="product-title" >{product.name}</h1>
+          <h1 class="product-title" title={product.name}>{product.name}</h1>
           <p class="product-sub" >{product.description}</p>
           <div class="product-hero__actions" aria-label="商品页主要操作">
             <button class="button" id="hero-geo-sort" type="button">按当前位置排序</button>
@@ -201,20 +201,23 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
                 </div>
                 <div class="personal-log-form__action">
                   <label class="field">
-                    <input id="personal-price" name="personal-price" type="number" inputmode="numeric" min="1" step="1" enterkeyhint="done" placeholder="输入价格（円）" />
+                    <span class="field__label">价格</span>
+                    <input id="personal-price" name="personal-price" type="number" inputmode="numeric" min="1" step="1" enterkeyhint="done" placeholder="日元金额" />
                   </label>
                   <button class="button" type="submit" disabled>保存价格</button>
                 </div>
                 <div class="personal-log-form__secondary">
                   <label class="field">
-                    <input id="personal-note" name="personal-note" placeholder="备注" />
+                    <span class="field__label">备注</span>
+                    <input id="personal-note" name="personal-note" placeholder="会员价或促销信息" />
                   </label>
                   <label class="field">
+                    <span class="field__label">价格凭证</span>
                     <input id="personal-evidence-url" name="personal-evidence-url" type="url" placeholder="价签或小票图片链接（可选）" />
                   </label>
                   <label class="field field--inline">
-                    <input id="personal-share-public" type="checkbox" checked />
-                    <span>参与公共比价（提交后由管理员审核）</span>
+                    <input id="personal-share-public" type="checkbox" />
+                    <span>提交公共比价，审核通过后其他用户可见。默认仅保存到个人记录。</span>
                   </label>
                 </div>
                 <div class="notice notice--compact" id="personal-status">{productLogPrompt}</div>

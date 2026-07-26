@@ -10540,3 +10540,58 @@ body.me-page.me-logged-out .grid {
     animation: none;
   }
 }
+
+/* Audit follow-up: keep authenticated mobile tasks compact and self-explanatory. */
+body.product-page .personal-log-form .field:not(.field--inline),
+body.me-page .account-security-form .field {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 3px;
+}
+
+body.product-page .personal-log-form .field__label,
+body.me-page .account-security-form .field__label {
+  min-width: 0;
+  color: #475467;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 720px) {
+  body.product-page .product-hero__overlay {
+    gap: 12px;
+    padding: 18px;
+  }
+
+  body.product-page .product-hero__image {
+    width: min(100%, 132px);
+    border-radius: 18px;
+  }
+
+  body.product-page .product-title {
+    display: -webkit-box;
+    max-width: none;
+    overflow: hidden;
+    font-size: clamp(1.75rem, 8vw, 2.25rem);
+    line-height: 1.02;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  body.product-page .product-hero__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  body.me-page #me-quick-log-panel {
+    order: 1;
+  }
+
+  body.me-page #me-panel-logs {
+    order: 2;
+  }
+
+  body.me-page .account-security-form .button {
+    width: 100%;
+    justify-content: center;
+  }
+}

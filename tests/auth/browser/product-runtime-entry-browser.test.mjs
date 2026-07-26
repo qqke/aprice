@@ -246,6 +246,8 @@ async function main() {
       assert.equal(await page.locator('#personal-selected-store-label').textContent(), 'Sugi Pharmacy Hiroo');
       assert.equal(await page.locator('#personal-store').inputValue(), 'sugi-hiroo');
       assert.equal(await page.locator('#personal-price').inputValue(), '688');
+      assert.equal(await page.locator('#personal-share-public').isChecked(), false);
+      assert.match(await page.locator('label:has(#personal-price)').textContent(), /价格/);
       assert.equal(await page.locator('#personal-log-form button[type="submit"]').isEnabled(), true);
       assert.equal(await page.locator('#favorite-store-button').isEnabled(), true);
       assert.match(requests.join('\n'), /\/rest\/v1\/rpc\/fetch_product_prices/);
@@ -316,6 +318,7 @@ async function main() {
       await page.waitForFunction(() => document.querySelector('#nearby-store-map .store-map__marker[data-map-store-id="welcia-shibuya"]')?.classList.contains('is-highlighted') || document.querySelector('#nearby-store-map .store-map__marker[data-map-store-id="welcia-shibuya"]')?.classList.contains('is-selected'), null, { timeout: 10000 });
       assert.equal(await page.locator('#nearby-store-list [data-store-id="welcia-shibuya"]').evaluate((node) => node.classList.contains('is-active')), true);
 
+      await page.locator('#personal-share-public').check();
       await page.locator('#personal-price').fill('722');
       await page.locator('#personal-note').fill('browser regression');
       await page.locator('#personal-evidence-url').fill('https://example.test/shelf.jpg');
@@ -347,7 +350,6 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
-
 
 
 

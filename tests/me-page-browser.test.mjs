@@ -240,7 +240,7 @@ async function main() {
       await signedPage.locator('#me-auth-gate').waitFor({ state: 'attached' });
       await waitForHidden(signedPage, '#me-auth-gate');
       await signedPage.waitForFunction(() => String(document.querySelector('#log-status')?.textContent || '').includes('已同步 1 条价格记录和 2 条收藏。'));
-      assert.equal(await signedPage.locator('#me-panel-logs').evaluate((element) => element.open), true);
+      assert.equal(await signedPage.locator('#me-panel-logs').evaluate((element) => element.open), false);
       assert.equal(await signedPage.locator('#me-panel-credits').evaluate((element) => element.open), false);
       assert.equal(await signedPage.locator('#me-panel-security').evaluate((element) => element.open), false);
       assert.equal(await signedPage.locator('#me-panel-favorites').evaluate((element) => element.open), false);
@@ -264,6 +264,7 @@ async function main() {
       assert.match(await signedPage.locator('#my-logs').textContent(), /[¥￥]698/);
       assert.match(await signedPage.locator('#my-favorites').textContent(), /Loxonin S/);
       assert.match(await signedPage.locator('#my-favorites').textContent(), /Welcia Shibuya/);
+      assert.match(await signedPage.locator('[data-remove-favorite]').first().textContent(), /取消收藏/);
       assert.match(await signedPage.locator('#favorites-summary').textContent(), /共 2 项收藏，当前显示 2 项/);
       assert.match(await signedPage.locator('#recent-views').textContent(), /Loxonin S/);
       assert.equal(await signedPage.evaluate(() => window.__meXss === true), false);
