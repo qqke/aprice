@@ -186,18 +186,41 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
           <section class="tile" id="product-personal-record">
             <div class="section__header section__header--tight">
               <h3>记录店头价格</h3>
-              <p>记录你在门店看到的价格，可选择提交公共比价。</p>
-            </div>
-            <div class="pillrow product-secondary-actions" aria-label="收藏操作">
-              <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>
-              <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button>
+              <p>选择门店并输入价格即可保存。</p>
             </div>
             <div class="personal-record-layout">
               <form class="form personal-log-form" id="personal-log-form">
                 <input id="personal-store" type="hidden" value="" />
                 <div class="personal-log-form__selected">
-                  <span>当前门店</span>
-                  <strong id="personal-selected-store-label">未选择门店</strong>
+                  <div class="personal-log-form__selected-copy">
+                    <span>价格记录门店</span>
+                    <strong id="personal-selected-store-label">正在定位最近门店...</strong>
+                  </div>
+                  <button class="button button--ghost" id="personal-nearest-store" type="button" aria-describedby="personal-location-status">定位最近门店</button>
+                  <p class="personal-location-status" id="personal-location-status" role="status" aria-live="polite">正在查找最近门店...</p>
+                  <button class="button button--ghost personal-store-search-toggle" id="personal-store-search-toggle" type="button" aria-controls="personal-store-panel" aria-expanded="false">搜索门店</button>
+                </div>
+                <div class="personal-store-panel" id="personal-store-panel" hidden>
+                  <div class="store-search">
+                    <label class="field store-search__input">
+                      <input id="personal-store-search" name="personal-store-search" type="search" inputmode="search" enterkeyhint="search" placeholder="搜索店名或连锁名" autocomplete="off" spellcheck="false" aria-label="搜索门店" />
+                    </label>
+                    <button class="button button--ghost store-search__clear" id="personal-store-search-clear" type="button" hidden>清空</button>
+                  </div>
+                  <div class="store-map-card">
+                    <div class="store-map-card__header">
+                      <strong>选店地图</strong>
+                      <small id="store-picker-map-status">加载中：等待门店数据。</small>
+                    </div>
+                    <div class="store-map" id="personal-store-map" aria-live="polite">
+                      <div class="notice notice--compact">可选门店地图会显示在这里。</div>
+                    </div>
+                  </div>
+                  <div class="notice notice--compact" id="personal-store-status">按店名、连锁名或当前位置筛选门店。</div>
+                  <div class="feed" id="personal-store-list">
+                    <div class="notice notice--compact">正在加载门店...</div>
+                  </div>
+                  <button class="button button--ghost store-search__load-more" id="personal-store-load-more" type="button" hidden>加载更多</button>
                 </div>
                 <div class="personal-log-form__action">
                   <label class="field">
@@ -206,44 +229,29 @@ const productLogPrompt = getPrivatePageStatusCopy('product', 'logPrompt');
                   </label>
                   <button class="button" type="submit" disabled>保存价格</button>
                 </div>
-                <div class="personal-log-form__secondary">
-                  <label class="field">
-                    <span class="field__label">备注</span>
-                    <input id="personal-note" name="personal-note" placeholder="会员价或促销信息" />
-                  </label>
-                  <label class="field">
-                    <span class="field__label">价格凭证</span>
-                    <input id="personal-evidence-url" name="personal-evidence-url" type="url" placeholder="价签或小票图片链接（可选）" />
-                  </label>
-                  <label class="field field--inline">
-                    <input id="personal-share-public" type="checkbox" />
-                    <span>提交公共比价，审核通过后其他用户可见。默认仅保存到个人记录。</span>
-                  </label>
-                </div>
+                <details class="personal-log-more">
+                  <summary>更多选项</summary>
+                  <div class="pillrow product-secondary-actions" aria-label="收藏操作">
+                    <button class="button button--ghost" id="favorite-product-button" type="button">添加商品收藏</button>
+                    <button class="button button--ghost" id="favorite-store-button" type="button">添加门店收藏</button>
+                  </div>
+                  <div class="personal-log-form__secondary">
+                    <label class="field">
+                      <span class="field__label">备注</span>
+                      <input id="personal-note" name="personal-note" placeholder="会员价或促销信息" />
+                    </label>
+                    <label class="field">
+                      <span class="field__label">价格凭证</span>
+                      <input id="personal-evidence-url" name="personal-evidence-url" type="url" placeholder="价签或小票图片链接（可选）" />
+                    </label>
+                    <label class="field field--inline">
+                      <input id="personal-share-public" type="checkbox" />
+                      <span>提交公共比价，审核通过后其他用户可见。默认仅保存到个人记录。</span>
+                    </label>
+                  </div>
+                </details>
                 <div class="notice notice--compact" id="personal-status">{productLogPrompt}</div>
               </form>
-              <div class="personal-store-panel">
-                <div class="store-search">
-                  <label class="field store-search__input">
-                    <input id="personal-store-search" name="personal-store-search" type="search" inputmode="search" enterkeyhint="search" placeholder="搜索店名或连锁名" autocomplete="off" spellcheck="false" aria-label="搜索门店" />
-                  </label>
-                  <button class="button button--ghost store-search__clear" id="personal-store-search-clear" type="button" hidden>清空</button>
-                </div>
-                <div class="store-map-card">
-                  <div class="store-map-card__header">
-                    <strong>选店地图</strong>
-                    <small id="store-picker-map-status">加载中：等待门店数据。</small>
-                  </div>
-                  <div class="store-map" id="personal-store-map" aria-live="polite">
-                    <div class="notice notice--compact">可选门店地图会显示在这里。</div>
-                  </div>
-                </div>
-                <div class="notice notice--compact" id="personal-store-status">按店名、连锁名或当前位置筛选门店。</div>
-                <div class="feed" id="personal-store-list">
-                  <div class="notice notice--compact">正在加载门店...</div>
-                </div>
-                <button class="button button--ghost store-search__load-more" id="personal-store-load-more" type="button" hidden>加载更多</button>
-              </div>
             </div>
           </section>
         </div>

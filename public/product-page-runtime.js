@@ -181,7 +181,7 @@ export function findNearestStore(stores = [], location = null) {
 
 export async function initProductPage({ loginUrl }) {
 
-const { escapeAttribute, escapeHtml, recordRecentView, resolveBase, fetchNearbyPrices, fetchProductPricesPage, fetchStoresPage, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
+const { escapeAttribute, escapeHtml, recordRecentView, resolveBase, fetchNearbyPrices, fetchNearestStore, fetchProductPricesPage, fetchStoresPage, formatDistance, formatYen, geolocate } = await import(window.__APriceConfig?.browserJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser.js');
 const { fetchCreditSummary, fetchFavorites, fetchPersonalLogs, formatDataError, getCurrentUser, getSession, indexLatestPersonalPricesByStore, submitStorePrice, toggleFavorite } = await import(window.__APriceConfig?.browserAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'browser-auth.js');
 const { getPrivatePageStatusCopy, redirectToLogin, syncPrivatePageGate } = await import(window.__APriceConfig?.privatePageAuthJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'private-page-auth.js');
 const { validateOptionalHttpUrl, validatePositiveYen } = await import(window.__APriceConfig?.formValidationJsUrl || (window.__APriceConfig?.baseUrl || '/') + 'form-validation.js');
@@ -217,7 +217,12 @@ const note = document.querySelector('#personal-note');
 const evidenceUrl = document.querySelector('#personal-evidence-url');
 const sharePublic = document.querySelector('#personal-share-public');
 const status = document.querySelector('#personal-status');
+const productLogPrompt = status?.textContent || getPrivatePageStatusCopy('product', 'logPrompt');
 const selectedStoreLabel = document.querySelector('#personal-selected-store-label');
+const nearestStoreButton = document.querySelector('#personal-nearest-store');
+const personalLocationStatus = document.querySelector('#personal-location-status');
+const storeSearchToggle = document.querySelector('#personal-store-search-toggle');
+const storePanel = document.querySelector('#personal-store-panel');
 const personalSubmitButton = form?.querySelector('button[type="submit"]');
 const favoriteButton = document.querySelector('#favorite-product-button');
 const favoriteStoreButton = document.querySelector('#favorite-store-button');
@@ -257,6 +262,7 @@ let storeLoadError = '';
 let storeRequestToken = 0;
 let selectedStoreId = '';
 let selectedStoreSnapshot = null;
+let nearestSelectedStoreId = '';
 let personalPriceLogs = [];
 let personalPriceIndex = new Map();
 let storeLocation = null;
@@ -533,11 +539,27 @@ function getSelectedStore() {
   return storeRows.find((item) => item.id === selectedStoreId) || selectedStoreSnapshot || null;
 }
 
+function setStorePanelOpen(open, { focus = false } = {}) {
+  if (storePanel) storePanel.hidden = !open;
+  storeSearchToggle?.setAttribute('aria-expanded', String(open));
+  if (storeSearchToggle) storeSearchToggle.textContent = open ? '收起门店搜索' : selectedStoreId ? '更换门店' : '搜索门店';
+  if (open && focus) requestAnimationFrame(() => storeSearch?.focus());
+}
+
 function syncPersonalLogFormState({ focus = false } = {}) {
   const selectedStore = selectedStoreId ? getSelectedStore() : null;
   if (selectedStoreLabel) {
     selectedStoreLabel.textContent = selectedStore?.name || '未选择门店';
   }
+  if (selectedStore && personalLocationStatus) {
+    personalLocationStatus.textContent = selectedStore.id === nearestSelectedStoreId
+      ? Number.isFinite(Number(selectedStore.distance_km))
+        ? `已选择最近门店，距你 ${formatDistance(Number(selectedStore.distance_km))}。`
+        : '已选择最近门店。'
+      : '门店已选择，可以输入价格。';
+  }
+  if (storeSearchToggle && !storePanel?.hidden) storeSearchToggle.textContent = '收起门店搜索';
+  else if (storeSearchToggle) storeSearchToggle.textContent = selectedStore ? '更换门店' : '搜索门店';
   if (personalSubmitButton instanceof HTMLButtonElement) {
     personalSubmitButton.disabled = !selectedStoreId;
   }
@@ -623,19 +645,31 @@ function applySelectedStorePrice(storeId, { focus = false } = {}) {
   }
 }
 
-function autoSelectNearestStore({ focus = false, scroll = false } = {}) {
-  if (!shouldAutoSelectNearestStore || selectedStoreId || storeSearchTerm) {
+async function autoSelectNearestStore({ focus = false, scroll = false, force = false } = {}) {
+  if (!shouldAutoSelectNearestStore || (!force && selectedStoreId) || storeSearchTerm) {
     return false;
   }
 
-  const nearestStore = findNearestStore(storeRows, storeLocation);
+  let nearestStore = null;
+  try {
+    nearestStore = await fetchNearestStore(storeLocation || {});
+  } catch {
+    nearestStore = findNearestStore(storeRows, storeLocation);
+  }
   if (!nearestStore) {
     return false;
   }
 
   selectedStoreSnapshot = nearestStore;
+  nearestSelectedStoreId = String(nearestStore.id || '');
   shouldAutoSelectNearestStore = false;
   applySelectedStorePrice(nearestStore.id, { focus: false });
+  if (nearestStoreButton) nearestStoreButton.textContent = '重新定位';
+  if (personalLocationStatus) {
+    personalLocationStatus.textContent = Number.isFinite(Number(nearestStore.distance_km))
+      ? `已选择最近门店，距你 ${formatDistance(Number(nearestStore.distance_km))}。`
+      : '已选择最近门店。';
+  }
   if (scroll) {
     const recordSection = document.querySelector('#product-personal-record');
     recordSection?.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -772,17 +806,20 @@ async function refreshPersonalPriceState({ preserveSelection = true } = {}) {
   return user;
 }
 
-async function syncStoreLocation({ announce = false } = {}) {
+async function syncStoreLocation({ announce = false, forceSelect = false } = {}) {
   try {
     const location = await geolocate();
     storeLocation = location;
-    const autoSelected = autoSelectNearestStore({ focus: announce, scroll: announce });
+    const autoSelected = await autoSelectNearestStore({ focus: announce, scroll: announce, force: forceSelect });
     if (autoSelected) {
       if (geoStatus) {
         geoStatus.textContent = `已按当前位置排序，并默认选择最近门店：${getSelectedStore()?.name || '最近门店'}。`;
       }
       return location;
     }
+    if (!selectedStoreId && selectedStoreLabel) selectedStoreLabel.textContent = '未找到有坐标的附近门店';
+    if (nearestStoreButton) nearestStoreButton.textContent = selectedStoreId ? '重新定位' : '重试定位';
+    if (personalLocationStatus) personalLocationStatus.textContent = '附近没有可定位的门店，请搜索门店。';
     renderStorePicker();
     if (announce && geoStatus) {
       geoStatus.textContent = `门店已按当前位置排序，定位点：${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}。`;
@@ -790,6 +827,9 @@ async function syncStoreLocation({ announce = false } = {}) {
     return location;
   } catch {
     storeLocation = null;
+    if (!selectedStoreId && selectedStoreLabel) selectedStoreLabel.textContent = '未选择门店';
+    if (nearestStoreButton) nearestStoreButton.textContent = '重试定位';
+    if (personalLocationStatus) personalLocationStatus.textContent = '无法获取位置，请搜索门店或重试。';
     renderStorePicker();
     renderStoreSelectionStatus(storeRows.length);
     if (announce && geoStatus) geoStatus.textContent = '定位失败，门店已按名称排序。';
@@ -1225,12 +1265,27 @@ storeLoadMore?.addEventListener('click', () => {
   void loadStores();
 });
 
+storeSearchToggle?.addEventListener('click', () => {
+  setStorePanelOpen(Boolean(storePanel?.hidden), { focus: true });
+});
+
+nearestStoreButton?.addEventListener('click', async () => {
+  nearestStoreButton.disabled = true;
+  nearestStoreButton.textContent = '定位中...';
+  if (personalLocationStatus) personalLocationStatus.textContent = '正在获取位置...';
+  shouldAutoSelectNearestStore = true;
+  const location = await syncStoreLocation({ announce: true, forceSelect: true });
+  nearestStoreButton.disabled = false;
+  if (!location) nearestStoreButton.textContent = '重试定位';
+});
+
 storeList?.addEventListener('click', (event) => {
   const target = event.target instanceof HTMLElement ? event.target.closest('[data-store-id]') : null;
   if (!(target instanceof HTMLElement)) return;
   const storeId = target.dataset.storeId;
   if (!storeId) return;
   applySelectedStorePrice(storeId, { focus: true });
+  setStorePanelOpen(false);
 });
 
 favoriteButton?.addEventListener('click', async () => {
@@ -1318,6 +1373,7 @@ personalStoreMap?.addEventListener('click', (event) => {
   const storeId = target.dataset.mapStoreId;
   if (!storeId) return;
   applySelectedStorePrice(storeId, { focus: true });
+  setStorePanelOpen(false);
 });
 
 nearbyStoreMap?.addEventListener('click', (event) => {

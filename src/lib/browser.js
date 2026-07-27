@@ -406,6 +406,30 @@ export async function fetchStoresPage({ term = '', limit = 10, offset = 0 } = {}
   };
 }
 
+export async function fetchNearestStore({ lat, lng } = {}) {
+  const originLat = Number(lat);
+  const originLng = Number(lng);
+  if (!Number.isFinite(originLat) || !Number.isFinite(originLng)) return null;
+
+  // ponytail: Client-sort the current catalog; replace with a nearest-store RPC if it grows beyond 5,000 rows.
+  const rows = await restGet('stores', {
+    query: {
+      select: 'id,name,chain_name,address,city,pref,lat,lng,hours',
+      lat: 'not.is.null',
+      lng: 'not.is.null',
+      limit: 5000,
+    },
+  });
+
+  return (rows || [])
+    .filter((store) => Number.isFinite(Number(store?.lat)) && Number.isFinite(Number(store?.lng)))
+    .map((store) => ({
+      ...store,
+      distance_km: distanceKm(originLat, originLng, Number(store.lat), Number(store.lng)),
+    }))
+    .sort((a, b) => a.distance_km - b.distance_km || String(a.name || '').localeCompare(String(b.name || ''), 'ja-JP'))[0] || null;
+}
+
 export async function fetchRecentPrices(limit = 10, options = {}) {
   return restGet('prices', {
     query: {

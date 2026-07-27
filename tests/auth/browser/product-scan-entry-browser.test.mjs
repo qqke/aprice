@@ -105,6 +105,8 @@ async function main() {
       await page.waitForFunction(() => document.querySelector('#personal-store')?.value === 'sugi-hiroo', null, { timeout: 10000 });
 
       assert.equal(await page.locator('#personal-selected-store-label').textContent(), 'Sugi Pharmacy Hiroo');
+      assert.equal(await page.locator('#personal-nearest-store').textContent(), '重新定位');
+      assert.match(await page.locator('#personal-location-status').textContent(), /已选择最近门店/);
       assert.equal(await page.locator('#personal-store').inputValue(), 'sugi-hiroo');
       assert.equal(await page.locator('#personal-log-form button[type="submit"]').isEnabled(), true);
       assert.match(await page.locator('#personal-store-list .store-picker__item').first().textContent(), /Sugi Pharmacy Hiroo/);

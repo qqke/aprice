@@ -4378,16 +4378,24 @@ body.product-page .personal-log-form {
 
 body.product-page .personal-log-form__selected {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+body.product-page .personal-log-form__selected-copy {
+  display: grid;
+  min-width: 0;
   gap: 2px;
 }
 
-body.product-page .personal-log-form__selected span {
+body.product-page .personal-log-form__selected-copy span {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
 }
 
-body.product-page .personal-log-form__selected strong {
+body.product-page .personal-log-form__selected-copy strong {
   overflow: hidden;
   color: var(--ink);
   font-size: 0.98rem;
@@ -9600,7 +9608,7 @@ body.me-page #me-panel-logs .me-panel__title strong {
 }
 
 body.product-page .personal-record-layout {
-  grid-template-columns: minmax(300px, 0.82fr) minmax(0, 1.18fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -9610,7 +9618,7 @@ body.product-page .personal-store-panel {
 }
 
 body.product-page .personal-log-form {
-  top: 88px;
+  position: static;
   gap: 10px;
   padding: 14px;
   border-color: rgba(45, 103, 235, 0.2);
@@ -9641,6 +9649,26 @@ body.product-page .personal-log-form__selected strong {
   font-size: 1.02rem;
 }
 
+body.product-page #personal-nearest-store {
+  min-height: 40px;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
+
+body.product-page .personal-location-status {
+  grid-column: 1;
+  margin: 0;
+  color: var(--muted-strong);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+body.product-page .personal-store-search-toggle {
+  grid-column: 2;
+  min-height: 40px;
+  padding: 8px 12px;
+}
+
 body.product-page .personal-log-form__action {
   grid-template-columns: minmax(0, 1fr);
   gap: 8px;
@@ -9665,6 +9693,27 @@ body.product-page .personal-log-form__action .button {
 
 body.product-page .personal-log-form__secondary {
   gap: 8px;
+}
+
+body.product-page .personal-log-more {
+  border-top: 1px solid rgba(45, 103, 235, 0.12);
+  padding-top: 8px;
+}
+
+body.product-page .personal-log-more > summary {
+  width: fit-content;
+  color: var(--ref-blue);
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+body.product-page .personal-log-more[open] > summary {
+  margin-bottom: 10px;
+}
+
+body.product-page .personal-log-more .product-secondary-actions {
+  margin-bottom: 8px;
 }
 
 body.product-page .personal-log-form__secondary .field--inline {
@@ -9865,6 +9914,20 @@ body.me-page .me-panel__body .feed {
   body.product-page .personal-log-form__selected {
     padding: 12px;
     border-radius: 16px;
+  }
+
+  body.product-page #personal-nearest-store {
+    max-width: 122px;
+    white-space: normal;
+  }
+
+  body.product-page .personal-location-status {
+    grid-column: 1 / -1;
+  }
+
+  body.product-page .personal-store-search-toggle {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 
   body.product-page #personal-price,

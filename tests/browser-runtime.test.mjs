@@ -75,6 +75,8 @@ globalThis.fetch = async (input) => {
           chain_name: 'Welcia',
           city: 'Tokyo',
           pref: 'Tokyo',
+          lat: 35.66,
+          lng: 139.7,
         },
         {
           id: 'welcia-ebisu',
@@ -82,6 +84,8 @@ globalThis.fetch = async (input) => {
           chain_name: 'Welcia',
           city: 'Tokyo',
           pref: 'Tokyo',
+          lat: 35.648,
+          lng: 139.722,
         },
       ]),
       { status: 200, headers: { 'Content-Type': 'application/json' } },
@@ -152,6 +156,11 @@ const normalizedStoresPage = await browser.fetchStoresPage({ term: '', limit: -5
 assert.equal(normalizedStoresPage.rows.length, 1);
 assert.match(requests.at(-1), /limit=2/);
 assert.match(requests.at(-1), /offset=0/);
+
+const nearestStore = await browser.fetchNearestStore({ lat: 35.6485, lng: 139.7215 });
+assert.equal(nearestStore?.id, 'welcia-ebisu');
+assert.match(requests.at(-1), /limit=5000/);
+assert.match(requests.at(-1), /lat=not.is.null/);
 
 const draft = browser.parseJancodeProductDraft(
   [

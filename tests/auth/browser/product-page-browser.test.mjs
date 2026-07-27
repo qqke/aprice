@@ -292,17 +292,23 @@ async function main() {
       assert.match(personalStatusText || '', /已回填你在该店的最新价 ¥688，可直接修改后保存。/);
       assert.match(creditStatusText || '', /今日免费参考剩余 4 次/);
       assert.equal(await page.locator('#personal-selected-store-label').textContent(), 'Sugi Pharmacy Hiroo');
+      assert.equal(await page.locator('#personal-nearest-store').textContent(), '重新定位');
+      assert.match(await page.locator('#personal-location-status').textContent(), /已选择最近门店/);
       assert.equal(await page.locator('#personal-store').inputValue(), 'sugi-hiroo');
       assert.equal(await page.locator('#personal-price').inputValue(), '688');
       assert.equal(await page.locator('#personal-share-public').isChecked(), false);
       assert.match(await page.locator('label:has(#personal-price)').textContent(), /价格/);
       assert.equal(await page.locator('#personal-log-form button[type="submit"]').isEnabled(), true);
       assert.equal(await page.locator('#favorite-store-button').isEnabled(), true);
+      assert.equal(await page.locator('#personal-store-panel').isHidden(), true);
+      assert.equal(await page.locator('.personal-log-more').evaluate((node) => node.open), false);
       assert.match(requests.join('\n'), /\/rest\/v1\/rpc\/fetch_product_prices/);
       assert.match(requests.join('\n'), /\/rest\/v1\/stores/);
       assert.match(requests.join('\n'), /limit=11/);
       assert.match(requests.join('\n'), /\/rest\/v1\/user_price_logs/);
 
+      await page.locator('#personal-store-search-toggle').click();
+      assert.equal(await page.locator('#personal-store-search-toggle').getAttribute('aria-expanded'), 'true');
       assert.equal(await page.locator('#personal-store-list .store-picker__item').count(), 10);
       await page.locator('#personal-store-load-more').click();
       await page.waitForFunction(() => document.querySelectorAll('#personal-store-list .store-picker__item').length > 10, null, { timeout: 10000 });
@@ -335,6 +341,14 @@ async function main() {
       assert.match(await page.locator('#personal-status').textContent(), /712/);
       assert.equal(await page.locator('#personal-store-map .store-map__marker[data-map-store-id="welcia-shibuya"]').evaluate((node) => node.classList.contains('is-selected')), true);
 
+      await page.locator('#personal-nearest-store').click();
+      await page.waitForFunction(() => document.querySelector('#personal-store')?.value === 'sugi-hiroo', null, { timeout: 10000 });
+      assert.equal(await page.locator('#personal-selected-store-label').textContent(), 'Sugi Pharmacy Hiroo');
+      await page.locator('#personal-store-search-toggle').click();
+      await page.locator('#personal-store-map .store-map__marker[data-map-store-id="welcia-shibuya"]').click();
+      await page.waitForFunction(() => document.querySelector('#personal-store')?.value === 'welcia-shibuya', null, { timeout: 10000 });
+
+      await page.locator('#personal-store-search-toggle').click();
       await page.locator('#personal-store-search').fill('sugi');
       await page.waitForFunction(() => String(document.querySelector('#personal-store-list')?.textContent || '').includes('Welcia Shibuya'), null, { timeout: 10000 });
       assert.match(await page.locator('#personal-store-status').textContent(), /当前选择已保留在顶部|没有匹配到搜索词/);
@@ -342,6 +356,7 @@ async function main() {
       assert.equal(await page.locator('#personal-store').inputValue(), 'welcia-shibuya');
       assert.equal(await page.locator('#personal-log-form button[type="submit"]').isEnabled(), true);
 
+      await page.locator('.personal-log-more > summary').click();
       await page.locator('#favorite-store-button').click();
       await page.waitForFunction(() => document.querySelector('#favorite-store-button')?.textContent?.includes('取消门店收藏'), null, { timeout: 10000 });
       assert.ok(
@@ -479,6 +494,7 @@ async function main() {
       await adminCreditPage.locator('#product-page').waitFor({ state: 'attached', timeout: 10000 });
       await adminCreditPage.waitForFunction(() => String(document.querySelector('#product-credit-status')?.textContent || '').includes('管理员模式'));
       assert.match(await adminCreditPage.locator('#product-credit-status').textContent(), /管理员模式 · 本次不计费/);
+      await adminCreditPage.locator('#personal-store-search-toggle').click();
       await adminCreditPage.locator('#personal-store-list .store-picker__item').first().click();
       await adminCreditPage.waitForFunction(() => Boolean(document.querySelector('#personal-store')?.value), null, { timeout: 10000 });
       await adminCreditPage.locator('#personal-price').fill('699');
