@@ -10658,3 +10658,172 @@ body.me-page .account-security-form .field__label {
     justify-content: center;
   }
 }
+
+/* Unified mobile shell. Page-specific layouts keep their function, not a separate visual system. */
+@media (max-width: 720px) {
+  body:is(.home-page, .login-page, .scan-page, .me-page, .admin-page, .product-page, .error-page),
+  body:is(.home-page, .login-page, .scan-page, .me-page, .admin-page, .product-page, .error-page) .page {
+    background:
+      radial-gradient(520px 300px at 12% 2%, rgba(45, 103, 235, 0.12), transparent 72%),
+      linear-gradient(180deg, #f7faff 0%, #eef5ff 58%, #f8fbff 100%);
+    color: var(--ref-ink);
+  }
+
+  body:is(.home-page, .login-page, .scan-page, .me-page, .admin-page, .product-page, .error-page) .page {
+    padding-bottom: calc(var(--mobile-footer-space) + env(safe-area-inset-bottom) + 18px);
+  }
+
+  body:is(.home-page, .login-page, .scan-page, .me-page, .admin-page, .product-page, .error-page) .topbar {
+    padding-top: max(8px, env(safe-area-inset-top));
+    background: transparent;
+  }
+
+  body:is(.home-page, .login-page, .scan-page, .me-page, .admin-page, .product-page, .error-page) .topbar__inner {
+    width: calc(100% - 16px);
+    min-height: 58px;
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.82);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 10px 28px rgba(42, 79, 135, 0.12);
+  }
+
+  body:is(.home-page, .login-page, .scan-page, .me-page, .admin-page, .product-page, .error-page) :is(.brand__tag, .nav-toggle, .nav, .mobile-nav) {
+    display: none !important;
+  }
+
+  body:is(.home-page, .login-page, .scan-page, .me-page, .admin-page, .product-page, .error-page) .session-chip {
+    min-height: 40px;
+    margin-left: auto;
+    padding: 9px 15px;
+    border: 0;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #4f82ff 0%, #285ee8 100%);
+    box-shadow: 0 8px 18px rgba(45, 103, 235, 0.22);
+    color: #fff;
+  }
+
+  body:is(.home-page, .login-page, .scan-page, .me-page, .admin-page, .product-page, .error-page) :is(.tile, .me-panel, .admin-panel, .notice, .list__item, .feed__item) {
+    border-color: var(--ref-line);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 8px 24px rgba(42, 79, 135, 0.08);
+  }
+
+  body:is(.home-page, .login-page, .scan-page, .me-page, .admin-page, .product-page, .error-page) :is(input, select, textarea) {
+    min-height: 48px;
+    border-color: rgba(68, 103, 152, 0.18);
+    border-radius: 14px;
+    background: #fff;
+    color: var(--ref-ink);
+  }
+
+  body:is(.home-page, .login-page, .scan-page, .me-page, .admin-page, .product-page, .error-page) :is(input, select, textarea):focus {
+    border-color: var(--ref-blue);
+    box-shadow: 0 0 0 3px rgba(45, 103, 235, 0.13);
+  }
+
+  body:is(.home-page, .login-page, .scan-page, .me-page, .admin-page, .product-page, .error-page) .button {
+    min-height: 46px;
+    border-radius: 14px;
+  }
+
+  body.scan-page .hero-banner {
+    display: block;
+    margin: 10px 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.68);
+    box-shadow: 0 10px 28px rgba(42, 79, 135, 0.08);
+  }
+
+  body.scan-page .scan-hero .hero-banner__inner {
+    padding: 22px 18px;
+    animation: none;
+  }
+
+  body.scan-page .scan-layout {
+    gap: 12px;
+    padding: 0 8px;
+  }
+
+  body.scan-page .scan-layout > .scan-primary-panel,
+  body.scan-page .scan-manual-panel {
+    padding: 14px !important;
+    border: 1px solid var(--ref-line);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 8px 24px rgba(42, 79, 135, 0.08);
+    animation: none;
+  }
+
+  body.scan-page .scan-frame,
+  body.scan-page .scan-frame:not(.scan-frame--active) {
+    aspect-ratio: 4 / 3;
+    border: 0;
+    border-radius: 16px;
+    background: #0a285a;
+    box-shadow: none;
+  }
+
+  body.scan-page .scan-start-actions .button,
+  body.scan-page #barcode-search {
+    min-height: 48px;
+    border: 0;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #3f79f6 0%, #2057db 100%);
+    box-shadow: 0 8px 18px rgba(45, 103, 235, 0.2);
+    color: #fff;
+  }
+
+  body.scan-page #barcode-input {
+    min-height: 48px;
+    border: 1px solid rgba(68, 103, 152, 0.18);
+    border-radius: 14px;
+    background: #fff;
+    color: var(--ref-ink);
+  }
+
+  body:is(.home-page, .login-page, .scan-page, .me-page, .admin-page, .product-page, .error-page) .footer {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 25;
+    margin: 0;
+    padding: 0;
+    border-top: 1px solid rgba(68, 103, 152, 0.12);
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 -8px 24px rgba(42, 79, 135, 0.08);
+    backdrop-filter: blur(16px);
+  }
+
+  body:is(.home-page, .login-page, .scan-page, .me-page, .admin-page, .product-page, .error-page) .footer__inner {
+    width: 100%;
+    padding: 7px 14px max(7px, env(safe-area-inset-bottom));
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  body:is(.home-page, .login-page, .scan-page, .me-page, .admin-page, .product-page, .error-page) :is(.footer__brand, .footer__meta) {
+    display: none;
+  }
+
+  body:is(.home-page, .login-page, .scan-page, .me-page, .admin-page, .product-page, .error-page) .footer__links a {
+    min-height: 48px;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    box-shadow: none !important;
+    color: #475467;
+  }
+
+  body:is(.home-page, .login-page, .scan-page, .me-page, .admin-page, .product-page, .error-page) .footer__links a[aria-current="page"] {
+    background: var(--ref-blue-soft);
+    color: var(--ref-blue-strong);
+    box-shadow: none;
+  }
+}
